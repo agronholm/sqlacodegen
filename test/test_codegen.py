@@ -100,6 +100,43 @@ class SimpleItem(Base):
 """)
 
 
+def test_noindexes_table():
+    testmeta = MetaData()
+    simple_items = Table(
+        'simple_items', testmeta,
+        Column('number', Integer),
+        CheckConstraint('number > 2')
+    )
+    simple_items.indexes.add(Index('idx_number', simple_items.c.number))
+
+    table_def = remove_unicode_prefixes(next(generate_declarative_models(testmeta, noindexes=True)))
+    eq_(table_def, """\
+t_simple_items = Table(
+    'simple_items', Base.metadata,
+    Column('number', Integer),
+    CheckConstraint('number > 2')
+)
+""")
+
+
+def test_noconstraints_table():
+    testmeta = MetaData()
+    simple_items = Table(
+        'simple_items', testmeta,
+        Column('number', Integer),
+        CheckConstraint('number > 2')
+    )
+    simple_items.indexes.add(Index('idx_number', simple_items.c.number))
+
+    table_def = remove_unicode_prefixes(next(generate_declarative_models(testmeta, noconstraints=True)))
+    eq_(table_def, """\
+t_simple_items = Table(
+    'simple_items', Base.metadata,
+    Column('number', Integer, index=True)
+)
+""")
+
+
 def test_indexes_table():
     testmeta = MetaData()
     simple_items = Table(

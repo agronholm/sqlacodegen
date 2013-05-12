@@ -8,7 +8,7 @@ extra_requirements = ('argparse',) if sys.version_info < (2, 7) else ()
 setup(
     name='sqlcodegen',
     description='Automatic model code generator for SQLAlchemy',
-    version='1.0.0.pre1',
+    version='1.0.0.pre2',
     author='Alex Gronholm',
     author_email='sqlcodegen@nextday.fi',
     url='http://pypi.python.org/pypi/sqlcodegen/',

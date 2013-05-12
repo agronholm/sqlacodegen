@@ -14,8 +14,9 @@ def main():
     parser.add_argument('url', help='SQLAlchemy url to the database')
     parser.add_argument('--schema', help='load tables from an alternate schema')
     parser.add_argument('--tables', help='tables to process (comma-separated, default: all)')
-    parser.add_argument('--noviews', action='store_true', help="don't generate models for views")
-    parser.add_argument('--noindexes', action='store_true', help="don't generate models for views")
+    parser.add_argument('--noviews', action='store_true', help="ignore views")
+    parser.add_argument('--noindexes', action='store_true', help='ignore indexes')
+    parser.add_argument('--noconstraints', action='store_true', help='ignore constraints')
     parser.add_argument('--outfile', type=argparse.FileType('w'), default=sys.stdout,
                         help='file to write output to (default: stdout)')
     args = parser.parse_args()
@@ -24,4 +25,4 @@ def main():
     metadata = MetaData(engine)
     tables = args.tables.split(',') if args.tables else None
     metadata.reflect(engine, args.schema, not args.noviews, tables)
-    print(generate_model_code(metadata), file=args.outfile)
+    print(generate_model_code(metadata, args.noindexes, args.noconstraints), file=args.outfile)

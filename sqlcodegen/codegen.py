@@ -292,7 +292,7 @@ def generate_class(table, links=()):
     return text
 
 
-def generate_declarative_models(metadata, exclude=()):
+def generate_declarative_models(metadata, noindexes=False, noconstraints=False):
     links = defaultdict(lambda: [])
     link_tables = set()
     for table in metadata.tables.values():
@@ -304,14 +304,25 @@ def generate_declarative_models(metadata, exclude=()):
             links[tablename].append(table)
 
     for table in sorted(metadata.tables.values(), key=lambda t: t.name):
-        if table.name in exclude:
+        # Support for Alembic and sqlalchemy-migrate -- never expose the schema version tables
+        if table.name in ('alembic_version', 'migrate_version'):
             continue
+
+        if noindexes:
+            table.indexes.clear()
+
+        if noconstraints:
+            table.constraints = set([table.primary_key])
+            table.foreign_keys.clear()
+            for col in table.columns:
+                col.foreign_keys.clear()
+
         if not table.primary_key or table.name in link_tables:
             yield generate_table(table)
         else:
             yield generate_class(table, links[table.name])
 
 
-def generate_model_code(metadata, header=DEFAULT_HEADER, footer=DEFAULT_FOOTER, exclude=['alembic_version']):
-    models = generate_declarative_models(metadata, exclude)
+def generate_model_code(metadata, noindexes, noconstraints, header=DEFAULT_HEADER, footer=DEFAULT_FOOTER):
+    models = generate_declarative_models(metadata, noindexes, noconstraints)
     return header + '\n\n'.join(models).rstrip() + footer
