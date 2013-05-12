@@ -240,6 +240,32 @@ class SimpleItem(Base):
 """)
 
 
+def test_onetomany_selfref_multi():
+    testmeta = MetaData()
+    Table(
+        'simple_items', testmeta,
+        Column('id', Integer, primary_key=True),
+        Column('parent_item_id', Integer),
+        Column('top_item_id', Integer),
+        ForeignKeyConstraint(['parent_item_id'], ['simple_items.id']),
+        ForeignKeyConstraint(['top_item_id'], ['simple_items.id'])
+    )
+
+    table_defs = [remove_unicode_prefixes(table_def) for table_def in generate_declarative_models(testmeta)]
+    eq_(len(table_defs), 1)
+    eq_(table_defs[0], """\
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    parent_item_id = Column(ForeignKey('simple_items.id'))
+    top_item_id = Column(ForeignKey('simple_items.id'))
+
+    parent_item = relationship('SimpleItem', remote_side=[id], primaryjoin='parent_item_id == SimpleItem.id')
+    top_item = relationship('SimpleItem', remote_side=[id], primaryjoin='top_item_id == SimpleItem.id')
+""")
+
+
 def test_onetomany_composite():
     testmeta = MetaData()
     Table(

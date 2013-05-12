@@ -77,10 +77,12 @@ def get_constraint_sort_key(constraint):
 
 
 def get_common_fk_constraints(table1, table2):
-    """Returns a list of foreign key constraints the two tables have against each other."""
-    c1 = [c for c in table1.constraints if isinstance(c, ForeignKeyConstraint) and c.elements[0].column.table == table2]
-    c2 = [c for c in table2.constraints if isinstance(c, ForeignKeyConstraint) and c.elements[0].column.table == table1]
-    return c1 + c2
+    """Returns a set of foreign key constraints the two tables have against each other."""
+    c1 = set(c for c in table1.constraints if isinstance(c, ForeignKeyConstraint) and
+             c.elements[0].column.table == table2)
+    c2 = set(c for c in table2.constraints if isinstance(c, ForeignKeyConstraint) and
+             c.elements[0].column.table == table1)
+    return c1.union(c2)
 
 
 def tablename_to_classname(tablename):
@@ -240,13 +242,13 @@ def generate_relationship(classname, used_names, fk_constraint=None, link_table=
         if classname == remote_classname:
             pk_col_names = [col.name for col in fk_constraint.table.primary_key]
             remote_side = 'remote_side=[{0}]'.format(', '.join(pk_col_names))
-        else:
-            # If the two tables share more than one foreign key constraint,
-            # SQLAlchemy needs an explicit primaryjoin to figure out which column(s) to join with
-            common_fk_constraints = get_common_fk_constraints(fk_constraint.table, fk_constraint.elements[0].column.table)
-            if len(common_fk_constraints) > 1:
-                primaryjoin = "primaryjoin='{0} == {1}.{2}'".format(fk_constraint.columns[0], remote_classname,
-                                                                    fk_constraint.elements[0].column.name)
+
+        # If the two tables share more than one foreign key constraint,
+        # SQLAlchemy needs an explicit primaryjoin to figure out which column(s) to join with
+        common_fk_constraints = get_common_fk_constraints(fk_constraint.table, fk_constraint.elements[0].column.table)
+        if len(common_fk_constraints) > 1:
+            primaryjoin = "primaryjoin='{0} == {1}.{2}'".format(fk_constraint.columns[0], remote_classname,
+                                                                fk_constraint.elements[0].column.name)
 
     args = [arg for arg in (repr(remote_classname), remote_side, uselist, secondary, primaryjoin, secondaryjoin) if arg]
     if secondaryjoin:
