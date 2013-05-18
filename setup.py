@@ -1,15 +1,19 @@
 import sys
+import os.path
 
 from setuptools import setup, find_packages
 
 
 extra_requirements = ('argparse',) if sys.version_info < (2, 7) else ()
+here = os.path.dirname(__file__)
+readme_path = os.path.join(here, 'README.rst')
+readme = open(readme_path).read()
 
 setup(
     name='sqlacodegen',
     description='Automatic model code generator for SQLAlchemy',
-    long_description=open('README.rst').read(),
-    version='1.0.0',
+    long_description=readme,
+    version='1.0.0.post1',
     author='Alex Gronholm',
     author_email='sqlacodegen@nextday.fi',
     url='http://pypi.python.org/pypi/sqlacodegen/',
