@@ -13,3 +13,5 @@ syntax: regexp
 ^\.settings$
 syntax: glob
 .tox
+syntax: regexp
+^dist$

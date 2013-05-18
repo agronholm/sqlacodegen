@@ -5,8 +5,8 @@ import re
 from nose.tools import eq_
 from sqlalchemy import *
 
-from sqlcodegen.codegen import (generate_declarative_models, generate_type_code, singular, generate_relationship_name,
-                                generate_table, generate_class)
+from sqlacodegen.codegen import (generate_declarative_models, generate_type_code, singular, generate_relationship_name,
+                                 generate_table, generate_class)
 
 
 if sys.version_info < (3,):

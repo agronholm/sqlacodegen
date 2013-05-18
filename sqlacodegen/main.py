@@ -6,7 +6,7 @@ import sys
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
-from sqlcodegen.codegen import generate_model_code
+from sqlacodegen.codegen import generate_model_code
 
 
 def main():

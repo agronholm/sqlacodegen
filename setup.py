@@ -6,14 +6,15 @@ from setuptools import setup, find_packages
 extra_requirements = ('argparse',) if sys.version_info < (2, 7) else ()
 
 setup(
-    name='sqlcodegen',
+    name='sqlacodegen',
     description='Automatic model code generator for SQLAlchemy',
-    version='1.0.0.pre3',
+    long_description=open('README.rst').read(),
+    version='1.0.0',
     author='Alex Gronholm',
-    author_email='sqlcodegen@nextday.fi',
-    url='http://pypi.python.org/pypi/sqlcodegen/',
+    author_email='sqlacodegen@nextday.fi',
+    url='http://pypi.python.org/pypi/sqlacodegen/',
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Environment :: Console',
@@ -35,7 +36,7 @@ setup(
     zip_safe=False,
     entry_points={
         'console_scripts': [
-            'sqlcodegen=sqlcodegen.main:main'
+            'sqlacodegen=sqlacodegen.main:main'
         ]
     }
 )

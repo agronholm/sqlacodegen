@@ -26,17 +26,17 @@ Installation
 
 To install, do::
 
-    pip install sqlcodegen
+    pip install sqlacodegen
 
 or, failing that::
 
-    easy_install sqlcodegen
+    easy_install sqlacodegen
 
 
 Example usage
 -------------
 
-At the minimum, you have to give sqlcodegen a database URL.
+At the minimum, you have to give sqlacodegen a database URL.
 The URL is passed directly to SQLAlchemy's
 `create_engine() <http://docs.sqlalchemy.org/en/latest/core/engines.html?highlight=create_engine#sqlalchemy.create_engine>`_
 method so please refer to
@@ -45,13 +45,13 @@ for instructions on how to construct a proper URL.
 
 Examples::
 
-    sqlcodegen postgresql:///some_local_db
-    sqlcodegen mysql+oursql://user:password@localhost/dbname
-    sqlcodegen sqlite:///database.db
+    sqlacodegen postgresql:///some_local_db
+    sqlacodegen mysql+oursql://user:password@localhost/dbname
+    sqlacodegen sqlite:///database.db
 
 To see the full list of options::
 
-    sqlcodegen --help
+    sqlacodegen --help
 
 
 Model class naming logic
@@ -105,13 +105,13 @@ Source code
 ===========
 
 The source can be browsed at `Bitbucket
-<http://bitbucket.org/agronholm/sqlcodegen/src/>`_.
+<http://bitbucket.org/agronholm/sqlacodegen/src/>`_.
 
 
 Reporting bugs
 ==============
 
-A `bug tracker <http://bitbucket.org/agronholm/sqlcodegen/issues/>`_
+A `bug tracker <http://bitbucket.org/agronholm/sqlacodegen/issues/>`_
 is provided by bitbucket.org.
 
 
