@@ -221,8 +221,10 @@ def generate_relationship(classname, used_names, fk_constraint=None, link_table=
         if classname == remote_classname:
             pri_pairs = zip(fk_constraints[0].columns, fk_constraints[0].elements)
             sec_pairs = zip(fk_constraints[1].columns, fk_constraints[1].elements)
-            pri_joins = ['{0} == {1}.c.{2}'.format(elem.column.name, link_table.name, col) for col, elem in pri_pairs]
-            sec_joins = ['{0} == {1}.c.{2}'.format(elem.column.name, link_table.name, col) for col, elem in sec_pairs]
+            pri_joins = ['{0}.{1} == {2}.c.{3}'.format(classname, elem.column.name, link_table.name, col)
+                         for col, elem in pri_pairs]
+            sec_joins = ['{0}.{1} == {2}.c.{3}'.format(classname, elem.column.name, link_table.name, col)
+                         for col, elem in sec_pairs]
             primaryjoin = 'primaryjoin=' + (
                 repr('and_({0})'.format(', '.join(pri_joins))) if len(pri_joins) > 1 else repr(pri_joins[0]))
             secondaryjoin = 'secondaryjoin=' + (
@@ -247,8 +249,9 @@ def generate_relationship(classname, used_names, fk_constraint=None, link_table=
         # SQLAlchemy needs an explicit primaryjoin to figure out which column(s) to join with
         common_fk_constraints = get_common_fk_constraints(fk_constraint.table, fk_constraint.elements[0].column.table)
         if len(common_fk_constraints) > 1:
-            primaryjoin = "primaryjoin='{0} == {1}.{2}'".format(fk_constraint.columns[0], remote_classname,
-                                                                fk_constraint.elements[0].column.name)
+            primaryjoin = "primaryjoin='{0}.{1} == {2}.{3}'".format(classname, fk_constraint.columns[0],
+                                                                    remote_classname,
+                                                                    fk_constraint.elements[0].column.name)
 
     args = [arg for arg in (repr(remote_classname), remote_side, uselist, secondary, primaryjoin, secondaryjoin) if arg]
     if secondaryjoin:

@@ -261,8 +261,8 @@ class SimpleItem(Base):
     parent_item_id = Column(ForeignKey('simple_items.id'))
     top_item_id = Column(ForeignKey('simple_items.id'))
 
-    parent_item = relationship('SimpleItem', remote_side=[id], primaryjoin='parent_item_id == SimpleItem.id')
-    top_item = relationship('SimpleItem', remote_side=[id], primaryjoin='top_item_id == SimpleItem.id')
+    parent_item = relationship('SimpleItem', remote_side=[id], primaryjoin='SimpleItem.parent_item_id == SimpleItem.id')
+    top_item = relationship('SimpleItem', remote_side=[id], primaryjoin='SimpleItem.top_item_id == SimpleItem.id')
 """)
 
 
@@ -338,8 +338,8 @@ class SimpleItem(Base):
     parent_container_id = Column(ForeignKey('simple_containers.id'))
     top_container_id = Column(ForeignKey('simple_containers.id'))
 
-    parent_container = relationship('SimpleContainer', primaryjoin='parent_container_id == SimpleContainer.id')
-    top_container = relationship('SimpleContainer', primaryjoin='top_container_id == SimpleContainer.id')
+    parent_container = relationship('SimpleContainer', primaryjoin='SimpleItem.parent_container_id == SimpleContainer.id')
+    top_container = relationship('SimpleContainer', primaryjoin='SimpleItem.top_container_id == SimpleContainer.id')
 """)
 
 
@@ -447,8 +447,8 @@ class SimpleItem(Base):
     parents = relationship(
         'SimpleItem',
         secondary='child_items',
-        primaryjoin='id == child_items.c.child_id',
-        secondaryjoin='id == child_items.c.parent_id'
+        primaryjoin='SimpleItem.id == child_items.c.child_id',
+        secondaryjoin='SimpleItem.id == child_items.c.parent_id'
     )
 """)
     eq_(table_defs[1], """\
