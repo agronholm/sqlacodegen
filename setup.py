@@ -13,7 +13,7 @@ setup(
     name='sqlacodegen',
     description='Automatic model code generator for SQLAlchemy',
     long_description=readme,
-    version='1.0.0.post2',
+    version='1.1.0.pre1',
     author='Alex Gronholm',
     author_email='sqlacodegen@nextday.fi',
     url='http://pypi.python.org/pypi/sqlacodegen/',

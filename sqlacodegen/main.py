@@ -6,7 +6,7 @@ import sys
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
-from sqlacodegen.codegen import generate_model_code
+from sqlacodegen.codegen import CodeGenerator
 
 
 def main():
@@ -25,4 +25,5 @@ def main():
     metadata = MetaData(engine)
     tables = args.tables.split(',') if args.tables else None
     metadata.reflect(engine, args.schema, not args.noviews, tables)
-    print(generate_model_code(metadata, args.noindexes, args.noconstraints), file=args.outfile)
+    generator = CodeGenerator(metadata, args.noindexes, args.noconstraints)
+    generator.render(args.outfile)
