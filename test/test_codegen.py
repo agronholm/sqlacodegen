@@ -7,6 +7,7 @@ from nose.tools import eq_
 from sqlalchemy import *
 
 from sqlacodegen.codegen import CodeGenerator, _singular
+from sqlalchemy.dialects.postgresql.base import DOUBLE_PRECISION
 
 
 if sys.version_info < (3,):
@@ -99,6 +100,29 @@ metadata = MetaData()
 t_simple_items = Table(
     'simple_items', metadata,
     Column('enum', Enum('A', "\\\\'B", 'C'))
+)
+""")
+
+    def test_column_adaptation(self):
+        testmeta = MetaData()
+        Table(
+            'simple_items', testmeta,
+            Column('id', BIGINT),
+            Column('length', DOUBLE_PRECISION)
+        )
+
+        eq_(self.generate_code(testmeta), """\
+# coding: utf-8
+from sqlalchemy import BigInteger, Column, Float, MetaData, Table
+
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('id', BigInteger),
+    Column('length', Float)
 )
 """)
 

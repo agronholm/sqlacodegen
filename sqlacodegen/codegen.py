@@ -73,18 +73,7 @@ def _get_common_fk_constraints(table1, table2):
 
 
 def _render_column_type(coltype):
-    # Figure out the most reasonable column type name to use (ie. String instead of VARCHAR)
-    cls = coltype.__class__
-    typename = cls.__class__.__name__
-    for supercls in cls.__mro__:
-        if hasattr(supercls, '__visit_name__'):
-            typename = supercls.__name__
-        if supercls.__name__ != supercls.__name__.upper():
-            break
-
-    text = typename
     args = []
-
     if isinstance(coltype, Enum):
         args.extend(repr(arg) for arg in coltype.enums)
         if coltype.name is not None:
@@ -105,6 +94,7 @@ def _render_column_type(coltype):
             else:
                 args.append(repr(value))
 
+    text = coltype.__class__.__name__
     if args:
         text += '({0})'.format(', '.join(args))
 
@@ -130,6 +120,17 @@ class Model(object):
     def __init__(self, table):
         super(Model, self).__init__()
         self.table = table
+
+        # Adapt column types to the most reasonable generic types (ie. VARCHAR -> String)
+        for column in table.columns:
+            cls = column.type.__class__
+            for supercls in cls.__mro__:
+                if hasattr(supercls, '__visit_name__'):
+                    cls = supercls
+                if supercls.__name__ != supercls.__name__.upper():
+                    break
+            
+            column.type = column.type.adapt(cls)
 
     def add_imports(self, collector):
         if self.table.columns:
