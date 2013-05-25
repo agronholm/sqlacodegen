@@ -6,6 +6,8 @@ Version history
 
 * Revamped the API
 
+* Added automatic detection of joined-table inheritance
+
 * Fixed missing class name prefix in primary/secondary joins in relationships
 
 * Instead of wildcard imports, generate explicit imports dynamically (fixes #1)

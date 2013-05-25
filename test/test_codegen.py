@@ -1,13 +1,16 @@
 from __future__ import unicode_literals, division, print_function, absolute_import
 from io import StringIO
-import sys  # @UnusedImport
+import sys
 import re
 
 from nose.tools import eq_
-from sqlalchemy import *
+from sqlalchemy.engine import create_engine
+from sqlalchemy.schema import MetaData, Table, Column, CheckConstraint, UniqueConstraint, Index, ForeignKeyConstraint
+from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
+from sqlalchemy.dialects.postgresql.base import BIGINT, DOUBLE_PRECISION, BOOLEAN, ENUM
+from sqlalchemy.dialects.mysql.base import TINYINT
 
 from sqlacodegen.codegen import CodeGenerator, _singular
-from sqlalchemy.dialects.postgresql.base import DOUBLE_PRECISION
 
 
 if sys.version_info < (3,):
@@ -28,22 +31,24 @@ def test_singular_ss():
 
 
 class TestCodeGenerator(object):
-    def generate_code(self, metadata, **kwargs):
-        codegen = CodeGenerator(metadata, **kwargs)
+    def setup(self):
+        self.metadata = MetaData(create_engine('sqlite:///'))
+    
+    def generate_code(self, **kwargs):
+        codegen = CodeGenerator(self.metadata, **kwargs)
         sio = StringIO()
         codegen.render(sio)
         return remove_unicode_prefixes(sio.getvalue())
 
     def test_fancy_coltypes(self):
-        testmeta = MetaData(create_engine('sqlite:///'))
         Table(
-            'simple_items', testmeta,
-            Column('enum', Enum('A', 'B', name='blah')),
-            Column('bool', Boolean),
-            Column('number', Numeric(10, asdecimal=False)),
+            'simple_items', self.metadata,
+            Column('enum', ENUM('A', 'B', name='blah')),
+            Column('bool', BOOLEAN),
+            Column('number', NUMERIC(10, asdecimal=False)),
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Boolean, Column, Enum, MetaData, Numeric, Table
 
@@ -60,14 +65,17 @@ t_simple_items = Table(
 """)
 
     def test_boolean_detection(self):
-        testmeta = MetaData(create_engine('sqlite:///'))
         Table(
-            'simple_items', testmeta,
-            Column('bool', SmallInteger),
-            CheckConstraint('simple_items.bool IN (0, 1)')
+            'simple_items', self.metadata,
+            Column('bool1', INTEGER),
+            Column('bool2', SMALLINT),
+            Column('bool3', TINYINT),
+            CheckConstraint('simple_items.bool1 IN (0, 1)'),
+            CheckConstraint('simple_items.bool2 IN (0, 1)'),
+            CheckConstraint('simple_items.bool3 IN (0, 1)')
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Boolean, Column, MetaData, Table
 
@@ -77,19 +85,20 @@ metadata = MetaData()
 
 t_simple_items = Table(
     'simple_items', metadata,
-    Column('bool', Boolean)
+    Column('bool1', Boolean),
+    Column('bool2', Boolean),
+    Column('bool3', Boolean)
 )
 """)
 
     def test_enum_detection(self):
-        testmeta = MetaData(create_engine('sqlite:///'))
         Table(
-            'simple_items', testmeta,
-            Column('enum', String),
+            'simple_items', self.metadata,
+            Column('enum', VARCHAR(255)),
             CheckConstraint(r"simple_items.enum IN ('A', '\'B', 'C')")
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, Enum, MetaData, Table
 
@@ -104,14 +113,13 @@ t_simple_items = Table(
 """)
 
     def test_column_adaptation(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
+            'simple_items', self.metadata,
             Column('id', BIGINT),
             Column('length', DOUBLE_PRECISION)
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import BigInteger, Column, Float, MetaData, Table
 
@@ -127,16 +135,15 @@ t_simple_items = Table(
 """)
 
     def test_constraints_table(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id', Integer),
-            Column('number', Integer),
+            'simple_items', self.metadata,
+            Column('id', INTEGER),
+            Column('number', INTEGER),
             CheckConstraint('number > 0'),
             UniqueConstraint('id', 'number')
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table, UniqueConstraint
 
@@ -154,16 +161,15 @@ t_simple_items = Table(
 """)
 
     def test_constraints_class(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id', Integer, primary_key=True),
-            Column('number', Integer),
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('number', INTEGER),
             CheckConstraint('number > 0'),
             UniqueConstraint('id', 'number')
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
@@ -185,15 +191,14 @@ class SimpleItem(Base):
 """)
 
     def test_noindexes_table(self):
-        testmeta = MetaData()
         simple_items = Table(
-            'simple_items', testmeta,
-            Column('number', Integer),
+            'simple_items', self.metadata,
+            Column('number', INTEGER),
             CheckConstraint('number > 2')
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
 
-        eq_(self.generate_code(testmeta, noindexes=True), """\
+        eq_(self.generate_code(noindexes=True), """\
 # coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table
 
@@ -209,15 +214,14 @@ t_simple_items = Table(
 """)
 
     def test_noconstraints_table(self):
-        testmeta = MetaData()
         simple_items = Table(
-            'simple_items', testmeta,
-            Column('number', Integer),
+            'simple_items', self.metadata,
+            Column('number', INTEGER),
             CheckConstraint('number > 2')
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
 
-        eq_(self.generate_code(testmeta, noconstraints=True), """\
+        eq_(self.generate_code(noconstraints=True), """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, Table
 
@@ -232,17 +236,16 @@ t_simple_items = Table(
 """)
 
     def test_indexes_table(self):
-        testmeta = MetaData()
         simple_items = Table(
-            'simple_items', testmeta,
-            Column('id', Integer),
-            Column('number', Integer),
-            Column('text', String)
+            'simple_items', self.metadata,
+            Column('id', INTEGER),
+            Column('number', INTEGER),
+            Column('text', VARCHAR)
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
         simple_items.indexes.add(Index('idx_text_number', simple_items.c.text, simple_items.c.number))
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, Index, Integer, MetaData, String, Table
 
@@ -260,17 +263,16 @@ t_simple_items = Table(
 """)
 
     def test_indexes_class(self):
-        testmeta = MetaData()
         simple_items = Table(
-            'simple_items', testmeta,
-            Column('id', Integer, primary_key=True),
-            Column('number', Integer),
-            Column('text', String)
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('number', INTEGER),
+            Column('text', VARCHAR)
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
         simple_items.indexes.add(Index('idx_text_number', simple_items.c.text, simple_items.c.number))
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, Index, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
@@ -292,19 +294,18 @@ class SimpleItem(Base):
 """)
 
     def test_onetomany(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id', Integer, primary_key=True),
-            Column('container_id', Integer),
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('container_id', INTEGER),
             ForeignKeyConstraint(['container_id'], ['simple_containers.id']),
         )
         Table(
-            'simple_containers', testmeta,
-            Column('id', Integer, primary_key=True)
+            'simple_containers', self.metadata,
+            Column('id', INTEGER, primary_key=True)
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -331,15 +332,14 @@ class SimpleItem(Base):
 """)
 
     def test_onetomany_selfref(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id', Integer, primary_key=True),
-            Column('parent_item_id', Integer),
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('parent_item_id', INTEGER),
             ForeignKeyConstraint(['parent_item_id'], ['simple_items.id'])
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -360,17 +360,16 @@ class SimpleItem(Base):
 """)
 
     def test_onetomany_selfref_multi(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id', Integer, primary_key=True),
-            Column('parent_item_id', Integer),
-            Column('top_item_id', Integer),
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('parent_item_id', INTEGER),
+            Column('top_item_id', INTEGER),
             ForeignKeyConstraint(['parent_item_id'], ['simple_items.id']),
             ForeignKeyConstraint(['top_item_id'], ['simple_items.id'])
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -393,21 +392,20 @@ class SimpleItem(Base):
 """)
 
     def test_onetomany_composite(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id', Integer, primary_key=True),
-            Column('container_id1', Integer),
-            Column('container_id2', Integer),
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('container_id1', INTEGER),
+            Column('container_id2', INTEGER),
             ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', 'simple_containers.id2'])
         )
         Table(
-            'simple_containers', testmeta,
-            Column('id1', Integer, primary_key=True),
-            Column('id2', Integer, primary_key=True)
+            'simple_containers', self.metadata,
+            Column('id1', INTEGER, primary_key=True),
+            Column('id2', INTEGER, primary_key=True)
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKeyConstraint, Integer
 from sqlalchemy.orm import relationship
@@ -439,21 +437,20 @@ class SimpleItem(Base):
 """)
 
     def test_onetomany_multiref(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id', Integer, primary_key=True),
-            Column('parent_container_id', Integer),
-            Column('top_container_id', Integer),
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('parent_container_id', INTEGER),
+            Column('top_container_id', INTEGER),
             ForeignKeyConstraint(['parent_container_id'], ['simple_containers.id']),
             ForeignKeyConstraint(['top_container_id'], ['simple_containers.id'])
         )
         Table(
-            'simple_containers', testmeta,
-            Column('id', Integer, primary_key=True)
+            'simple_containers', self.metadata,
+            Column('id', INTEGER, primary_key=True)
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -482,20 +479,19 @@ class SimpleItem(Base):
 """)
 
     def test_onetoone(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id', Integer, primary_key=True),
-            Column('other_item_id', Integer),
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('other_item_id', INTEGER),
             ForeignKeyConstraint(['other_item_id'], ['other_items.id']),
             UniqueConstraint('other_item_id')
         )
         Table(
-            'other_items', testmeta,
-            Column('id', Integer, primary_key=True)
+            'other_items', self.metadata,
+            Column('id', INTEGER, primary_key=True)
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -522,24 +518,23 @@ class SimpleItem(Base):
 """)
 
     def test_manytomany(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id', Integer, primary_key=True)
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True)
         )
         Table(
-            'simple_containers', testmeta,
-            Column('id', Integer, primary_key=True)
+            'simple_containers', self.metadata,
+            Column('id', INTEGER, primary_key=True)
         )
         Table(
-            'container_items', testmeta,
-            Column('item_id', Integer),
-            Column('container_id', Integer),
+            'container_items', self.metadata,
+            Column('item_id', INTEGER),
+            Column('container_id', INTEGER),
             ForeignKeyConstraint(['item_id'], ['simple_items.id']),
             ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import relationship
@@ -572,20 +567,19 @@ class SimpleItem(Base):
 """)
 
     def test_manytomany_selfref(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id', Integer, primary_key=True)
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True)
         )
         Table(
-            'child_items', testmeta,
-            Column('parent_id', Integer),
-            Column('child_id', Integer),
+            'child_items', self.metadata,
+            Column('parent_id', INTEGER),
+            Column('child_id', INTEGER),
             ForeignKeyConstraint(['parent_id'], ['simple_items.id']),
             ForeignKeyConstraint(['child_id'], ['simple_items.id'])
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import relationship
@@ -617,28 +611,27 @@ class SimpleItem(Base):
 """)
 
     def test_manytomany_composite(self):
-        testmeta = MetaData()
         Table(
-            'simple_items', testmeta,
-            Column('id1', Integer, primary_key=True),
-            Column('id2', Integer, primary_key=True)
+            'simple_items', self.metadata,
+            Column('id1', INTEGER, primary_key=True),
+            Column('id2', INTEGER, primary_key=True)
         )
         Table(
-            'simple_containers', testmeta,
-            Column('id1', Integer, primary_key=True),
-            Column('id2', Integer, primary_key=True)
+            'simple_containers', self.metadata,
+            Column('id1', INTEGER, primary_key=True),
+            Column('id2', INTEGER, primary_key=True)
         )
         Table(
-            'container_items', testmeta,
-            Column('item_id1', Integer),
-            Column('item_id2', Integer),
-            Column('container_id1', Integer),
-            Column('container_id2', Integer),
+            'container_items', self.metadata,
+            Column('item_id1', INTEGER),
+            Column('item_id2', INTEGER),
+            Column('container_id1', INTEGER),
+            Column('container_id2', INTEGER),
             ForeignKeyConstraint(['item_id1', 'item_id2'], ['simple_items.id1', 'simple_items.id2']),
             ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', 'simple_containers.id2'])
         )
 
-        eq_(self.generate_code(testmeta), """\
+        eq_(self.generate_code(), """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKeyConstraint, Integer, Table
 from sqlalchemy.orm import relationship
@@ -674,4 +667,54 @@ class SimpleItem(Base):
 
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
+""")
+
+    def test_joined_inheritance(self):
+        Table(
+            'simple_sub_items', self.metadata,
+            Column('simple_items_id', INTEGER, primary_key=True),
+            Column('data3', INTEGER),
+            ForeignKeyConstraint(['simple_items_id'], ['simple_items.super_item_id'])
+        )
+        Table(
+            'simple_super_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('data1', INTEGER)
+        )
+        Table(
+            'simple_items', self.metadata,
+            Column('super_item_id', INTEGER, primary_key=True),
+            Column('data2', INTEGER),
+            ForeignKeyConstraint(['super_item_id'], ['simple_super_items.id'])
+        )
+
+        eq_(self.generate_code(), """\
+# coding: utf-8
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleSuperItem(Base):
+    __tablename__ = 'simple_super_items'
+
+    id = Column(Integer, primary_key=True)
+    data1 = Column(Integer)
+
+
+class SimpleItem(SimpleSuperItem):
+    __tablename__ = 'simple_items'
+
+    super_item_id = Column(ForeignKey('simple_super_items.id'), primary_key=True)
+    data2 = Column(Integer)
+
+
+class SimpleSubItem(SimpleItem):
+    __tablename__ = 'simple_sub_items'
+
+    simple_items_id = Column(ForeignKey('simple_items.super_item_id'), primary_key=True)
+    data3 = Column(Integer)
 """)

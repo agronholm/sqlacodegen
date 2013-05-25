@@ -85,6 +85,10 @@ def _render_column_type(coltype):
         missing = object()
         use_kwargs = False
         for attr in argspec.args[1:]:
+            # Remove annoyances like _warn_on_bytestring
+            if attr.startswith('_'):
+                continue
+
             value = getattr(coltype, attr, missing)
             default = defaults.get(attr, missing)
             if value is missing or value == default:
@@ -99,6 +103,56 @@ def _render_column_type(coltype):
         text += '({0})'.format(', '.join(args))
 
     return text
+
+
+def _render_column(column, show_name):
+    kwarg = []
+    is_sole_pk = column.primary_key and len(column.table.primary_key) == 1
+    dedicated_fks = [c for c in column.foreign_keys if len(c.constraint.columns) == 1]
+    is_unique = any(isinstance(c, UniqueConstraint) and set(c.columns) == set([column])
+                    for c in column.table.constraints)
+    has_index = any(set(i.columns) == set([column]) for i in column.table.indexes)
+
+    if column.key != column.name:
+        kwarg.append('key')
+    if column.primary_key:
+        kwarg.append('primary_key')
+    if not column.nullable and not is_sole_pk:
+        kwarg.append('nullable')
+    if is_unique:
+        column.unique = True
+        kwarg.append('unique')
+    elif has_index:
+        column.index = True
+        kwarg.append('index')
+    if column.server_default and not is_sole_pk:
+        column.server_default = _get_compiled_expression(column.server_default.arg)
+        kwarg.append('server_default')
+
+    return 'Column({0})'.format(', '.join(
+        ([repr(column.name)] if show_name else []) +
+        ([_render_column_type(column.type)] if not dedicated_fks else []) +
+        [repr(x) for x in dedicated_fks] +
+        [repr(x) for x in column.constraints] +
+        ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg]))
+
+
+def _render_constraint(constraint):
+    if isinstance(constraint, ForeignKeyConstraint):
+        local_columns = constraint.columns
+        remote_columns = ['{0}.{1}'.format(fk.column.table.name, fk.column.name)
+                          for fk in constraint.elements]
+        return 'ForeignKeyConstraint({0!r}, {1!r})'.format(local_columns, remote_columns)
+    elif isinstance(constraint, CheckConstraint):
+        return 'CheckConstraint({0!r})'.format(_get_compiled_expression(constraint.sqltext))
+    elif isinstance(constraint, UniqueConstraint):
+        columns = [repr(col.name) for col in constraint.columns]
+        return 'UniqueConstraint({0})'.format(', '.join(columns))
+
+
+def _render_index(index):
+    columns = [repr(col.name) for col in index.columns]
+    return 'Index({0!r}, {1})'.format(index.name, ', '.join(columns))
 
 
 class ImportCollector(OrderedDict):
@@ -129,7 +183,7 @@ class Model(object):
                     cls = supercls
                 if supercls.__name__ != supercls.__name__.upper():
                     break
-            
+
             column.type = column.type.adapt(cls)
 
     def add_imports(self, collector):
@@ -155,56 +209,6 @@ class Model(object):
             if len(index.columns) > 1:
                 collector.add_import(index)
 
-    @staticmethod
-    def _render_column(column, show_name):
-        kwarg = []
-        is_sole_pk = column.primary_key and len(column.table.primary_key) == 1
-        dedicated_fks = [c for c in column.foreign_keys if len(c.constraint.columns) == 1]
-        is_unique = any(isinstance(c, UniqueConstraint) and set(c.columns) == set([column])
-                        for c in column.table.constraints)
-        has_index = any(set(i.columns) == set([column]) for i in column.table.indexes)
-
-        if column.key != column.name:
-            kwarg.append('key')
-        if column.primary_key:
-            kwarg.append('primary_key')
-        if not column.nullable and not is_sole_pk:
-            kwarg.append('nullable')
-        if is_unique:
-            column.unique = True
-            kwarg.append('unique')
-        elif has_index:
-            column.index = True
-            kwarg.append('index')
-        if column.server_default and not is_sole_pk:
-            column.server_default = _get_compiled_expression(column.server_default.arg)
-            kwarg.append('server_default')
-
-        return 'Column({0})'.format(', '.join(
-            ([repr(column.name)] if show_name else []) +
-            ([_render_column_type(column.type)] if not dedicated_fks else []) +
-            [repr(x) for x in dedicated_fks] +
-            [repr(x) for x in column.constraints] +
-            ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg]))
-
-    @staticmethod
-    def _render_constraint(constraint):
-        if isinstance(constraint, ForeignKeyConstraint):
-            local_columns = constraint.columns
-            remote_columns = ['{0}.{1}'.format(fk.column.table.name, fk.column.name)
-                              for fk in constraint.elements]
-            return 'ForeignKeyConstraint({0!r}, {1!r})'.format(local_columns, remote_columns)
-        elif isinstance(constraint, CheckConstraint):
-            return 'CheckConstraint({0!r})'.format(_get_compiled_expression(constraint.sqltext))
-        elif isinstance(constraint, UniqueConstraint):
-            columns = [repr(col.name) for col in constraint.columns]
-            return 'UniqueConstraint({0})'.format(', '.join(columns))
-
-    @staticmethod
-    def _render_index(index):
-        columns = [repr(col.name) for col in index.columns]
-        return 'Index({0!r}, {1})'.format(index.name, ', '.join(columns))
-
 
 class ModelTable(Model):
     def add_imports(self, collector):
@@ -215,24 +219,26 @@ class ModelTable(Model):
         text = 't_{0} = Table(\n    {0!r}, metadata,\n'.format(self.table.name)
 
         for column in self.table.columns:
-            text += '    {0},\n'.format(self._render_column(column, True))
+            text += '    {0},\n'.format(_render_column(column, True))
 
         for constraint in sorted(self.table.constraints, key=_get_constraint_sort_key):
             if isinstance(constraint, PrimaryKeyConstraint):
                 continue
             if isinstance(constraint, (ForeignKeyConstraint, UniqueConstraint)) and len(constraint.columns) == 1:
                 continue
-            text += '    {0},\n'.format(self._render_constraint(constraint))
+            text += '    {0},\n'.format(_render_constraint(constraint))
 
         for index in self.table.indexes:
             if len(index.columns) > 1:
-                text += '    {0},\n'.format(self._render_index(index))
+                text += '    {0},\n'.format(_render_index(index))
 
         return text.rstrip('\n,') + '\n)'
 
 
 class ModelClass(Model):
-    def __init__(self, table, association_tables):
+    parent_name = 'Base'
+
+    def __init__(self, table, association_tables, detect_joined):
         super(ModelClass, self).__init__(table)
         self.name = _tablename_to_classname(table.name)
         self.children = []
@@ -244,10 +250,14 @@ class ModelClass(Model):
             self.attributes[attrname] = column
 
         # Add many-to-one relationships
+        pk_column_names = set(col.name for col in table.primary_key.columns)
         for constraint in sorted(table.constraints, key=_get_constraint_sort_key):
             if isinstance(constraint, ForeignKeyConstraint):
                 target_cls = _tablename_to_classname(constraint.elements[0].column.table.name)
-                self._add_relationship(ManyToOneRelationship(self.name, target_cls, constraint))
+                if detect_joined and self.parent_name == 'Base' and set(constraint.columns) == pk_column_names:
+                    self.parent_name = target_cls
+                else:
+                    self._add_relationship(ManyToOneRelationship(self.name, target_cls, constraint))
 
         # Add many-to-many relationships
         for association_table in association_tables:
@@ -271,39 +281,43 @@ class ModelClass(Model):
         for child in self.children:
             child.add_imports(collector)
 
-    def render(self, parentname='Base'):
-        text = 'class {0}({1}):\n'.format(self.name, parentname)
+    def render(self):
+        text = 'class {0}({1}):\n'.format(self.name, self.parent_name)
         text += '    __tablename__ = {0!r}\n'.format(self.table.name)
 
+        # Render constraints and indexes as __table_args__
         table_args = []
         for constraint in sorted(self.table.constraints, key=_get_constraint_sort_key):
             if isinstance(constraint, PrimaryKeyConstraint):
                 continue
             if isinstance(constraint, (ForeignKeyConstraint, UniqueConstraint)) and len(constraint.columns) == 1:
                 continue
-            table_args.append(self._render_constraint(constraint))
+            table_args.append(_render_constraint(constraint))
         for index in self.table.indexes:
             if len(index.columns) > 1:
-                table_args.append(self._render_index(index))
+                table_args.append(_render_index(index))
         if table_args:
             if len(table_args) == 1:
                 table_args[0] += ','
             text += '    __table_args__ = (\n        {0}\n    )\n'.format(',\n        '.join(table_args))
 
+        # Render columns
         text += '\n'
         for attr, column in self.attributes.items():
             if isinstance(column, Column):
                 show_name = attr != column.name
-                text += '    {0} = {1}\n'.format(attr, self._render_column(column, show_name))
+                text += '    {0} = {1}\n'.format(attr, _render_column(column, show_name))
 
+        # Render relationships
         if any(isinstance(value, Relationship) for value in self.attributes.values()):
             text += '\n'
         for attr, relationship in self.attributes.items():
             if isinstance(relationship, Relationship):
                 text += '    {0} = {1}\n'.format(attr, relationship.render())
 
+        # Render subclasses
         for child_class in self.children:
-            text += '\n' + child_class.render(self.classname)
+            text += '\n\n' + child_class.render()
 
         return text
 
@@ -396,10 +410,8 @@ class CodeGenerator(object):
     header = '# coding: utf-8'
     footer = ''
 
-    def __init__(self, metadata, noindexes=False, noconstraints=False):
+    def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False):
         super(CodeGenerator, self).__init__()
-        self.models = []
-        self.collector = ImportCollector()
 
         # Pick association tables from the metadata into their own set, don't process them normally
         links = defaultdict(lambda: [])
@@ -413,6 +425,9 @@ class CodeGenerator(object):
                 links[tablename].append(table)
 
         # Iterate through the tables and create model classes when possible
+        self.models = []
+        self.collector = ImportCollector()
+        classes = {}
         for table in sorted(metadata.tables.values(), key=lambda t: t.name):
             # Support for Alembic and sqlalchemy-migrate -- never expose the schema version tables
             if table.name in ('alembic_version', 'migrate_version'):
@@ -431,6 +446,8 @@ class CodeGenerator(object):
                 for constraint in table.constraints.copy():
                     if isinstance(constraint, CheckConstraint):
                         sqltext = _get_compiled_expression(constraint.sqltext)
+
+                        # Turn any integer-like column with a CheckConstraint like "column IN (0, 1)" into a Boolean
                         match = _re_boolean_check_constraint.match(sqltext)
                         if match:
                             colname = match.group(1)
@@ -438,6 +455,7 @@ class CodeGenerator(object):
                             table.c[colname].type = Boolean()
                             continue
 
+                        # Turn any string-type column with a CheckConstraint like "column IN (...)" into an Enum
                         match = _re_enum_check_constraint.match(sqltext)
                         if match:
                             colname = match.group(1)
@@ -453,11 +471,19 @@ class CodeGenerator(object):
             if not table.primary_key or table.name in association_tables:
                 model = ModelTable(table)
             else:
-                model = ModelClass(table, links[table.name])
+                model = ModelClass(table, links[table.name], not nojoined)
+                classes[model.name] = model
 
             self.models.append(model)
             model.add_imports(self.collector)
 
+        # Nest inherited classes in their superclasses to ensure proper ordering
+        for model in classes.values():
+            if model.parent_name != 'Base':
+                classes[model.parent_name].children.append(model)
+                self.models.remove(model)
+
+        # Add either the MetaData or declarative_base import depending on whether there are mapped classes or not
         if not any(isinstance(model, ModelClass) for model in self.models):
             self.collector.add_literal_import('sqlalchemy', 'MetaData')
         else:
