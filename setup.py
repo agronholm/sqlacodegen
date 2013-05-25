@@ -4,7 +4,13 @@ import os.path
 from setuptools import setup, find_packages
 
 
-extra_requirements = ('argparse',) if sys.version_info < (2, 7) else ()
+extra_requirements = ()
+dependency_links = []
+if sys.version_info < (2, 7):
+    extra_requirements = ('argparse',)
+elif sys.version_info > (3,):
+    dependency_links = ['https://github.com/benthor/inflect.py/archive/master.zip#egg=inflect-0.2.3']
+
 here = os.path.dirname(__file__)
 readme_path = os.path.join(here, 'README.rst')
 readme = open(readme_path).read()
@@ -13,7 +19,7 @@ setup(
     name='sqlacodegen',
     description='Automatic model code generator for SQLAlchemy',
     long_description=readme,
-    version='1.1.0.pre2',
+    version='1.1.0.pre3',
     author='Alex Gronholm',
     author_email='sqlacodegen@nextday.fi',
     url='http://pypi.python.org/pypi/sqlacodegen/',
@@ -34,7 +40,9 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=(
         'sqlalchemy >= 0.6.0',
+        'inflect >= 0.2.0'
     ) + extra_requirements,
+    dependency_links=dependency_links,
     test_suite='nose.collector',
     tests_require=['nose'],
     zip_safe=False,

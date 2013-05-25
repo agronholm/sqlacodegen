@@ -10,7 +10,7 @@ from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
 from sqlalchemy.dialects.postgresql.base import BIGINT, DOUBLE_PRECISION, BOOLEAN, ENUM
 from sqlalchemy.dialects.mysql.base import TINYINT
 
-from sqlacodegen.codegen import CodeGenerator, _singular
+from sqlacodegen.codegen import CodeGenerator
 
 
 if sys.version_info < (3,):
@@ -20,14 +20,6 @@ if sys.version_info < (3,):
         return unicode_re.sub(r"\1\2\1", text)
 else:
     remove_unicode_prefixes = lambda text: text
-
-
-def test_singular_ies():
-    eq_(_singular('bunnies'), 'bunny')
-
-
-def test_singular_ss():
-    eq_(_singular('address'), 'address')
 
 
 class TestCodeGenerator(object):

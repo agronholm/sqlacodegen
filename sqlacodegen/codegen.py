@@ -11,6 +11,7 @@ from sqlalchemy import (Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckC
 from sqlalchemy.util import OrderedDict
 from sqlalchemy.types import Boolean, String
 import sqlalchemy
+import inflect
 
 try:
     from sqlalchemy.sql.expression import TextClause
@@ -23,18 +24,11 @@ _re_boolean_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \(0, 1\)")
 _re_enum_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 
-
-def _singular(plural):
-    """A feeble attempt at converting plural English nouns into singular form."""
-    if plural.endswith('ies'):
-        return plural[:-3] + 'y'
-    if plural.endswith('s') and not plural.endswith('ss'):
-        return plural[:-1]
-    return plural
+inflect_engine = inflect.engine()
 
 
 def _tablename_to_classname(tablename):
-    return _singular(''.join(part.capitalize() for part in tablename.split('_')))
+    return inflect_engine.singular_noun(''.join(part.capitalize() for part in tablename.split('_')))
 
 
 def _get_compiled_expression(statement):
@@ -358,7 +352,7 @@ class ManyToOneRelationship(Relationship):
 
         colname = constraint.columns[0]
         tablename = constraint.elements[0].column.table.name
-        self.preferred_name = _singular(tablename) if not colname.endswith('_id') else colname[:-3]
+        self.preferred_name = inflect_engine.singular_noun(tablename) if not colname.endswith('_id') else colname[:-3]
 
         # Add uselist=False to One-to-One relationships
         if any(isinstance(c, (PrimaryKeyConstraint, UniqueConstraint)) and

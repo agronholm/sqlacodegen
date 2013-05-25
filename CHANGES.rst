@@ -4,13 +4,13 @@ Version history
 1.1.0
 -----
 
-* Revamped the API
-
 * Added automatic detection of joined-table inheritance
 
 * Fixed missing class name prefix in primary/secondary joins in relationships
 
 * Instead of wildcard imports, generate explicit imports dynamically (fixes #1)
+
+* Use the inflect library to produce better guesses for table to class name conversion
 
 * Automatically detect Boolean columns based on CheckConstraints
 
