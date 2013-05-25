@@ -409,7 +409,7 @@ class CodeGenerator(object):
 
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False, noinflect=False):
         super(CodeGenerator, self).__init__()
-        
+
         if noinflect:
             inflect_engine = _DummyInflectEngine()
         else:
