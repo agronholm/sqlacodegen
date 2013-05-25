@@ -15,6 +15,7 @@ Features
 * Produces declarative code that almost looks like it was hand written
 * Produces `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ compliant code
 * Accurately determines relationships, including many-to-many, one-to-one
+* Automatically detects joined table inheritance
 * Excellent test coverage
 
 
