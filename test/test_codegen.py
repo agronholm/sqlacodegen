@@ -710,3 +710,25 @@ class SimpleSubItem(SimpleItem):
     simple_items_id = Column(ForeignKey('simple_items.super_item_id'), primary_key=True)
     data3 = Column(Integer)
 """)
+
+    def test_no_inflect(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+
+        eq_(self.generate_code(noinflect=True), """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+""")

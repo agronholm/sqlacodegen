@@ -11,7 +11,6 @@ from sqlalchemy import (Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckC
 from sqlalchemy.util import OrderedDict
 from sqlalchemy.types import Boolean, String
 import sqlalchemy
-import inflect
 
 try:
     from sqlalchemy.sql.expression import TextClause
@@ -24,11 +23,10 @@ _re_boolean_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \(0, 1\)")
 _re_enum_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 
-inflect_engine = inflect.engine()
 
-
-def _tablename_to_classname(tablename):
-    return inflect_engine.singular_noun(''.join(part.capitalize() for part in tablename.split('_')))
+class _DummyInflectEngine(object):
+    def singular_noun(self, noun):
+        return noun
 
 
 def _get_compiled_expression(statement):
@@ -232,9 +230,9 @@ class ModelTable(Model):
 class ModelClass(Model):
     parent_name = 'Base'
 
-    def __init__(self, table, association_tables, detect_joined):
+    def __init__(self, table, association_tables, inflect_engine, detect_joined):
         super(ModelClass, self).__init__(table)
-        self.name = _tablename_to_classname(table.name)
+        self.name = self._tablename_to_classname(table.name, inflect_engine)
         self.children = []
         self.attributes = OrderedDict()
 
@@ -247,18 +245,23 @@ class ModelClass(Model):
         pk_column_names = set(col.name for col in table.primary_key.columns)
         for constraint in sorted(table.constraints, key=_get_constraint_sort_key):
             if isinstance(constraint, ForeignKeyConstraint):
-                target_cls = _tablename_to_classname(constraint.elements[0].column.table.name)
+                target_cls = self._tablename_to_classname(constraint.elements[0].column.table.name, inflect_engine)
                 if detect_joined and self.parent_name == 'Base' and set(constraint.columns) == pk_column_names:
                     self.parent_name = target_cls
                 else:
-                    self._add_relationship(ManyToOneRelationship(self.name, target_cls, constraint))
+                    self._add_relationship(ManyToOneRelationship(self.name, target_cls, constraint, inflect_engine))
 
         # Add many-to-many relationships
         for association_table in association_tables:
             fk_constraints = [c for c in association_table.constraints if isinstance(c, ForeignKeyConstraint)]
             fk_constraints.sort(key=_get_constraint_sort_key)
-            target_cls = _tablename_to_classname(fk_constraints[1].elements[0].column.table.name)
+            target_cls = self._tablename_to_classname(fk_constraints[1].elements[0].column.table.name, inflect_engine)
             self._add_relationship(ManyToManyRelationship(self.name, target_cls, association_table))
+
+    @staticmethod
+    def _tablename_to_classname(tablename, inflect_engine):
+        camel_case_name = ''.join(part.capitalize() for part in tablename.split('_'))
+        return inflect_engine.singular_noun(camel_case_name) or camel_case_name
 
     def _add_relationship(self, relationship):
         for attrname in relationship.suggested_names:
@@ -347,7 +350,7 @@ class Relationship(object):
 
 
 class ManyToOneRelationship(Relationship):
-    def __init__(self, source_cls, target_cls, constraint):
+    def __init__(self, source_cls, target_cls, constraint, inflect_engine):
         super(ManyToOneRelationship, self).__init__(source_cls, target_cls)
 
         colname = constraint.columns[0]
@@ -404,8 +407,14 @@ class CodeGenerator(object):
     header = '# coding: utf-8'
     footer = ''
 
-    def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False):
+    def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False, noinflect=False):
         super(CodeGenerator, self).__init__()
+        
+        if noinflect:
+            inflect_engine = _DummyInflectEngine()
+        else:
+            import inflect
+            inflect_engine = inflect.engine()
 
         # Pick association tables from the metadata into their own set, don't process them normally
         links = defaultdict(lambda: [])
@@ -465,7 +474,7 @@ class CodeGenerator(object):
             if not table.primary_key or table.name in association_tables:
                 model = ModelTable(table)
             else:
-                model = ModelClass(table, links[table.name], not nojoined)
+                model = ModelClass(table, links[table.name], inflect_engine, not nojoined)
                 classes[model.name] = model
 
             self.models.append(model)
