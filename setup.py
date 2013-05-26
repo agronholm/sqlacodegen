@@ -41,7 +41,7 @@ setup(
     ],
     packages=find_packages(exclude=['tests']),
     install_requires=(
-        'sqlalchemy >= 0.6.0',
+        'SQLAlchemy >= 0.6.0',
         'inflect >= 0.2.0'
     ) + extra_requirements,
     dependency_links=dependency_links,
