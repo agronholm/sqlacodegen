@@ -453,7 +453,7 @@ class CodeGenerator(object):
                         # Turn any integer-like column with a CheckConstraint like "column IN (0, 1)" into a Boolean
                         match = _re_boolean_check_constraint.match(sqltext)
                         if match:
-                            colname = match.group(1)
+                            colname = match.group(1).strip('`"')
                             table.constraints.remove(constraint)
                             table.c[colname].type = Boolean()
                             continue
@@ -461,7 +461,7 @@ class CodeGenerator(object):
                         # Turn any string-type column with a CheckConstraint like "column IN (...)" into an Enum
                         match = _re_enum_check_constraint.match(sqltext)
                         if match:
-                            colname = match.group(1)
+                            colname = match.group(1).strip('`"')
                             items = match.group(2)
                             if isinstance(table.c[colname].type, String):
                                 table.constraints.remove(constraint)
