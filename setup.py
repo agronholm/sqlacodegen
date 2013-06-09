@@ -7,11 +7,8 @@ import sqlacodegen
 
 
 extra_requirements = ()
-dependency_links = []
 if sys.version_info < (2, 7):
     extra_requirements = ('argparse',)
-elif sys.version_info > (3,):
-    dependency_links = ['https://github.com/benthor/inflect.py/archive/master.zip#egg=inflect-0.2.4']
 
 here = os.path.dirname(__file__)
 readme_path = os.path.join(here, 'README.rst')
@@ -44,7 +41,6 @@ setup(
         'SQLAlchemy >= 0.6.0',
         'inflect >= 0.2.0'
     ) + extra_requirements,
-    dependency_links=dependency_links,
     test_suite='nose.collector',
     tests_require=['nose'],
     zip_safe=False,
