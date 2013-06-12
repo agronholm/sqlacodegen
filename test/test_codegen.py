@@ -509,6 +509,44 @@ class SimpleItem(Base):
     other_item = relationship('OtherItem', uselist=False)
 """)
 
+    def test_onetomany_noinflect(self):
+        Table(
+            'oglkrogk', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('fehwiuhfiwID', INTEGER),
+            ForeignKeyConstraint(['fehwiuhfiwID'], ['fehwiuhfiw.id']),
+        )
+        Table(
+            'fehwiuhfiw', self.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+
+        eq_(self.generate_code(), """\
+# coding: utf-8
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class Fehwiuhfiw(Base):
+    __tablename__ = 'fehwiuhfiw'
+
+    id = Column(Integer, primary_key=True)
+
+
+class Oglkrogk(Base):
+    __tablename__ = 'oglkrogk'
+
+    id = Column(Integer, primary_key=True)
+    fehwiuhfiwID = Column(ForeignKey('fehwiuhfiw.id'))
+
+    fehwiuhfiw = relationship('Fehwiuhfiw')
+""")
+
     def test_manytomany(self):
         Table(
             'simple_items', self.metadata,

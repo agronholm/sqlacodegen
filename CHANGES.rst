@@ -1,6 +1,12 @@
 Version history
 ===============
 
+1.1.1
+-----
+
+* Fixed TypeError when inflect could not determine the singular name of a table for a many-to-1 relationship
+
+
 1.1.0
 -----
 

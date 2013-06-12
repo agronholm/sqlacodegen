@@ -355,7 +355,10 @@ class ManyToOneRelationship(Relationship):
 
         colname = constraint.columns[0]
         tablename = constraint.elements[0].column.table.name
-        self.preferred_name = inflect_engine.singular_noun(tablename) if not colname.endswith('_id') else colname[:-3]
+        if not colname.endswith('_id'):
+            self.preferred_name = inflect_engine.singular_noun(tablename) or tablename
+        else:
+            self.preferred_name = colname[:-3]
 
         # Add uselist=False to One-to-One relationships
         if any(isinstance(c, (PrimaryKeyConstraint, UniqueConstraint)) and
