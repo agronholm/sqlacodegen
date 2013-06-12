@@ -173,7 +173,7 @@ class Model(object):
             for supercls in cls.__mro__:
                 if hasattr(supercls, '__visit_name__'):
                     cls = supercls
-                if supercls.__name__ != supercls.__name__.upper():
+                if supercls.__name__ != supercls.__name__.upper() and not supercls.__name__.startswith('_'):
                     break
 
             column.type = column.type.adapt(cls)

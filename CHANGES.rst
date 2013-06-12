@@ -6,6 +6,8 @@ Version history
 
 * Fixed TypeError when inflect could not determine the singular name of a table for a many-to-1 relationship
 
+* Fixed _IntegerType, _StringType etc. being rendered instead of proper types on MySQL
+
 
 1.1.0
 -----
