@@ -26,7 +26,7 @@ else:
 class TestCodeGenerator(object):
     def setup(self):
         self.metadata = MetaData(create_engine('sqlite:///'))
-    
+
     def generate_code(self, **kwargs):
         codegen = CodeGenerator(self.metadata, **kwargs)
         sio = StringIO()
@@ -792,4 +792,80 @@ class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id = Column(Integer, primary_key=True)
+""")
+
+    def test_table_kwargs(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            schema='testschema'
+        )
+
+        eq_(self.generate_code(), """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = {'schema': 'testschema'}
+
+    id = Column(Integer, primary_key=True)
+""")
+
+    def test_table_args_kwargs(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('name', VARCHAR),
+            Index('testidx', 'id', 'name'),
+            schema='testschema'
+        )
+
+        eq_(self.generate_code(), """\
+# coding: utf-8
+from sqlalchemy import Column, Index, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        Index('testidx', 'id', 'name'),
+        {'schema': 'testschema'}
+    )
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+""")
+
+    def test_schema_table(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('name', VARCHAR),
+            schema='testschema'
+        )
+
+        eq_(self.generate_code(), """\
+# coding: utf-8
+from sqlalchemy import Column, MetaData, String, Table
+
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('name', String),
+    schema='testschema'
+)
 """)

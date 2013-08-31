@@ -166,6 +166,7 @@ class Model(object):
     def __init__(self, table):
         super(Model, self).__init__()
         self.table = table
+        self.schema = table.schema
 
         # Adapt column types to the most reasonable generic types (ie. VARCHAR -> String)
         for column in table.columns:
@@ -223,6 +224,9 @@ class ModelTable(Model):
         for index in self.table.indexes:
             if len(index.columns) > 1:
                 text += '    {0},\n'.format(_render_index(index))
+
+        if self.schema:
+            text += "    schema='{0}',\n".format(self.schema)
 
         return text.rstrip('\n,') + '\n)'
 
@@ -293,7 +297,18 @@ class ModelClass(Model):
         for index in self.table.indexes:
             if len(index.columns) > 1:
                 table_args.append(_render_index(index))
-        if table_args:
+
+        table_kwargs = {}
+        if self.schema:
+            table_kwargs['schema'] = self.schema
+
+        kwargs_items = ', '.join('{0!r}: {1!r}'.format(key, table_kwargs[key]) for key in table_kwargs)
+        kwargs_items = '{{{0}}}'.format(kwargs_items) if kwargs_items else None
+        if table_kwargs and not table_args:
+            text += '    __table_args__ = {0}\n'.format(kwargs_items)
+        elif table_args:
+            if kwargs_items:
+                table_args.append(kwargs_items)
             if len(table_args) == 1:
                 table_args[0] += ','
             text += '    __table_args__ = (\n        {0}\n    )\n'.format(',\n        '.join(table_args))
