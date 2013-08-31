@@ -36,6 +36,8 @@ setup(
         'Programming Language :: Python :: 3.2',
         'Programming Language :: Python :: 3.3'
     ],
+    keywords='sqlalchemy',
+    license='MIT',
     packages=find_packages(exclude=['tests']),
     install_requires=(
         'SQLAlchemy >= 0.6.0',
