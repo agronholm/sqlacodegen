@@ -59,14 +59,9 @@ Model class naming logic
 ------------------------
 
 The table name (which is assumed to be in English) is converted to singular
-form by the following rules:
-
-* if the word ends with "ies", remove that and append "y", then return
-* if the word ends with "s", remove that and return
-* otherwise, return the word as is
-
-Finally, every underscore is removed while transforming the next letter to
-upper case. For example, ``sales_invoices`` becomes ``SalesInvoice``.
+form using the "inflect" library. Then, every underscore is removed while
+transforming the next letter to upper case. For example, ``sales_invoices``
+becomes ``SalesInvoice``.
 
 
 Relationship detection logic
