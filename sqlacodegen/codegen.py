@@ -97,6 +97,15 @@ def _render_column_type(coltype):
     return text
 
 
+def _render_fk(fk):
+    text = "ForeignKey('%s.%s'" % (fk.column.table.name, fk.column.name)
+    if fk.deferrable:
+        text += ', deferrable=True'
+    if fk.initially:
+        text += ', initially=%r' % fk.initially
+    return text + ')'
+
+
 def _render_column(column, show_name):
     kwarg = []
     is_sole_pk = column.primary_key and len(column.table.primary_key) == 1
@@ -104,6 +113,9 @@ def _render_column(column, show_name):
     is_unique = any(isinstance(c, UniqueConstraint) and set(c.columns) == set([column])
                     for c in column.table.constraints)
     has_index = any(set(i.columns) == set([column]) for i in column.table.indexes)
+    
+    # Render the column type if there are no foreign keys on it or any of them points back to itself
+    render_coltype = not dedicated_fks or any(fk.column is column for fk in dedicated_fks)
 
     if column.key != column.name:
         kwarg.append('key')
@@ -123,8 +135,8 @@ def _render_column(column, show_name):
 
     return 'Column({0})'.format(', '.join(
         ([repr(column.name)] if show_name else []) +
-        ([_render_column_type(column.type)] if not dedicated_fks else []) +
-        [repr(x) for x in dedicated_fks] +
+        ([_render_column_type(column.type)] if render_coltype else []) +
+        [_render_fk(x) for x in dedicated_fks] +
         [repr(x) for x in column.constraints] +
         ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg]))
 

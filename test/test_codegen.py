@@ -5,7 +5,8 @@ import re
 
 from nose.tools import eq_
 from sqlalchemy.engine import create_engine
-from sqlalchemy.schema import MetaData, Table, Column, CheckConstraint, UniqueConstraint, Index, ForeignKeyConstraint
+from sqlalchemy.schema import (MetaData, Table, Column, CheckConstraint, UniqueConstraint, Index, ForeignKey,
+                               ForeignKeyConstraint)
 from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
 from sqlalchemy.dialects.postgresql.base import BIGINT, DOUBLE_PRECISION, BOOLEAN, ENUM
 from sqlalchemy.dialects.mysql.base import TINYINT
@@ -23,7 +24,7 @@ else:
     remove_unicode_prefixes = lambda text: text
 
 
-class TestCodeGenerator(object):
+class TestModelGenerator(object):
     def setup(self):
         self.metadata = MetaData(create_engine('sqlite:///'))
 
@@ -867,5 +868,25 @@ t_simple_items = Table(
     'simple_items', metadata,
     Column('name', String),
     schema='testschema'
+)
+""")
+
+    def test_foreign_key_options(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('name', VARCHAR, ForeignKey('simple_items.name', deferrable=True, initially='DEFERRED'))
+        )
+
+        eq_(self.generate_code(), """\
+# coding: utf-8
+from sqlalchemy import Column, ForeignKey, MetaData, String, Table
+
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('name', String, ForeignKey('simple_items.name', deferrable=True, initially='DEFERRED'))
 )
 """)
