@@ -1,6 +1,18 @@
 Version history
 ===============
 
+1.1.2
+-----
+
+* Fixed non-default schema name not being present in __table_args__ (fixes #2)
+
+* Fixed self referential foreign key causing column type to not be rendered
+
+* Fixed missing "deferrable" and "initially" keyword arguments in ForeignKey constructs
+
+* Fixed foreign key and check constraint handling with alternate schemas (fixes #3)
+
+
 1.1.1
 -----
 
