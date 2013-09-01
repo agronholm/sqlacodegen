@@ -820,13 +820,13 @@ class SimpleItem(Base):
 """)
 
     def test_table_args_kwargs(self):
-        Table(
+        simple_items = Table(
             'simple_items', self.metadata,
             Column('id', INTEGER, primary_key=True),
             Column('name', VARCHAR),
-            Index('testidx', 'id', 'name'),
             schema='testschema'
         )
+        simple_items.indexes.add(Index('testidx', simple_items.c.id, simple_items.c.name))
 
         eq_(self.generate_code(), """\
 # coding: utf-8
@@ -889,4 +889,44 @@ t_simple_items = Table(
     'simple_items', metadata,
     Column('name', String, ForeignKey('simple_items.name', deferrable=True, initially='DEFERRED'))
 )
+""")
+
+    def test_foreign_key_schema(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('other_item_id', INTEGER),
+            ForeignKeyConstraint(['other_item_id'], ['otherschema.other_items.id'])
+        )
+        Table(
+            'other_items', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            schema='otherschema'
+        )
+
+        eq_(self.generate_code(), """\
+# coding: utf-8
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    other_item_id = Column(ForeignKey('otherschema.other_items.id'))
+
+    other_item = relationship('OtherItem')
+
+
+class OtherItem(Base):
+    __tablename__ = 'other_items'
+    __table_args__ = {'schema': 'otherschema'}
+
+    id = Column(Integer, primary_key=True)
 """)

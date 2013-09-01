@@ -20,6 +20,7 @@ except ImportError:
 
 
 _re_boolean_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \(0, 1\)")
+_re_column_name = re.compile(r'(?:(["`])(?:.*)\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 
@@ -113,7 +114,7 @@ def _render_column(column, show_name):
     is_unique = any(isinstance(c, UniqueConstraint) and set(c.columns) == set([column])
                     for c in column.table.constraints)
     has_index = any(set(i.columns) == set([column]) for i in column.table.indexes)
-    
+
     # Render the column type if there are no foreign keys on it or any of them points back to itself
     render_coltype = not dedicated_fks or any(fk.column is column for fk in dedicated_fks)
 
@@ -483,7 +484,7 @@ class CodeGenerator(object):
                         # Turn any integer-like column with a CheckConstraint like "column IN (0, 1)" into a Boolean
                         match = _re_boolean_check_constraint.match(sqltext)
                         if match:
-                            colname = match.group(1).strip('`"')
+                            colname = _re_column_name.match(match.group(1)).group(3)
                             table.constraints.remove(constraint)
                             table.c[colname].type = Boolean()
                             continue
@@ -491,7 +492,7 @@ class CodeGenerator(object):
                         # Turn any string-type column with a CheckConstraint like "column IN (...)" into an Enum
                         match = _re_enum_check_constraint.match(sqltext)
                         if match:
-                            colname = match.group(1).strip('`"')
+                            colname = _re_column_name.match(match.group(1)).group(3)
                             items = match.group(2)
                             if isinstance(table.c[colname].type, String):
                                 table.constraints.remove(constraint)
