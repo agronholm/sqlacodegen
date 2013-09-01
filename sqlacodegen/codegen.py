@@ -98,7 +98,7 @@ def _render_column_type(coltype):
 
 
 def _render_fk(fk):
-    text = "ForeignKey('%s.%s'" % (fk.column.table.name, fk.column.name)
+    text = "ForeignKey('%s.%s'" % (fk.column.table.fullname, fk.column.name)
     if fk.deferrable:
         text += ', deferrable=True'
     if fk.initially:
@@ -144,7 +144,7 @@ def _render_column(column, show_name):
 def _render_constraint(constraint):
     if isinstance(constraint, ForeignKeyConstraint):
         local_columns = constraint.columns
-        remote_columns = ['{0}.{1}'.format(fk.column.table.name, fk.column.name)
+        remote_columns = ['{0}.{1}'.format(fk.column.table.fullname, fk.column.name)
                           for fk in constraint.elements]
         return 'ForeignKeyConstraint({0!r}, {1!r})'.format(local_columns, remote_columns)
     elif isinstance(constraint, CheckConstraint):
@@ -461,7 +461,7 @@ class CodeGenerator(object):
         self.models = []
         self.collector = ImportCollector()
         classes = {}
-        for table in sorted(metadata.tables.values(), key=lambda t: t.name):
+        for table in sorted(metadata.tables.values(), key=lambda t: (t.schema or '', t.name)):
             # Support for Alembic and sqlalchemy-migrate -- never expose the schema version tables
             if table.name in ('alembic_version', 'migrate_version'):
                 continue
