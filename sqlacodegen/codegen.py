@@ -20,7 +20,7 @@ except ImportError:
 
 
 _re_boolean_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \(0, 1\)")
-_re_column_name = re.compile(r'(?:(["`])(?:.*)\1\.)?(["`]?)(.*)\2')
+_re_column_name = re.compile(r'(?:(["`]?)(?:.*)\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 
@@ -113,6 +113,7 @@ def _render_column(column, show_name):
     dedicated_fks = [c for c in column.foreign_keys if len(c.constraint.columns) == 1]
     is_unique = any(isinstance(c, UniqueConstraint) and set(c.columns) == set([column])
                     for c in column.table.constraints)
+    is_unique = is_unique or any(i.unique and set(i.columns) == set([column]) for i in column.table.indexes)
     has_index = any(set(i.columns) == set([column]) for i in column.table.indexes)
 
     # Render the column type if there are no foreign keys on it or any of them points back to itself

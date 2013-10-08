@@ -260,6 +260,7 @@ t_simple_items = Table(
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
         simple_items.indexes.add(Index('idx_text_number', simple_items.c.text, simple_items.c.number))
+        simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
         eq_(self.generate_code(), """\
 # coding: utf-8
@@ -273,7 +274,7 @@ t_simple_items = Table(
     'simple_items', metadata,
     Column('id', Integer),
     Column('number', Integer, index=True),
-    Column('text', String),
+    Column('text', String, unique=True),
     Index('idx_text_number', 'text', 'number')
 )
 """)
@@ -287,6 +288,7 @@ t_simple_items = Table(
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
         simple_items.indexes.add(Index('idx_text_number', simple_items.c.text, simple_items.c.number))
+        simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
         eq_(self.generate_code(), """\
 # coding: utf-8
@@ -306,7 +308,7 @@ class SimpleItem(Base):
 
     id = Column(Integer, primary_key=True)
     number = Column(Integer, index=True)
-    text = Column(String)
+    text = Column(String, unique=True)
 """)
 
     def test_onetomany(self):
@@ -867,6 +869,29 @@ metadata = MetaData()
 t_simple_items = Table(
     'simple_items', metadata,
     Column('name', String),
+    schema='testschema'
+)
+""")
+
+    def test_schema_boolean(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('bool1', INTEGER),
+            CheckConstraint('testschema.simple_items.bool1 IN (0, 1)'),
+            schema='testschema'
+        )
+
+        eq_(self.generate_code(), """\
+# coding: utf-8
+from sqlalchemy import Boolean, Column, MetaData, Table
+
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('bool1', Boolean),
     schema='testschema'
 )
 """)
