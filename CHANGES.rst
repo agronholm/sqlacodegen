@@ -6,6 +6,8 @@ Version history
 
 * Fixed compatibility with SQLAlchemy 0.8.3+
 
+* Migrated tests from nose to pytest
+
 
 1.1.2
 -----
