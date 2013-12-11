@@ -35,7 +35,7 @@ def _get_compiled_expression(statement):
     if isinstance(statement, TextClause):
         return statement.text
 
-    dialect = statement.left.table.bind.dialect
+    dialect = statement._from_objects[0].bind.dialect
     compiler = statement._compiler(dialect)
 
     # Adapted from http://stackoverflow.com/a/5698357/242021
