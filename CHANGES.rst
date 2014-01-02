@@ -1,6 +1,12 @@
 Version history
 ===============
 
+1.1.4
+-----
+
+* Fixed compatibility with SQLAlchemy 0.9.0
+
+
 1.1.3
 -----
 

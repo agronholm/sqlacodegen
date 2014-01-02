@@ -1,6 +1,7 @@
 """Contains the code generation logic and helper functions."""
 from __future__ import unicode_literals, division, print_function, absolute_import
 from collections import defaultdict
+from inspect import ArgSpec
 from keyword import iskeyword
 import inspect
 import sys
@@ -65,6 +66,16 @@ def _get_common_fk_constraints(table1, table2):
     return c1.union(c2)
 
 
+def _getargspec_init(method):
+    try:
+        return inspect.getargspec(method)
+    except TypeError:
+        if method is object.__init__:
+            return ArgSpec(['self'], None, None, None)
+        else:
+            return ArgSpec(['self'], 'args', 'kwargs', None)
+
+
 def _render_column_type(coltype):
     args = []
     if isinstance(coltype, Enum):
@@ -73,7 +84,7 @@ def _render_column_type(coltype):
             args.append('name={0!r}'.format(coltype.name))
     else:
         # All other types
-        argspec = inspect.getargspec(coltype.__class__.__init__)
+        argspec = _getargspec_init(coltype.__class__.__init__)
         defaults = dict(zip(argspec.args[-len(argspec.defaults or ()):], argspec.defaults or ()))
         missing = object()
         use_kwargs = False
