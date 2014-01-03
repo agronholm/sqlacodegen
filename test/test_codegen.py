@@ -969,7 +969,7 @@ class OtherItem(Base):
 
         assert self.generate_code() == """\
 # coding: utf-8
-from sqlalchemy import Column, Integer
+from sqlalchemy import Column, Integer, text
 from sqlalchemy.ext.declarative import declarative_base
 
 

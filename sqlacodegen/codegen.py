@@ -214,6 +214,8 @@ class Model(object):
 
         for column in self.table.columns:
             collector.add_import(column.type)
+            if column.server_default:
+                collector.add_literal_import('sqlalchemy', 'text')
 
         for constraint in sorted(self.table.constraints, key=_get_constraint_sort_key):
             if isinstance(constraint, ForeignKeyConstraint):
