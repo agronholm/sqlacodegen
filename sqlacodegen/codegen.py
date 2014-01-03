@@ -15,10 +15,10 @@ from sqlalchemy.types import Boolean, String
 import sqlalchemy
 
 try:
-    from sqlalchemy.sql.expression import TextClause
+    from sqlalchemy.sql.expression import text, TextClause
 except ImportError:
     # SQLAlchemy < 0.8
-    from sqlalchemy.sql.expression import _TextClause as TextClause
+    from sqlalchemy.sql.expression import text, _TextClause as TextClause
 
 
 _re_boolean_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \(0, 1\)")
@@ -134,16 +134,16 @@ def _render_column(column, show_name):
     elif has_index:
         column.index = True
         kwarg.append('index')
-    if column.server_default and not is_sole_pk:
-        column.server_default = _get_compiled_expression(column.server_default.arg)
-        kwarg.append('server_default')
 
     return 'Column({0})'.format(', '.join(
         ([repr(column.name)] if show_name else []) +
         ([_render_column_type(column.type)] if render_coltype else []) +
         [_render_constraint(x) for x in dedicated_fks] +
         [repr(x) for x in column.constraints] +
-        ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg]))
+        ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg] +
+        (['server_default=text("{0}")'.format(_get_compiled_expression(column.server_default.arg))] if
+         column.server_default else [])
+    ))
 
 
 def _render_constraint(constraint):

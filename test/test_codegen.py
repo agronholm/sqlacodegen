@@ -6,6 +6,7 @@ import re
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import (MetaData, Table, Column, CheckConstraint, UniqueConstraint, Index, ForeignKey,
                                ForeignKeyConstraint)
+from sqlalchemy.sql.expression import text
 from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
 from sqlalchemy.dialects.postgresql.base import BIGINT, DOUBLE_PRECISION, BOOLEAN, ENUM
 from sqlalchemy.dialects.mysql.base import TINYINT
@@ -958,4 +959,26 @@ class OtherItem(Base):
     __table_args__ = {'schema': 'otherschema'}
 
     id = Column(Integer, primary_key=True)
+"""
+
+    def test_pk_default(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True, server_default=text('uuid_generate_v4()'))
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True, server_default=text("uuid_generate_v4()"))
 """
