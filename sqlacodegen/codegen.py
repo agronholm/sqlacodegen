@@ -9,6 +9,7 @@ import re
 
 from sqlalchemy import (Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckConstraint, UniqueConstraint, Table,
                         Column)
+from sqlalchemy.schema import ForeignKey
 from sqlalchemy.util import OrderedDict
 from sqlalchemy.types import Boolean, String
 import sqlalchemy
@@ -109,15 +110,6 @@ def _render_column_type(coltype):
     return text
 
 
-def _render_fk(fk):
-    text = "ForeignKey('%s.%s'" % (fk.column.table.fullname, fk.column.name)
-    if fk.deferrable:
-        text += ', deferrable=True'
-    if fk.initially:
-        text += ', initially=%r' % fk.initially
-    return text + ')'
-
-
 def _render_column(column, show_name):
     kwarg = []
     is_sole_pk = column.primary_key and len(column.table.primary_key) == 1
@@ -149,17 +141,29 @@ def _render_column(column, show_name):
     return 'Column({0})'.format(', '.join(
         ([repr(column.name)] if show_name else []) +
         ([_render_column_type(column.type)] if render_coltype else []) +
-        [_render_fk(x) for x in dedicated_fks] +
+        [_render_constraint(x) for x in dedicated_fks] +
         [repr(x) for x in column.constraints] +
         ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg]))
 
 
 def _render_constraint(constraint):
-    if isinstance(constraint, ForeignKeyConstraint):
+    def render_fk_options(*opts):
+        opts = [repr(opt) for opt in opts]
+        for attr in 'ondelete', 'onupdate', 'deferrable', 'initially', 'match':
+            value = getattr(constraint, attr)
+            if value:
+                opts.append('{0}={1!r}'.format(attr, value))
+
+        return ', '.join(opts)
+
+    if isinstance(constraint, ForeignKey):
+        remote_column = '{0}.{1}'.format(constraint.column.table.fullname, constraint.column.name)
+        return 'ForeignKey({0})'.format(render_fk_options(remote_column))
+    elif isinstance(constraint, ForeignKeyConstraint):
         local_columns = constraint.columns
         remote_columns = ['{0}.{1}'.format(fk.column.table.fullname, fk.column.name)
                           for fk in constraint.elements]
-        return 'ForeignKeyConstraint({0!r}, {1!r})'.format(local_columns, remote_columns)
+        return 'ForeignKeyConstraint({0})'.format(render_fk_options(local_columns, remote_columns))
     elif isinstance(constraint, CheckConstraint):
         return 'CheckConstraint({0!r})'.format(_get_compiled_expression(constraint.sqltext))
     elif isinstance(constraint, UniqueConstraint):
@@ -465,7 +469,7 @@ class CodeGenerator(object):
         for table in metadata.tables.values():
             # Link tables have exactly two foreign key constraints and all columns are involved in them
             fk_constraints = [constr for constr in table.constraints if isinstance(constr, ForeignKeyConstraint)]
-            if (len(fk_constraints) == 2 and all(col.foreign_keys for col in table.columns)):
+            if len(fk_constraints) == 2 and all(col.foreign_keys for col in table.columns):
                 association_tables.add(table.name)
                 tablename = sorted(fk_constraints, key=_get_constraint_sort_key)[0].elements[0].column.table.name
                 links[tablename].append(table)
