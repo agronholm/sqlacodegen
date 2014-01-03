@@ -13,5 +13,11 @@ syntax: regexp
 ^\.settings$
 syntax: glob
 .tox
-syntax: regexp
-^dist$
+syntax: glob
+dist
+syntax: glob
+.idea
+syntax: glob
+build
+syntax: glob
+.cache
