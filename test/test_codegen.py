@@ -416,7 +416,7 @@ class SimpleItem(Base):
             Column('container_id1', INTEGER),
             Column('container_id2', INTEGER),
             ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', 'simple_containers.id2'],
-                                 ondelete='CASCADE', onupdate='CASCADE', match='PARTIAL')
+                                 ondelete='CASCADE', onupdate='CASCADE')
         )
         Table(
             'simple_containers', self.metadata,
@@ -446,7 +446,7 @@ class SimpleItem(Base):
     __tablename__ = 'simple_items'
     __table_args__ = (
         ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', 'simple_containers.id2'], \
-ondelete='CASCADE', onupdate='CASCADE', match='PARTIAL'),
+ondelete='CASCADE', onupdate='CASCADE'),
     )
 
     id = Column(Integer, primary_key=True)
@@ -903,7 +903,7 @@ t_simple_items = Table(
         Table(
             'simple_items', self.metadata,
             Column('name', VARCHAR, ForeignKey('simple_items.name', ondelete='CASCADE', onupdate='CASCADE',
-                                               deferrable=True, initially='DEFERRED', match='PARTIAL'))
+                                               deferrable=True, initially='DEFERRED'))
         )
 
         assert self.generate_code() == """\
@@ -917,7 +917,7 @@ metadata = MetaData()
 t_simple_items = Table(
     'simple_items', metadata,
     Column('name', String, ForeignKey('simple_items.name', ondelete='CASCADE', onupdate='CASCADE', \
-deferrable=True, initially='DEFERRED', match='PARTIAL'))
+deferrable=True, initially='DEFERRED'))
 )
 """
 

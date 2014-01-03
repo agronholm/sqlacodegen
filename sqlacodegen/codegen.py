@@ -150,7 +150,7 @@ def _render_constraint(constraint):
     def render_fk_options(*opts):
         opts = [repr(opt) for opt in opts]
         for attr in 'ondelete', 'onupdate', 'deferrable', 'initially', 'match':
-            value = getattr(constraint, attr)
+            value = getattr(constraint, attr, None)
             if value:
                 opts.append('{0}={1!r}'.format(attr, value))
 
