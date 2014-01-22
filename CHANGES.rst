@@ -1,6 +1,12 @@
 Version history
 ===============
 
+1.1.5
+-----
+
+* Fixed potential assignment of columns or relationships into invalid attribute names (fixes #10)
+
+
 1.1.4
 -----
 

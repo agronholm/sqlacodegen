@@ -982,3 +982,31 @@ class SimpleItem(Base):
 
     id = Column(Integer, primary_key=True, server_default=text("uuid_generate_v4()"))
 """
+
+    def test_invalid_attribute_names(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('id-test', INTEGER, primary_key=True),
+            Column('4test', INTEGER),
+            Column('_4test', INTEGER),
+            Column('def', INTEGER)
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id_test = Column('id-test', Integer, primary_key=True)
+    _4test = Column('4test', Integer)
+    _4test1 = Column('_4test', Integer)
+    _def = Column('def', Integer)
+"""

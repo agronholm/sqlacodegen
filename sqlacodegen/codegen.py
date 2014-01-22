@@ -20,16 +20,23 @@ except ImportError:
     # SQLAlchemy < 0.8
     from sqlalchemy.sql.expression import text, _TextClause as TextClause
 
-
 _re_boolean_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?)(?:.*)\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
+_re_invalid_identifier = re.compile(r'[^a-zA-Z0-9_]' if sys.version_info[0] < 3 else r'(?u)\W')
 
 
 class _DummyInflectEngine(object):
     def singular_noun(self, noun):
         return noun
+
+
+def _convert_to_valid_identifier(name):
+    assert name, 'Identifier cannot be empty'
+    if name[0].isdigit() or iskeyword(name):
+        name = '_' + name
+    return _re_invalid_identifier.sub('_', name)
 
 
 def _get_compiled_expression(statement):
@@ -273,8 +280,7 @@ class ModelClass(Model):
 
         # Assign attribute names for columns
         for column in table.columns:
-            attrname = column.name + '_' if iskeyword(column.name) else column.name
-            self.attributes[attrname] = column
+            self._add_attribute(column.name, column)
 
         # Add many-to-one relationships
         pk_column_names = set(col.name for col in table.primary_key.columns)
@@ -284,25 +290,31 @@ class ModelClass(Model):
                 if detect_joined and self.parent_name == 'Base' and set(constraint.columns) == pk_column_names:
                     self.parent_name = target_cls
                 else:
-                    self._add_relationship(ManyToOneRelationship(self.name, target_cls, constraint, inflect_engine))
+                    relationship_ = ManyToOneRelationship(self.name, target_cls, constraint, inflect_engine)
+                    self._add_attribute(relationship_.preferred_name, relationship_)
 
         # Add many-to-many relationships
         for association_table in association_tables:
             fk_constraints = [c for c in association_table.constraints if isinstance(c, ForeignKeyConstraint)]
             fk_constraints.sort(key=_get_constraint_sort_key)
             target_cls = self._tablename_to_classname(fk_constraints[1].elements[0].column.table.name, inflect_engine)
-            self._add_relationship(ManyToManyRelationship(self.name, target_cls, association_table))
+            relationship_ = ManyToManyRelationship(self.name, target_cls, association_table)
+            self._add_attribute(relationship_.preferred_name, relationship_)
 
     @staticmethod
     def _tablename_to_classname(tablename, inflect_engine):
         camel_case_name = ''.join(part.capitalize() for part in tablename.split('_'))
         return inflect_engine.singular_noun(camel_case_name) or camel_case_name
 
-    def _add_relationship(self, relationship):
-        for attrname in relationship.suggested_names:
-            if attrname not in self.attributes and not iskeyword(attrname):
-                self.attributes[attrname] = relationship
-                break
+    def _add_attribute(self, attrname, value):
+        attrname = tempname = _convert_to_valid_identifier(attrname)
+        counter = 1
+        while tempname in self.attributes:
+            tempname = attrname + str(counter)
+            counter += 1
+
+        self.attributes[tempname] = value
+        return tempname
 
     def add_imports(self, collector):
         super(ModelClass, self).add_imports(collector)
@@ -371,15 +383,6 @@ class Relationship(object):
         self.source_cls = source_cls
         self.target_cls = target_cls
         self.kwargs = OrderedDict()
-
-    @property
-    def suggested_names(self):
-        yield self.preferred_name if not iskeyword(self.preferred_name) else self.preferred_name + '_'
-
-        iteration = 0
-        while True:
-            iteration += 1
-            yield self.preferred_name + str(iteration)
 
     def render(self):
         text = 'relationship('
