@@ -141,6 +141,12 @@ def _render_column(column, show_name):
     elif has_index:
         column.index = True
         kwarg.append('index')
+    if column.server_default:
+        default_expr = _get_compiled_expression(column.server_default.arg)
+        if '\n' in default_expr:
+            server_default = 'server_default=text("""\\\n{0}""")'.format(default_expr)
+        else:
+            server_default = 'server_default=text("{0}")'.format(default_expr)
 
     return 'Column({0})'.format(', '.join(
         ([repr(column.name)] if show_name else []) +
@@ -148,8 +154,7 @@ def _render_column(column, show_name):
         [_render_constraint(x) for x in dedicated_fks] +
         [repr(x) for x in column.constraints] +
         ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg] +
-        (['server_default=text("{0}")'.format(_get_compiled_expression(column.server_default.arg))] if
-         column.server_default else [])
+        ([server_default] if column.server_default else [])
     ))
 
 

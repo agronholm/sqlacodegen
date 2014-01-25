@@ -983,6 +983,34 @@ class SimpleItem(Base):
     id = Column(Integer, primary_key=True, server_default=text("uuid_generate_v4()"))
 """
 
+    def test_server_default_multiline(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True, server_default=text("""\
+/*Comment*/
+/*Next line*/
+something()"""))
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer, text
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True, server_default=text(\"""\\
+/*Comment*/
+/*Next line*/
+something()\"""))
+"""
+
     def test_invalid_attribute_names(self):
         Table(
             'simple_items', self.metadata,
