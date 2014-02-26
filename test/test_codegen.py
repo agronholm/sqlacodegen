@@ -1038,3 +1038,91 @@ class SimpleItem(Base):
     _4test1 = Column('_4test', Integer)
     _def = Column('def', Integer)
 """
+
+    def test_pascal(self):
+        Table(
+            'CustomerAPIPreference', self.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class CustomerAPIPreference(Base):
+    __tablename__ = 'CustomerAPIPreference'
+
+    id = Column(Integer, primary_key=True)
+"""
+
+    def test_underscore(self):
+        Table(
+            'customer_api_preference', self.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class CustomerApiPreference(Base):
+    __tablename__ = 'customer_api_preference'
+
+    id = Column(Integer, primary_key=True)
+"""
+
+    def test_pascal_underscore(self):
+        Table(
+            'customer_API_Preference', self.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class CustomerAPIPreference(Base):
+    __tablename__ = 'customer_API_Preference'
+
+    id = Column(Integer, primary_key=True)
+"""
+
+    def test_pascal_multiple_underscore(self):
+        Table(
+            'customer_API__Preference', self.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class CustomerAPIPreference(Base):
+    __tablename__ = 'customer_API__Preference'
+
+    id = Column(Integer, primary_key=True)
+"""
