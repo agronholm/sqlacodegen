@@ -308,7 +308,7 @@ class ModelClass(Model):
 
     @staticmethod
     def _tablename_to_classname(tablename, inflect_engine):
-        camel_case_name = ''.join(part.capitalize() for part in tablename.split('_'))
+        camel_case_name = ''.join(part[:1].upper() + part[1:] for part in tablename.split('_'))
         return inflect_engine.singular_noun(camel_case_name) or camel_case_name
 
     def _add_attribute(self, attrname, value):
