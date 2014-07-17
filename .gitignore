@@ -1,0 +1,11 @@
+*.egg-info
+*.pyc
+.project
+.pydevproject
+.coverage
+.settings
+.tox
+.idea
+.cache
+dist
+build
