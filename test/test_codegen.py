@@ -259,7 +259,7 @@ t_simple_items = Table(
             Column('text', VARCHAR)
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
-        simple_items.indexes.add(Index('idx_text_number', simple_items.c.text, simple_items.c.number))
+        simple_items.indexes.add(Index('idx_text_number', simple_items.c.text, simple_items.c.number, unique=True))
         simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
         assert self.generate_code() == """\
@@ -275,7 +275,7 @@ t_simple_items = Table(
     Column('id', Integer),
     Column('number', Integer, index=True),
     Column('text', String, unique=True),
-    Index('idx_text_number', 'text', 'number')
+    Index('idx_text_number', 'text', 'number', unique=True)
 )
 """
 

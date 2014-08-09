@@ -184,8 +184,10 @@ def _render_constraint(constraint):
 
 
 def _render_index(index):
-    columns = [repr(col.name) for col in index.columns]
-    return 'Index({0!r}, {1})'.format(index.name, ', '.join(columns))
+    extra_args = [repr(col.name) for col in index.columns]
+    if index.unique:
+        extra_args.append('unique=True')
+    return 'Index({0!r}, {1})'.format(index.name, ', '.join(extra_args))
 
 
 class ImportCollector(OrderedDict):

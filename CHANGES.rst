@@ -6,6 +6,8 @@ Version history
 
 * Fixed potential assignment of columns or relationships into invalid attribute names (fixes #10)
 
+* Fixed unique=True missing from unique Index declarations
+
 
 1.1.4
 -----
