@@ -8,6 +8,14 @@ Version history
 
 * Fixed unique=True missing from unique Index declarations
 
+* Fixed several issues with server defaults
+
+* Fixed potential assignment of columns or relationships into invalid attribute names
+
+* Allowed pascal case for tables already using it
+
+* Switched from Mercurial to Git
+
 
 1.1.4
 -----
