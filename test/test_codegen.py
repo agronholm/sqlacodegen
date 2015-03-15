@@ -800,7 +800,7 @@ class SimpleItems(Base):
     id = Column(Integer, primary_key=True)
 """
 
-    def test_no_inflect(self):
+    def test_no_classes(self):
         Table(
             'simple_items', self.metadata,
             Column('id', INTEGER, primary_key=True)
