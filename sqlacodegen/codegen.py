@@ -466,7 +466,8 @@ class CodeGenerator(object):
     header = '# coding: utf-8'
     footer = ''
 
-    def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False, noinflect=False):
+    def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False, noinflect=False,
+                 noclasses=False):
         super(CodeGenerator, self).__init__()
 
         if noinflect:
@@ -530,7 +531,7 @@ class CodeGenerator(object):
                                 continue
 
             # Only form model classes for tables that have a primary key and are not association tables
-            if not table.primary_key or table.name in association_tables:
+            if noclasses or not table.primary_key or table.name in association_tables:
                 model = ModelTable(table)
             else:
                 model = ModelClass(table, links[table.name], inflect_engine, not nojoined)

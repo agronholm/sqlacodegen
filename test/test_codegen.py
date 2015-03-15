@@ -800,6 +800,26 @@ class SimpleItems(Base):
     id = Column(Integer, primary_key=True)
 """
 
+    def test_no_inflect(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+
+        assert self.generate_code(noclasses=True) == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer, MetaData, Table
+
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('id', Integer, primary_key=True)
+)
+"""
+
     def test_table_kwargs(self):
         Table(
             'simple_items', self.metadata,
