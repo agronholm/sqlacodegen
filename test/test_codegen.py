@@ -46,7 +46,6 @@ class TestModelGenerator(object):
 # coding: utf-8
 from sqlalchemy import Boolean, Column, Enum, MetaData, Numeric, Table
 
-
 metadata = MetaData()
 
 
@@ -73,7 +72,6 @@ t_simple_items = Table(
 # coding: utf-8
 from sqlalchemy import Boolean, Column, MetaData, Table
 
-
 metadata = MetaData()
 
 
@@ -96,7 +94,6 @@ t_simple_items = Table(
 # coding: utf-8
 from sqlalchemy import Column, Enum, MetaData, Table
 
-
 metadata = MetaData()
 
 
@@ -116,7 +113,6 @@ t_simple_items = Table(
         assert self.generate_code() == """\
 # coding: utf-8
 from sqlalchemy import BigInteger, Column, Float, MetaData, Table
-
 
 metadata = MetaData()
 
@@ -138,7 +134,6 @@ t_simple_items = Table(
         assert self.generate_code() == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, String, Table
-
 
 metadata = MetaData()
 
@@ -162,7 +157,6 @@ t_simple_items = Table(
         assert self.generate_code() == """\
 # coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table, UniqueConstraint
-
 
 metadata = MetaData()
 
@@ -189,7 +183,6 @@ t_simple_items = Table(
 # coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -218,7 +211,6 @@ class SimpleItem(Base):
 # coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table
 
-
 metadata = MetaData()
 
 
@@ -240,7 +232,6 @@ t_simple_items = Table(
         assert self.generate_code(noconstraints=True) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, Table
-
 
 metadata = MetaData()
 
@@ -265,7 +256,6 @@ t_simple_items = Table(
         assert self.generate_code() == """\
 # coding: utf-8
 from sqlalchemy import Column, Index, Integer, MetaData, String, Table
-
 
 metadata = MetaData()
 
@@ -294,7 +284,6 @@ t_simple_items = Table(
 # coding: utf-8
 from sqlalchemy import Column, Index, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -329,7 +318,6 @@ from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
-
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -363,7 +351,6 @@ from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
-
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -392,7 +379,6 @@ class SimpleItem(Base):
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -429,7 +415,6 @@ class SimpleItem(Base):
 from sqlalchemy import Column, ForeignKeyConstraint, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -476,7 +461,6 @@ from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
-
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -518,7 +502,6 @@ from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
-
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -555,7 +538,6 @@ class SimpleItem(Base):
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -598,7 +580,6 @@ class Oglkrogk(Base):
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -643,7 +624,6 @@ class SimpleItem(Base):
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -695,7 +675,6 @@ class SimpleItem(Base):
 from sqlalchemy import Column, ForeignKeyConstraint, Integer, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -752,7 +731,6 @@ class SimpleItem(Base):
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
-
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -789,7 +767,6 @@ class SimpleSubItem(SimpleItem):
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
-
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -809,7 +786,6 @@ class SimpleItems(Base):
         assert self.generate_code(noclasses=True) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, Table
-
 
 metadata = MetaData()
 
@@ -831,7 +807,6 @@ t_simple_items = Table(
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -857,7 +832,6 @@ class SimpleItem(Base):
 # coding: utf-8
 from sqlalchemy import Column, Index, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -885,7 +859,6 @@ class SimpleItem(Base):
 # coding: utf-8
 from sqlalchemy import Column, MetaData, String, Table
 
-
 metadata = MetaData()
 
 
@@ -908,7 +881,6 @@ t_simple_items = Table(
 # coding: utf-8
 from sqlalchemy import Boolean, Column, MetaData, Table
 
-
 metadata = MetaData()
 
 
@@ -929,7 +901,6 @@ t_simple_items = Table(
         assert self.generate_code() == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, MetaData, String, Table
-
 
 metadata = MetaData()
 
@@ -959,7 +930,6 @@ deferrable=True, initially='DEFERRED'))
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -992,7 +962,6 @@ class OtherItem(Base):
 from sqlalchemy import Column, Integer, text
 from sqlalchemy.ext.declarative import declarative_base
 
-
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -1016,7 +985,6 @@ something()"""))
 # coding: utf-8
 from sqlalchemy import Column, Integer, text
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1045,7 +1013,6 @@ something()\"""))
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
-
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -1070,7 +1037,6 @@ class SimpleItem(Base):
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
-
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -1091,7 +1057,6 @@ class CustomerAPIPreference(Base):
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1114,7 +1079,6 @@ class CustomerApiPreference(Base):
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
-
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -1135,7 +1099,6 @@ class CustomerAPIPreference(Base):
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
-
 
 Base = declarative_base()
 metadata = Base.metadata

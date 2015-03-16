@@ -1,6 +1,14 @@
 Version history
 ===============
 
+2.0.0
+-----
+
+* Refactored code for better reuse
+
+* Added an option to only generate tables
+
+
 1.1.5
 -----
 
