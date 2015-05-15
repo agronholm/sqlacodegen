@@ -15,10 +15,10 @@ from sqlalchemy.types import Boolean, String
 import sqlalchemy
 
 try:
-    from sqlalchemy.sql.expression import text, TextClause
+    from sqlalchemy.sql.expression import TextClause
 except ImportError:
     # SQLAlchemy < 0.8
-    from sqlalchemy.sql.expression import text, _TextClause as TextClause
+    from sqlalchemy.sql.expression import _TextClause as TextClause
 
 _re_boolean_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?)(?:.*)\1\.)?(["`]?)(.*)\2')
@@ -276,6 +276,7 @@ class CodeGenerator(object):
 
 
 {models}"""
+
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False, noinflect=False,
                  noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable, class_model=ModelClass,
