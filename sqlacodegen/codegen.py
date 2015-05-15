@@ -302,7 +302,7 @@ class ModelClass(Model):
             if isinstance(constraint, ForeignKeyConstraint):
                 target_cls = self._tablename_to_classname(constraint.elements[0].column.table.name, inflect_engine)
                 if (detect_joined and self.parent_name == 'Base' and
-                            set(_get_column_names(constraint)) == pk_column_names):
+                        set(_get_column_names(constraint)) == pk_column_names):
                     self.parent_name = target_cls
                 else:
                     relationship_ = ManyToOneRelationship(self.name, target_cls, constraint, inflect_engine)

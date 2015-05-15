@@ -21,7 +21,8 @@ if sys.version_info < (3,):
     def remove_unicode_prefixes(text):
         return unicode_re.sub(r"\1\2\1", text)
 else:
-    remove_unicode_prefixes = lambda text: text
+    def remove_unicode_prefixes(text):
+        return text
 
 
 class TestModelGenerator(object):
