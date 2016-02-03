@@ -453,7 +453,7 @@ class CodeGenerator(object):
             remote_column = '{0}.{1}'.format(constraint.column.table.fullname, constraint.column.name)
             return 'ForeignKey({0})'.format(render_fk_options(remote_column))
         elif isinstance(constraint, ForeignKeyConstraint):
-            local_columns = constraint.columns
+            local_columns = _get_column_names(constraint)
             remote_columns = ['{0}.{1}'.format(fk.column.table.fullname, fk.column.name)
                               for fk in constraint.elements]
             return 'ForeignKeyConstraint({0})'.format(render_fk_options(local_columns, remote_columns))
