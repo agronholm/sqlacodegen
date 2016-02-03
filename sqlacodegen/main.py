@@ -1,4 +1,3 @@
-""" """
 from __future__ import unicode_literals, division, print_function, absolute_import
 import argparse
 import codecs
@@ -6,9 +5,9 @@ import sys
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
+import pkg_resources
 
 from sqlacodegen.codegen import CodeGenerator
-import sqlacodegen
 
 
 def main():
@@ -27,7 +26,8 @@ def main():
     args = parser.parse_args()
 
     if args.version:
-        print(sqlacodegen.version)
+        version = pkg_resources.get_distribution('sqlacodegen').parsed_version
+        print(version.public)
         return
     if not args.url:
         print('You must supply a url\n', file=sys.stderr)
