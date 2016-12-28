@@ -100,15 +100,15 @@ latter ones are appended numeric suffixes, starting from 1.
 Source code
 ===========
 
-The source can be browsed at `Bitbucket
-<http://bitbucket.org/agronholm/sqlacodegen/src/>`_.
+The source can be browsed at `Github
+<https://github.com/agronholm/sqlacodegen>`_.
 
 
 Reporting bugs
 ==============
 
-A `bug tracker <http://bitbucket.org/agronholm/sqlacodegen/issues/>`_
-is provided by bitbucket.org.
+A `bug tracker <https://github.com/agronholm/sqlacodegen/issues>`_
+is provided by Github.
 
 
 Getting help
