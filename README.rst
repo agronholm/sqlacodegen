@@ -100,7 +100,7 @@ latter ones are appended numeric suffixes, starting from 1.
 Source code
 ===========
 
-The source can be browsed at `GitHub
+The source can be browsed at `Github
 <https://github.com/agronholm/sqlacodegen>`_.
 
 
