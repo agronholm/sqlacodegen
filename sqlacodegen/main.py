@@ -65,24 +65,21 @@ def main():
     def _filter_tables_list(table_name, metadata_obj):
         '''
         A callable function passed to MetaData.reflect which returns boolean predicates on args entered
-        If arg of tables specified, limit list to only those tables and also omit skiptables
-        Else, make sure to omit skiptables, else return True for all tables
+        First, return False for all tables in skiptables
+        Second, if tables arg is non-empty, only return tables specified; Else return all tables
         :param table_name: string
         :param metadata_obj: sqlalchemy.MetaData
         :return: bool
         '''
+        if table_name in args.skiptables:
+            return False
         if args.tables:
             if table_name in args.tables:
                 return True
-            elif table_name in args.skiptables:
-                return False
             else:
                 return False
         else:
-            if table_name in args.skiptables:
-                return False
-            else:
-                return True
+            return True
 
     metadata.reflect(bind=engine, schema=args.schema, views=args.noviews,
                          only=_filter_tables_list)
