@@ -16,6 +16,8 @@ def main():
     parser.add_argument('--version', action='store_true', help="print the version number and exit")
     parser.add_argument('--schema', help='load tables from an alternate schema')
     parser.add_argument('--tables', help='tables to process (comma-separated, default: all)')
+    parser.add_argument('--skiptables', help='tables to skip ('
+                                             'comma-separated, default: none')
     parser.add_argument('--noviews', action='store_true', help="ignore views")
     parser.add_argument('--noindexes', action='store_true', help='ignore indexes')
     parser.add_argument('--noconstraints', action='store_true', help='ignore constraints')
