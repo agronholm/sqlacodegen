@@ -38,7 +38,10 @@ def main():
 
     engine = create_engine(args.url)
     metadata = MetaData(engine)
-    tables = args.tables.split(',') if args.tables else None
+    if args.tables:
+        tables = args.tables.split(',')
+    else:
+        tables = None
     metadata.reflect(engine, args.schema, not args.noviews, tables)
     outfile = codecs.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints, args.nojoined, args.noinflect,
