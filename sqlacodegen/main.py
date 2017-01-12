@@ -62,20 +62,30 @@ def main():
 
     engine = create_engine(args.url)
     metadata = MetaData(engine)
-    if args.tables:
-        tables = args.tables.split(',')
-    else:
-        tables = None
-    metadata.reflect(engine, args.schema, not args.noviews, tables)
-    if args.skiptables:
-        # construct tables diff list from current reflection
-        tables = list(set(metadata.tables.keys()) - set(args.skiptables.split(
-            ',')))
-        # clear prior reflection
-        metadata.clear()
-        # re-reflect (sic) to tables spec'ed (all or some) and exclude args
-        metadata.reflect(bind=engine, schema=args.schema, views=args.noviews,
-                         only=tables)
+    def _filter_tables_list(table_name, metadata_obj):
+        '''
+        A callable function passed to MetaData.reflect which returns boolean predicates on args entered
+        If arg of tables specified, limit list to only those tables and also omit skiptables
+        Else, make sure to omit skiptables, else return True for all tables
+        :param table_name: string
+        :param metadata_obj: sqlalchemy.MetaData
+        :return: bool
+        '''
+        if args.tables:
+            if table_name in args.tables:
+                return True
+            elif table_name in args.skiptables:
+                return False
+            else:
+                return False
+        else:
+            if table_name in args.skiptables:
+                return False
+            else:
+                return True
+
+    metadata.reflect(bind=engine, schema=args.schema, views=args.noviews,
+                         only=_filter_tables_list)
     outfile = codecs.open(args.outfile, 'w',
                           encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints,
