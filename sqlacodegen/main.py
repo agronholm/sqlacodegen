@@ -48,7 +48,8 @@ def parser_factory():
 
 
 def main():
-    args = parser_factory().parse_args()
+    parser = parser_factory()
+    args = parser.parse_args()
 
     if args.version:
         version = pkg_resources.get_distribution('sqlacodegen').parsed_version
@@ -67,9 +68,14 @@ def main():
         tables = None
     metadata.reflect(engine, args.schema, not args.noviews, tables)
     if args.skiptables:
+        # construct tables diff list from current reflection
         tables = list(set(metadata.tables.keys()) - set(args.skiptables.split(
             ',')))
-        metadata.reflect(engine, args.schema, not args.noviews, tables)
+        # clear prior reflection
+        metadata.clear()
+        # re-reflect (sic) to tables spec'ed (all or some) and exclude args
+        metadata.reflect(bind=engine, schema=args.schema, views=args.noviews,
+                         only=tables)
     outfile = codecs.open(args.outfile, 'w',
                           encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints,
