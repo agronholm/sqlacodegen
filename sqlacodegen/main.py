@@ -17,7 +17,7 @@ def main():
     parser.add_argument('--schema', help='load tables from an alternate schema')
     parser.add_argument('--tables', help='tables to process (comma-separated, default: all)')
     parser.add_argument('--skiptables', help='tables to skip ('
-                                             'comma-separated, default: none')
+                                             'comma-separated, default: none)')
     parser.add_argument('--noviews', action='store_true', help="ignore views")
     parser.add_argument('--noindexes', action='store_true', help='ignore indexes')
     parser.add_argument('--noconstraints', action='store_true', help='ignore constraints')
@@ -43,6 +43,9 @@ def main():
     else:
         tables = None
     metadata.reflect(engine, args.schema, not args.noviews, tables)
+    if args.skiptables:
+        tables = set(metadata.tables.keys())-set(args.skiptables.split(','))
+        metadata.reflect(engine, args.schema, not args.noviews, tables)
     outfile = codecs.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints, args.nojoined, args.noinflect,
                               args.noclasses)
