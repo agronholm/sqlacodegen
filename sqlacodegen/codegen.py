@@ -436,7 +436,7 @@ class CodeGenerator(object):
         if args:
             rendered += '({0})'.format(', '.join(args))
 
-        return rendered
+        return rendered, args
 
     @staticmethod
     def render_constraint(constraint):
@@ -502,9 +502,21 @@ class CodeGenerator(object):
             else:
                 server_default = 'server_default=text("{0}")'.format(default_expr)
 
+        # change numeric type to integer for auto_increment column in MSSQL
+        # http://stackoverflow.com/questions/41050112/forcing-autoincrement-on-numeric-primary-key-with-sqlalchemy-and-sql-server
+        # http://stackoverflow.com/questions/28316177/what-should-be-the-preferred-data-type-for-primary-key-colum-if-in-databasemssq
+        _column_type, _args = self.render_column_type(column.type)
+        if column.primary_key and self.metadata.bind.name == 'mssql' and column.default and column.default.increment > 0:
+            if _args and int(_args[0]) > 9:
+                _column_type = 'BigInteger'
+                self.collector.add_literal_import('sqlalchemy', 'BigInteger')
+            else:
+                _column_type = "Integer"
+                self.collector.add_literal_import('sqlalchemy', 'Integer')
+
         return 'Column({0})'.format(', '.join(
             ([repr(column.name)] if show_name else []) +
-            ([self.render_column_type(column.type)] if render_coltype else []) +
+            ([_column_type] if render_coltype else []) +
             [self.render_constraint(x) for x in dedicated_fks] +
             [repr(x) for x in column.constraints] +
             ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg] +
