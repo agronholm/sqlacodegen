@@ -368,11 +368,13 @@ class CodeGenerator(object):
                                 continue
 
             # Only form model classes for tables that have a primary key and are not association tables
-            if noclasses or not table.primary_key or table.name in association_tables:
-                model = self.table_model(table)
-            else:
-                model = self.class_model(table, links[table.name], self.inflect_engine, not nojoined)
-                classes[model.name] = model
+            # commented next 3 lines per http://stackoverflow.com/a/35916967
+            # to force classes
+            # if noclasses or not table.primary_key or table.name in association_tables:
+            #     model = self.table_model(table)
+            # else:
+            model = self.class_model(table, links[table.name], self.inflect_engine, not nojoined)
+            classes[model.name] = model
 
             self.models.append(model)
             model.add_imports(self.collector)
