@@ -11,7 +11,7 @@ from sqlalchemy import (Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckC
                         Column)
 from sqlalchemy.schema import ForeignKey
 from sqlalchemy.util import OrderedDict
-from sqlalchemy.types import Boolean, String
+from sqlalchemy.types import Boolean, String, ARRAY
 import sqlalchemy
 
 try:
@@ -91,6 +91,17 @@ def _getargspec_init(method):
         else:
             return ArgSpec(['self'], 'args', 'kwargs', None)
 
+def _adapt_type(ct):
+    cls = ct.__class__
+    for supercls in cls.__mro__:
+        if hasattr(supercls, '__visit_name__'):
+            cls = supercls
+        if supercls.__name__ != supercls.__name__.upper() and not supercls.__name__.startswith(
+                '_'):
+            break
+    if isinstance(ct, ARRAY):
+        ct.item_type = _adapt_type(ct.item_type)
+    return ct.adapt(cls)
 
 class ImportCollector(OrderedDict):
     def add_import(self, obj):
@@ -109,16 +120,10 @@ class Model(object):
         self.table = table
         self.schema = table.schema
 
+
         # Adapt column types to the most reasonable generic types (ie. VARCHAR -> String)
         for column in table.columns:
-            cls = column.type.__class__
-            for supercls in cls.__mro__:
-                if hasattr(supercls, '__visit_name__'):
-                    cls = supercls
-                if supercls.__name__ != supercls.__name__.upper() and not supercls.__name__.startswith('_'):
-                    break
-
-            column.type = column.type.adapt(cls)
+            column.type = _adapt_type(column.type)
 
     def add_imports(self, collector):
         if self.table.columns:
