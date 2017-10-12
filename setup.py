@@ -17,7 +17,7 @@ setup(
     },
     author='Alex Gronholm',
     author_email='sqlacodegen@nextday.fi',
-    url='https://bitbucket.org/agronholm/sqlacodegen',
+    url='https://github.com/agronholm/sqlacodegen',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
