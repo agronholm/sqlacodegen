@@ -1,0 +1,27 @@
+sudo: false
+
+language: python
+
+python:
+  - "2.7"
+  - "3.3"
+  - "3.4"
+  - "3.5"
+  - "3.6"
+
+install: pip install tox-travis coveralls
+
+script: tox
+
+after_success: coveralls
+
+deploy:
+  provider: pypi
+  user: agronholm
+  password:
+    secure: dKgCsrEdqjXPLZMXG9GaPNR3GTEMUgzPPUYZo7T4TW08E+pcVwymz4DPa+9jdFYm10dDqofnrVoyPvsN2Bh4vZeoFtGJg+CKV5kIT7TJjmhdjheVSZnQI9tTmDXbQU5IbZQiqDtdCYGfg45AveXKbcBNcZBLD9FpNSC6zp+RKG5s7p5fLTsBFrhbrpRyomDhg+sKC3A6lfBSAb5cTn2aB1c3eZDLsNAuU5qor7RA0diMneqRIRgGY04RnEHUop599QbqdJH4/rVwcxbnXiguKOY1XU+Uys5ut9BGO6vZob1JUuh3IZ5I+qivxjtxhO9f7HGkl/q2BFco1V0KzFbipA/UY04oqBEIPRn7rLUqHHzbtafsg6vt8oDAlM8KN6ZQ9UGrzBYttQNU1ZUG996Ud7w9mbeTiANM9BXlof0J598PhmqCtWHAV2ssATtFFUamnATa7s4hrcGMx7yYrxH7+qzbcUHj89a43Xwxp73PqnjqHhXrMN96DLjL6KXW/AWiQdmw6n49JsR33ouAlS+3mA2V9rPazS6lsfX1XpAtOUdhiL6zhnwFHHDabxEyrQWUR8EDfsnqssyn1R2+qqSg1jwTqlSpgo2kP4btQ/92WaPcHTpaylWVChhfNNLO0Tkr2dwuAWxbWNEzYx7QslMzpwCZfKsistcKQ5nb3D+0QUc=
+  distributions: sdist bdist_wheel
+  on:
+    tags: true
+    python: "3.6"
+    repo: agronholm/sqlacodegen
