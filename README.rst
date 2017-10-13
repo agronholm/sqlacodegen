@@ -63,6 +63,10 @@ form using the "inflect" library. Then, every underscore is removed while
 transforming the next letter to upper case. For example, ``sales_invoices``
 becomes ``SalesInvoice``.
 
+Classes will not be created for tables lacking a primary key; these tables
+will appear instead as instances of ``sqlalchemy.Table`` in the generated
+code.
+
 
 Relationship detection logic
 ----------------------------
