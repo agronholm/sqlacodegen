@@ -7,7 +7,7 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import (MetaData, Table, Column, CheckConstraint, UniqueConstraint, Index, ForeignKey,
                                ForeignKeyConstraint)
 from sqlalchemy.sql.expression import text
-from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
+from sqlalchemy.types import ARRAY, DATE, INTEGER, SMALLINT, VARCHAR, NUMERIC
 from sqlalchemy.dialects.postgresql.base import BIGINT, DOUBLE_PRECISION, BOOLEAN, ENUM
 from sqlalchemy.dialects.mysql.base import TINYINT
 from sqlalchemy.dialects.mysql import base as mysql
@@ -81,6 +81,29 @@ t_simple_items = Table(
     Column('bool1', Boolean),
     Column('bool2', Boolean),
     Column('bool3', Boolean)
+)
+"""
+
+    def test_arrays(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('dp_array', ARRAY(DOUBLE_PRECISION(precision=53))),
+            Column('int_array', ARRAY(INTEGER)),
+            Column('date_array', ARRAY(DATE))
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import ARRAY, Column, MetaData, Table
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('dp_array', ARRAY(Float(precision=53))),
+    Column('int_array', ARRAY(Integer())),
+    Column('date_array', ARRAY(Date()))
 )
 """
 
