@@ -14,6 +14,8 @@ Version history
 
 * Added an option to only generate tables
 
+* Added support for Geoalchemy2
+
 
 1.1.6
 -----
