@@ -29,10 +29,6 @@ To install, do::
 
     pip install sqlacodegen
 
-or, failing that::
-
-    easy_install sqlacodegen
-
 
 Example usage
 -------------
