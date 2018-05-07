@@ -6,6 +6,12 @@ Version history
 
 * Refactored code for better reuse
 
+* Dropped support for Python 2.6, 3.2 and 3.3
+
+* Dropped support for SQLAlchemy < 0.8
+
+* Worked around a bug regarding Enum on SQLAlchemy 1.2+ (``name`` was missing)
+
 * Added an option to only generate tables
 
 

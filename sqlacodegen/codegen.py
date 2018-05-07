@@ -10,15 +10,11 @@ import re
 from sqlalchemy import (Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckConstraint, UniqueConstraint, Table,
                         Column)
 from sqlalchemy.schema import ForeignKey
-from sqlalchemy.util import OrderedDict
+from sqlalchemy.sql.expression import TextClause
 from sqlalchemy.types import Boolean, String
+from sqlalchemy.util import OrderedDict
 import sqlalchemy
 
-try:
-    from sqlalchemy.sql.expression import TextClause
-except ImportError:
-    # SQLAlchemy < 0.8
-    from sqlalchemy.sql.expression import _TextClause as TextClause
 
 _re_boolean_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?)(?:.*)\1\.)?(["`]?)(.*)\2')
@@ -111,14 +107,23 @@ class Model(object):
 
         # Adapt column types to the most reasonable generic types (ie. VARCHAR -> String)
         for column in table.columns:
-            cls = column.type.__class__
-            for supercls in cls.__mro__:
-                if hasattr(supercls, '__visit_name__'):
-                    cls = supercls
-                if supercls.__name__ != supercls.__name__.upper() and not supercls.__name__.startswith('_'):
-                    break
+            coltype = column.type
+            for supercls in coltype.__class__.__mro__:
+                if (not supercls.__name__.startswith('_') and
+                        supercls.__name__ != supercls.__name__.upper() and
+                        hasattr(supercls, '__visit_name__')):
 
-            column.type = column.type.adapt(cls)
+                    # Hack to fix adaptation of the Enum class which is broken since SQLAlchemy 1.2
+                    kw = {}
+                    if supercls is Enum:
+                        kw['name'] = column.type.name
+
+                    column.type = column.type.adapt(supercls)
+
+                    for key, value in kw.items():
+                        setattr(column.type, key, value)
+
+                    break
 
     def add_imports(self, collector):
         if self.table.columns:

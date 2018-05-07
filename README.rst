@@ -11,7 +11,7 @@ Python 3 and the latest SQLAlchemy version).
 Features
 ========
 
-* Supports SQLAlchemy 0.6.x - 1.0.x
+* Supports SQLAlchemy 0.8.x - 1.2.x
 * Produces declarative code that almost looks like it was hand written
 * Produces `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ compliant code
 * Accurately determines relationships, including many-to-many, one-to-one
