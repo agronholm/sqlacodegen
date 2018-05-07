@@ -12,8 +12,6 @@ Version history
 
 * Worked around a bug regarding Enum on SQLAlchemy 1.2+ (``name`` was missing)
 
-* Added an option to only generate tables
-
 * Added support for Geoalchemy2
 
 
@@ -21,6 +19,8 @@ Version history
 -----
 
 * Fixed compatibility with SQLAlchemy 1.0
+
+* Added an option to only generate tables
 
 
 1.1.5
