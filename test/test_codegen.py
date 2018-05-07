@@ -1,19 +1,20 @@
 from __future__ import unicode_literals, division, print_function, absolute_import
-from io import StringIO
-import sys
-import re
 
+import re
+import sys
+from io import StringIO
+
+from sqlalchemy.dialects.mysql import base as mysql
+from sqlalchemy.dialects.mysql.base import TINYINT
+from sqlalchemy.dialects.postgresql.base import BIGINT, DOUBLE_PRECISION, BOOLEAN, ENUM
 from sqlalchemy.engine import create_engine
-from sqlalchemy.schema import (MetaData, Table, Column, CheckConstraint, UniqueConstraint, Index, ForeignKey,
-                               ForeignKeyConstraint)
+from sqlalchemy.schema import (
+    MetaData, Table, Column, CheckConstraint, UniqueConstraint, Index, ForeignKey,
+    ForeignKeyConstraint)
 from sqlalchemy.sql.expression import text
 from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
-from sqlalchemy.dialects.postgresql.base import BIGINT, DOUBLE_PRECISION, BOOLEAN, ENUM
-from sqlalchemy.dialects.mysql.base import TINYINT
-from sqlalchemy.dialects.mysql import base as mysql
 
 from sqlacodegen.codegen import CodeGenerator
-
 
 if sys.version_info < (3,):
     unicode_re = re.compile(r"u('|\")(.*?)(?<!\\)\1")
@@ -251,7 +252,8 @@ t_simple_items = Table(
             Column('text', VARCHAR)
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
-        simple_items.indexes.add(Index('idx_text_number', simple_items.c.text, simple_items.c.number, unique=True))
+        simple_items.indexes.add(Index('idx_text_number', simple_items.c.text,
+                                       simple_items.c.number, unique=True))
         simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
         assert self.generate_code() == """\
@@ -278,7 +280,8 @@ t_simple_items = Table(
             Column('text', VARCHAR)
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
-        simple_items.indexes.add(Index('idx_text_number', simple_items.c.text, simple_items.c.number))
+        simple_items.indexes.add(Index('idx_text_number', simple_items.c.text,
+                                       simple_items.c.number))
         simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
         assert self.generate_code() == """\
@@ -392,8 +395,10 @@ class SimpleItem(Base):
     parent_item_id = Column(ForeignKey('simple_items.id'))
     top_item_id = Column(ForeignKey('simple_items.id'))
 
-    parent_item = relationship('SimpleItem', remote_side=[id], primaryjoin='SimpleItem.parent_item_id == SimpleItem.id')
-    top_item = relationship('SimpleItem', remote_side=[id], primaryjoin='SimpleItem.top_item_id == SimpleItem.id')
+    parent_item = relationship('SimpleItem', remote_side=[id], \
+primaryjoin='SimpleItem.parent_item_id == SimpleItem.id')
+    top_item = relationship('SimpleItem', remote_side=[id], \
+primaryjoin='SimpleItem.top_item_id == SimpleItem.id')
 """
 
     def test_onetomany_composite(self):
@@ -402,7 +407,8 @@ class SimpleItem(Base):
             Column('id', INTEGER, primary_key=True),
             Column('container_id1', INTEGER),
             Column('container_id2', INTEGER),
-            ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', 'simple_containers.id2'],
+            ForeignKeyConstraint(['container_id1', 'container_id2'],
+                                 ['simple_containers.id1', 'simple_containers.id2'],
                                  ondelete='CASCADE', onupdate='CASCADE')
         )
         Table(
@@ -431,8 +437,8 @@ class SimpleContainer(Base):
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
     __table_args__ = (
-        ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', 'simple_containers.id2'], \
-ondelete='CASCADE', onupdate='CASCADE'),
+        ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', \
+'simple_containers.id2'], ondelete='CASCADE', onupdate='CASCADE'),
     )
 
     id = Column(Integer, primary_key=True)
@@ -481,7 +487,8 @@ class SimpleItem(Base):
 
     parent_container = relationship('SimpleContainer', \
 primaryjoin='SimpleItem.parent_container_id == SimpleContainer.id')
-    top_container = relationship('SimpleContainer', primaryjoin='SimpleItem.top_container_id == SimpleContainer.id')
+    top_container = relationship('SimpleContainer', \
+primaryjoin='SimpleItem.top_container_id == SimpleContainer.id')
 """
 
     def test_onetoone(self):
@@ -667,8 +674,10 @@ class SimpleItem(Base):
             Column('item_id2', INTEGER),
             Column('container_id1', INTEGER),
             Column('container_id2', INTEGER),
-            ForeignKeyConstraint(['item_id1', 'item_id2'], ['simple_items.id1', 'simple_items.id2']),
-            ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', 'simple_containers.id2'])
+            ForeignKeyConstraint(['item_id1', 'item_id2'],
+                                 ['simple_items.id1', 'simple_items.id2']),
+            ForeignKeyConstraint(['container_id1', 'container_id2'],
+                                 ['simple_containers.id1', 'simple_containers.id2'])
         )
 
         assert self.generate_code() == """\
@@ -687,7 +696,8 @@ t_container_items = Table(
     Column('item_id2', Integer),
     Column('container_id1', Integer),
     Column('container_id2', Integer),
-    ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', 'simple_containers.id2']),
+    ForeignKeyConstraint(['container_id1', 'container_id2'], \
+['simple_containers.id1', 'simple_containers.id2']),
     ForeignKeyConstraint(['item_id1', 'item_id2'], ['simple_items.id1', 'simple_items.id2'])
 )
 
@@ -895,8 +905,9 @@ t_simple_items = Table(
     def test_foreign_key_options(self):
         Table(
             'simple_items', self.metadata,
-            Column('name', VARCHAR, ForeignKey('simple_items.name', ondelete='CASCADE', onupdate='CASCADE',
-                                               deferrable=True, initially='DEFERRED'))
+            Column('name', VARCHAR, ForeignKey(
+                'simple_items.name', ondelete='CASCADE', onupdate='CASCADE', deferrable=True,
+                initially='DEFERRED'))
         )
 
         assert self.generate_code() == """\
@@ -908,8 +919,8 @@ metadata = MetaData()
 
 t_simple_items = Table(
     'simple_items', metadata,
-    Column('name', String, ForeignKey('simple_items.name', ondelete='CASCADE', onupdate='CASCADE', \
-deferrable=True, initially='DEFERRED'))
+    Column('name', String, ForeignKey('simple_items.name', ondelete='CASCADE', \
+onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
 )
 """
 
