@@ -1,7 +1,7 @@
 from __future__ import unicode_literals, division, print_function, absolute_import
 
 import argparse
-import codecs
+import io
 import sys
 
 import pkg_resources
@@ -43,7 +43,7 @@ def main():
     metadata = MetaData(engine)
     tables = args.tables.split(',') if args.tables else None
     metadata.reflect(engine, args.schema, not args.noviews, tables)
-    outfile = codecs.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
+    outfile = io.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints, args.nojoined,
                               args.noinflect, args.noclasses)
     generator.render(outfile)
