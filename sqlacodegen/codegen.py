@@ -22,7 +22,6 @@ try:
     import geoalchemy2  # noqa: F401
 except ImportError:
     pass
-
 _re_boolean_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?)(?:.*)\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \((.+)\)")
@@ -42,14 +41,6 @@ def _get_column_names(constraint):
     if isinstance(constraint.columns, list):
         return constraint.columns
     return list(constraint.columns.keys())
-
-
-def _convert_to_valid_identifier(name):
-    assert name, 'Identifier cannot be empty'
-    if name[0].isdigit() or iskeyword(name):
-        name = '_' + name
-    return _re_invalid_identifier.sub('_', name)
-
 
 def _get_compiled_expression(statement):
     """Returns the statement in a form where any placeholders have been filled in."""
@@ -203,8 +194,9 @@ class ModelClass(Model):
             relationship_ = ManyToManyRelationship(self.name, target_cls, association_table)
             self._add_attribute(relationship_.preferred_name, relationship_)
 
-    @staticmethod
-    def _tablename_to_classname(tablename, inflect_engine):
+    @classmethod
+    def _tablename_to_classname(cls, tablename, inflect_engine):
+        tablename = cls._convert_to_valid_identifier(tablename)
         camel_case_name = ''.join(part[:1].upper() + part[1:] for part in tablename.split('_'))
         return inflect_engine.singular_noun(camel_case_name) or camel_case_name
 
