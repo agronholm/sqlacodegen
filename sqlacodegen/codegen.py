@@ -42,6 +42,7 @@ def _get_column_names(constraint):
         return constraint.columns
     return list(constraint.columns.keys())
 
+
 def _get_compiled_expression(statement):
     """Returns the statement in a form where any placeholders have been filled in."""
     if isinstance(statement, TextClause):
