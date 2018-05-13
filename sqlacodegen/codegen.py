@@ -44,13 +44,6 @@ def _get_column_names(constraint):
     return list(constraint.columns.keys())
 
 
-def _convert_to_valid_identifier(name):
-    assert name, 'Identifier cannot be empty'
-    if name[0].isdigit() or iskeyword(name):
-        name = '_' + name
-    return _re_invalid_identifier.sub('_', name)
-
-
 def _get_compiled_expression(statement):
     """Returns the statement in a form where any placeholders have been filled in."""
     if isinstance(statement, TextClause):
