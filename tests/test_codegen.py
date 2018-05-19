@@ -1013,7 +1013,7 @@ something()\"""))
 
     def test_invalid_attribute_names(self):
         Table(
-            'simple_items', self.metadata,
+            'simple-items', self.metadata,
             Column('id-test', INTEGER, primary_key=True),
             Column('4test', INTEGER),
             Column('_4test', INTEGER),
@@ -1030,7 +1030,7 @@ metadata = Base.metadata
 
 
 class SimpleItem(Base):
-    __tablename__ = 'simple_items'
+    __tablename__ = 'simple-items'
 
     id_test = Column('id-test', Integer, primary_key=True)
     _4test = Column('4test', Integer)
