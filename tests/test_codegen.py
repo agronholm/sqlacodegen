@@ -1143,3 +1143,26 @@ class CustomerAPIPreference(Base):
 
     id = Column(Integer, primary_key=True)
 """
+
+    def test_metadata_column(self):
+        Table(
+            'simple', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('metadata', VARCHAR)
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+
+    id = Column(Integer, primary_key=True)
+    metadata_ = Column('metadata', String)
+"""

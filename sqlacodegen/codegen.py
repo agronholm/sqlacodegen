@@ -216,6 +216,9 @@ class ModelClass(Model):
         assert name, 'Identifier cannot be empty'
         if name[0].isdigit() or iskeyword(name):
             name = '_' + name
+        elif name == 'metadata':
+            name = 'metadata_'
+
         return _re_invalid_identifier.sub('_', name)
 
     def _add_attribute(self, attrname, value):

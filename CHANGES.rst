@@ -19,6 +19,8 @@ Version history
 * Fixed array item types not being adapted or imported
   (fixes #46; thanks to Martin Glauer and Shawn Koschik for help)
 
+* Fixed attribute name of columns named ``metadata`` in mapped classes (fixes #62)
+
 
 1.1.6
 -----
