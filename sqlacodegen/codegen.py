@@ -11,7 +11,7 @@ from keyword import iskeyword
 import sqlalchemy
 from sqlalchemy import (
     Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckConstraint, UniqueConstraint, Table,
-    Column)
+    Column, ARRAY)
 from sqlalchemy.schema import ForeignKey
 from sqlalchemy.sql.expression import TextClause
 from sqlalchemy.types import Boolean, String
@@ -113,10 +113,7 @@ class Model(object):
 
     def _get_adapted_type(self, coltype):
         for supercls in coltype.__class__.__mro__:
-            if (not supercls.__name__.startswith('_') and
-                    supercls.__name__ != supercls.__name__.upper() and
-                    hasattr(supercls, '__visit_name__')):
-
+            if not supercls.__name__.startswith('_') and hasattr(supercls, '__visit_name__'):
                 # Hack to fix adaptation of the Enum class which is broken since SQLAlchemy 1.2
                 kw = {}
                 if supercls is Enum:
@@ -127,7 +124,12 @@ class Model(object):
                 for key, value in kw.items():
                     setattr(coltype, key, value)
 
-                break
+                if isinstance(coltype, ARRAY):
+                    coltype.item_type = self._get_adapted_type(coltype.item_type)
+
+                # Stop on the first valid non-uppercase column type class
+                if supercls.__name__ != supercls.__name__.upper():
+                    break
 
         return coltype
 
@@ -139,6 +141,9 @@ class Model(object):
             collector.add_import(column.type)
             if column.server_default:
                 collector.add_literal_import('sqlalchemy', 'text')
+
+            if isinstance(column.type, ARRAY):
+                collector.add_import(column.type.item_type.__class__)
 
         for constraint in sorted(self.table.constraints, key=_get_constraint_sort_key):
             if isinstance(constraint, ForeignKeyConstraint):

@@ -6,6 +6,7 @@ from io import StringIO
 
 from sqlalchemy.dialects.mysql import base as mysql
 from sqlalchemy.dialects.mysql.base import TINYINT
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql.base import BIGINT, DOUBLE_PRECISION, BOOLEAN, ENUM
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import (
@@ -82,6 +83,27 @@ t_simple_items = Table(
     Column('bool1', Boolean),
     Column('bool2', Boolean),
     Column('bool3', Boolean)
+)
+"""
+
+    def test_arrays(self):
+        Table(
+            'simple_items', self.metadata,
+            Column('dp_array', ARRAY(DOUBLE_PRECISION(precision=53))),
+            Column('int_array', ARRAY(INTEGER))
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import ARRAY, Column, Float, Integer, MetaData, Table
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('dp_array', ARRAY(Float(precision=53))),
+    Column('int_array', ARRAY(Integer()))
 )
 """
 
