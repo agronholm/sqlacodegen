@@ -109,23 +109,27 @@ class Model(object):
 
         # Adapt column types to the most reasonable generic types (ie. VARCHAR -> String)
         for column in table.columns:
-            coltype = column.type
-            for supercls in coltype.__class__.__mro__:
-                if (not supercls.__name__.startswith('_') and
-                        supercls.__name__ != supercls.__name__.upper() and
-                        hasattr(supercls, '__visit_name__')):
+            column.type = self._get_adapted_type(column.type)
 
-                    # Hack to fix adaptation of the Enum class which is broken since SQLAlchemy 1.2
-                    kw = {}
-                    if supercls is Enum:
-                        kw['name'] = column.type.name
+    def _get_adapted_type(self, coltype):
+        for supercls in coltype.__class__.__mro__:
+            if (not supercls.__name__.startswith('_') and
+                    supercls.__name__ != supercls.__name__.upper() and
+                    hasattr(supercls, '__visit_name__')):
 
-                    column.type = column.type.adapt(supercls)
+                # Hack to fix adaptation of the Enum class which is broken since SQLAlchemy 1.2
+                kw = {}
+                if supercls is Enum:
+                    kw['name'] = coltype.name
 
-                    for key, value in kw.items():
-                        setattr(column.type, key, value)
+                coltype = coltype.adapt(supercls)
 
-                    break
+                for key, value in kw.items():
+                    setattr(coltype, key, value)
+
+                break
+
+        return coltype
 
     def add_imports(self, collector):
         if self.table.columns:
