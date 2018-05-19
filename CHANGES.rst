@@ -14,6 +14,8 @@ Version history
 
 * Added support for Geoalchemy2
 
+* Fixed invalid class names being generated (fixes #60; PR by Dan O'Huiginn)
+
 
 1.1.6
 -----
