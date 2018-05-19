@@ -16,7 +16,8 @@ Version history
 
 * Fixed invalid class names being generated (fixes #60; PR by Dan O'Huiginn)
 
-* Fixed array item types not being adapted or imported (thanks to Martin Glauer for help)
+* Fixed array item types not being adapted or imported
+  (thanks to Martin Glauer and Shawn Koschik for help)
 
 
 1.1.6
