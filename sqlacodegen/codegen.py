@@ -50,50 +50,10 @@ def _get_column_names(constraint):
     return list(constraint.columns.keys())
 
 
-def _get_compiled_expression(statement):
-    """Returns the statement in a form where any placeholders have been filled in."""
-    if isinstance(statement, TextClause):
-        return statement.text
-
-    dialect = statement._from_objects[0].bind.dialect
-    compiler = statement._compiler(dialect)
-
-    # Adapted from http://stackoverflow.com/a/5698357/242021
-    class LiteralCompiler(compiler.__class__):
-        def visit_bindparam(self, bindparam, within_columns_clause=False, literal_binds=False,
-                            **kwargs):
-            return super(LiteralCompiler, self).render_literal_bindparam(
-                bindparam, within_columns_clause=within_columns_clause,
-                literal_binds=literal_binds, **kwargs
-            )
-
-    compiler = LiteralCompiler(dialect, statement)
-    return compiler.process(statement)
-
-
 def _get_constraint_sort_key(constraint):
     if isinstance(constraint, CheckConstraint):
         return 'C{0}'.format(constraint.sqltext)
     return constraint.__class__.__name__[0] + repr(_get_column_names(constraint))
-
-
-def _get_common_fk_constraints(table1, table2):
-    """Returns a set of foreign key constraints the two tables have against each other."""
-    c1 = set(c for c in table1.constraints if isinstance(c, ForeignKeyConstraint) and
-             c.elements[0].column.table == table2)
-    c2 = set(c for c in table2.constraints if isinstance(c, ForeignKeyConstraint) and
-             c.elements[0].column.table == table1)
-    return c1.union(c2)
-
-
-def _getargspec_init(method):
-    try:
-        return inspect.getargspec(method)
-    except TypeError:
-        if method is object.__init__:
-            return ArgSpec(['self'], None, None, None)
-        else:
-            return ArgSpec(['self'], 'args', 'kwargs', None)
 
 
 class ImportCollector(OrderedDict):
@@ -290,11 +250,20 @@ class ManyToOneRelationship(Relationship):
 
         # If the two tables share more than one foreign key constraint,
         # SQLAlchemy needs an explicit primaryjoin to figure out which column(s) to join with
-        common_fk_constraints = _get_common_fk_constraints(constraint.table,
-                                                           constraint.elements[0].column.table)
+        common_fk_constraints = self.get_common_fk_constraints(
+            constraint.table, constraint.elements[0].column.table)
         if len(common_fk_constraints) > 1:
             self.kwargs['primaryjoin'] = "'{0}.{1} == {2}.{3}'".format(
                 source_cls, column_names[0], target_cls, constraint.elements[0].column.name)
+
+    @staticmethod
+    def get_common_fk_constraints(table1, table2):
+        """Returns a set of foreign key constraints the two tables have against each other."""
+        c1 = set(c for c in table1.constraints if isinstance(c, ForeignKeyConstraint) and
+                 c.elements[0].column.table == table2)
+        c2 = set(c for c in table2.constraints if isinstance(c, ForeignKeyConstraint) and
+                 c.elements[0].column.table == table1)
+        return c1.union(c2)
 
 
 class ManyToManyRelationship(Relationship):
@@ -393,7 +362,7 @@ class CodeGenerator(object):
                 # Detect check constraints for boolean and enum columns
                 for constraint in table.constraints.copy():
                     if isinstance(constraint, CheckConstraint):
-                        sqltext = _get_compiled_expression(constraint.sqltext)
+                        sqltext = self._get_compiled_expression(constraint.sqltext)
 
                         # Turn any integer-like column with a CheckConstraint like
                         # "column IN (0, 1)" into a Boolean
@@ -459,7 +428,38 @@ class CodeGenerator(object):
         return 'metadata = MetaData()'
 
     @staticmethod
-    def render_column_type(coltype):
+    def _get_compiled_expression(statement):
+        """Returns the statement in a form where any placeholders have been filled in."""
+        if isinstance(statement, TextClause):
+            return statement.text
+
+        dialect = statement._from_objects[0].bind.dialect
+        compiler = statement._compiler(dialect)
+
+        # Adapted from http://stackoverflow.com/a/5698357/242021
+        class LiteralCompiler(compiler.__class__):
+            def visit_bindparam(self, bindparam, within_columns_clause=False, literal_binds=False,
+                                **kwargs):
+                return super(LiteralCompiler, self).render_literal_bindparam(
+                    bindparam, within_columns_clause=within_columns_clause,
+                    literal_binds=literal_binds, **kwargs
+                )
+
+        compiler = LiteralCompiler(dialect, statement)
+        return compiler.process(statement)
+
+    @staticmethod
+    def _getargspec_init(method):
+        try:
+            return inspect.getargspec(method)
+        except TypeError:
+            if method is object.__init__:
+                return ArgSpec(['self'], None, None, None)
+            else:
+                return ArgSpec(['self'], 'args', 'kwargs', None)
+
+    @classmethod
+    def render_column_type(cls, coltype):
         args = []
         if isinstance(coltype, Enum):
             args.extend(repr(arg) for arg in coltype.enums)
@@ -467,7 +467,7 @@ class CodeGenerator(object):
                 args.append('name={0!r}'.format(coltype.name))
         else:
             # All other types
-            argspec = _getargspec_init(coltype.__class__.__init__)
+            argspec = cls._getargspec_init(coltype.__class__.__init__)
             defaults = dict(zip(argspec.args[-len(argspec.defaults or ()):],
                                 argspec.defaults or ()))
             missing = object()
@@ -492,8 +492,8 @@ class CodeGenerator(object):
 
         return rendered
 
-    @staticmethod
-    def render_constraint(constraint):
+    @classmethod
+    def render_constraint(cls, constraint):
         def render_fk_options(*opts):
             opts = [repr(opt) for opt in opts]
             for attr in 'ondelete', 'onupdate', 'deferrable', 'initially', 'match':
@@ -514,7 +514,8 @@ class CodeGenerator(object):
             return 'ForeignKeyConstraint({0})'.format(
                 render_fk_options(local_columns, remote_columns))
         elif isinstance(constraint, CheckConstraint):
-            return 'CheckConstraint({0!r})'.format(_get_compiled_expression(constraint.sqltext))
+            return 'CheckConstraint({0!r})'.format(
+                cls._get_compiled_expression(constraint.sqltext))
         elif isinstance(constraint, UniqueConstraint):
             columns = [repr(col.name) for col in constraint.columns]
             return 'UniqueConstraint({0})'.format(', '.join(columns))
@@ -554,7 +555,7 @@ class CodeGenerator(object):
             column.index = True
             kwarg.append('index')
         if column.server_default:
-            default_expr = _get_compiled_expression(column.server_default.arg)
+            default_expr = self._get_compiled_expression(column.server_default.arg)
             if '\n' in default_expr:
                 server_default = 'server_default=text("""\\\n{0}""")'.format(default_expr)
             else:
