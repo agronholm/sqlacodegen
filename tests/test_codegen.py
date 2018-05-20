@@ -18,7 +18,7 @@ from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
 from sqlacodegen.codegen import CodeGenerator
 
 if sys.version_info < (3,):
-    unicode_re = re.compile(r"u('|\")(.*?)(?<!\\)\1")
+    unicode_re = re.compile(r"u(['\"])(.*?)(?<!\\)\1")
 
     def remove_unicode_prefixes(text):
         return unicode_re.sub(r"\1\2\1", text)
