@@ -4,6 +4,7 @@ import re
 import sys
 from io import StringIO
 
+import sqlalchemy
 from sqlalchemy.dialects.mysql import base as mysql
 from sqlalchemy.dialects.mysql.base import TINYINT
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -93,7 +94,23 @@ t_simple_items = Table(
             Column('int_array', ARRAY(INTEGER))
         )
 
-        assert self.generate_code() == """\
+        if sqlalchemy.__version__ < '1.1':
+            assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import Column, Float, Integer, MetaData, Table
+from sqlalchemy.dialects.postgresql.base import ARRAY
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('dp_array', ARRAY(Float(precision=53))),
+    Column('int_array', ARRAY(Integer()))
+)
+"""
+        else:
+            assert self.generate_code() == """\
 # coding: utf-8
 from sqlalchemy import ARRAY, Column, Float, Integer, MetaData, Table
 

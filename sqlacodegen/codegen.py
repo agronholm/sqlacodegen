@@ -11,11 +11,17 @@ from keyword import iskeyword
 import sqlalchemy
 from sqlalchemy import (
     Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckConstraint, UniqueConstraint, Table,
-    Column, ARRAY)
+    Column)
 from sqlalchemy.schema import ForeignKey
 from sqlalchemy.sql.expression import TextClause
 from sqlalchemy.types import Boolean, String
 from sqlalchemy.util import OrderedDict
+
+# The generic ARRAY type was introduced in SQLAlchemy 1.1
+try:
+    from sqlalchemy import ARRAY
+except ImportError:
+    from sqlalchemy.dialects.postgresql import ARRAY
 
 # Conditionally import Geoalchemy2 to enable reflection support
 try:
