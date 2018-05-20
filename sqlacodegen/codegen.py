@@ -354,7 +354,7 @@ class CodeGenerator(object):
                 table.indexes.clear()
 
             if noconstraints:
-                table.constraints = set([table.primary_key])
+                table.constraints = {table.primary_key}
                 table.foreign_keys.clear()
                 for col in table.columns:
                     col.foreign_keys.clear()
@@ -531,11 +531,11 @@ class CodeGenerator(object):
         kwarg = []
         is_sole_pk = column.primary_key and len(column.table.primary_key) == 1
         dedicated_fks = [c for c in column.foreign_keys if len(c.constraint.columns) == 1]
-        is_unique = any(isinstance(c, UniqueConstraint) and set(c.columns) == set([column])
+        is_unique = any(isinstance(c, UniqueConstraint) and set(c.columns) == {column}
                         for c in column.table.constraints)
-        is_unique = is_unique or any(i.unique and set(i.columns) == set([column])
+        is_unique = is_unique or any(i.unique and set(i.columns) == {column}
                                      for i in column.table.indexes)
-        has_index = any(set(i.columns) == set([column]) for i in column.table.indexes)
+        has_index = any(set(i.columns) == {column} for i in column.table.indexes)
         server_default = None
 
         # Render the column type if there are no foreign keys on it or any of them points back to
