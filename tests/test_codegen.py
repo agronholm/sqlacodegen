@@ -6,10 +6,8 @@ from io import StringIO
 
 import pytest
 import sqlalchemy
-from sqlalchemy.dialects.mysql import base as mysql
-from sqlalchemy.dialects.mysql.base import TINYINT
-from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.dialects.postgresql.base import BIGINT, DOUBLE_PRECISION, BOOLEAN, ENUM
+from sqlalchemy.dialects import mysql
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import (
     MetaData, Table, Column, CheckConstraint, UniqueConstraint, Index, ForeignKey,
@@ -52,8 +50,8 @@ def generate_code(metadata, **kwargs):
 def test_fancy_coltypes(metadata):
     Table(
         'simple_items', metadata,
-        Column('enum', ENUM('A', 'B', name='blah')),
-        Column('bool', BOOLEAN),
+        Column('enum', postgresql.ENUM('A', 'B', name='blah')),
+        Column('bool', postgresql.BOOLEAN),
         Column('number', NUMERIC(10, asdecimal=False)),
     )
 
@@ -78,7 +76,7 @@ def test_boolean_detection(metadata):
         'simple_items', metadata,
         Column('bool1', INTEGER),
         Column('bool2', SMALLINT),
-        Column('bool3', TINYINT),
+        Column('bool3', mysql.TINYINT),
         CheckConstraint('simple_items.bool1 IN (0, 1)'),
         CheckConstraint('simple_items.bool2 IN (0, 1)'),
         CheckConstraint('simple_items.bool3 IN (0, 1)')
@@ -104,8 +102,8 @@ t_simple_items = Table(
 def test_arrays(metadata):
     Table(
         'simple_items', metadata,
-        Column('dp_array', ARRAY(DOUBLE_PRECISION(precision=53))),
-        Column('int_array', ARRAY(INTEGER))
+        Column('dp_array', postgresql.ARRAY(postgresql.DOUBLE_PRECISION(precision=53))),
+        Column('int_array', postgresql.ARRAY(INTEGER))
     )
 
     if sqlalchemy.__version__ < '1.1':
@@ -164,8 +162,8 @@ t_simple_items = Table(
 def test_column_adaptation(metadata):
     Table(
         'simple_items', metadata,
-        Column('id', BIGINT),
-        Column('length', DOUBLE_PRECISION)
+        Column('id', postgresql.BIGINT),
+        Column('length', postgresql.DOUBLE_PRECISION)
     )
 
     assert generate_code(metadata) == """\
