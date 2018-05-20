@@ -637,6 +637,7 @@ class Oglkrogk(Base):
 """
 
 
+@pytest.mark.skipif(sqlalchemy.__version__ < '1.0', reason='SQLA < 1.0 gives inconsistent results')
 def test_manytomany(metadata):
     Table(
         'simple_items', metadata,
