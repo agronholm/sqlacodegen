@@ -4,6 +4,7 @@ import re
 import sys
 from io import StringIO
 
+import pytest
 import sqlalchemy
 from sqlalchemy.dialects.mysql import base as mysql
 from sqlalchemy.dialects.mysql.base import TINYINT
@@ -28,25 +29,35 @@ else:
         return text
 
 
-class TestModelGenerator(object):
-    def setup(self):
-        self.metadata = MetaData(create_engine('sqlite:///'))
+@pytest.fixture
+def metadata(request):
+    dialect = getattr(request, 'param', None)
+    if dialect == 'postgresql':
+        engine = create_engine('postgresql:///testdb')
+    elif dialect == 'mysql':
+        engine = create_engine('mysql+oursql://testdb')
+    else:
+        engine = create_engine('sqlite:///:memory:')
 
-    def generate_code(self, **kwargs):
-        codegen = CodeGenerator(self.metadata, **kwargs)
-        sio = StringIO()
-        codegen.render(sio)
-        return remove_unicode_prefixes(sio.getvalue())
+    return MetaData(engine)
 
-    def test_fancy_coltypes(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('enum', ENUM('A', 'B', name='blah')),
-            Column('bool', BOOLEAN),
-            Column('number', NUMERIC(10, asdecimal=False)),
-        )
 
-        assert self.generate_code() == """\
+def generate_code(metadata, **kwargs):
+    codegen = CodeGenerator(metadata, **kwargs)
+    sio = StringIO()
+    codegen.render(sio)
+    return remove_unicode_prefixes(sio.getvalue())
+
+
+def test_fancy_coltypes(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('enum', ENUM('A', 'B', name='blah')),
+        Column('bool', BOOLEAN),
+        Column('number', NUMERIC(10, asdecimal=False)),
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Boolean, Column, Enum, MetaData, Numeric, Table
 
@@ -61,18 +72,19 @@ t_simple_items = Table(
 )
 """
 
-    def test_boolean_detection(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('bool1', INTEGER),
-            Column('bool2', SMALLINT),
-            Column('bool3', TINYINT),
-            CheckConstraint('simple_items.bool1 IN (0, 1)'),
-            CheckConstraint('simple_items.bool2 IN (0, 1)'),
-            CheckConstraint('simple_items.bool3 IN (0, 1)')
-        )
 
-        assert self.generate_code() == """\
+def test_boolean_detection(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('bool1', INTEGER),
+        Column('bool2', SMALLINT),
+        Column('bool3', TINYINT),
+        CheckConstraint('simple_items.bool1 IN (0, 1)'),
+        CheckConstraint('simple_items.bool2 IN (0, 1)'),
+        CheckConstraint('simple_items.bool3 IN (0, 1)')
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Boolean, Column, MetaData, Table
 
@@ -87,15 +99,17 @@ t_simple_items = Table(
 )
 """
 
-    def test_arrays(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('dp_array', ARRAY(DOUBLE_PRECISION(precision=53))),
-            Column('int_array', ARRAY(INTEGER))
-        )
 
-        if sqlalchemy.__version__ < '1.1':
-            assert self.generate_code() == """\
+@pytest.mark.parametrize('metadata', ['postgresql'], indirect=['metadata'])
+def test_arrays(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('dp_array', ARRAY(DOUBLE_PRECISION(precision=53))),
+        Column('int_array', ARRAY(INTEGER))
+    )
+
+    if sqlalchemy.__version__ < '1.1':
+        assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Float, Integer, MetaData, Table
 from sqlalchemy.dialects.postgresql.base import ARRAY
@@ -109,8 +123,8 @@ t_simple_items = Table(
     Column('int_array', ARRAY(Integer()))
 )
 """
-        else:
-            assert self.generate_code() == """\
+    else:
+        assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import ARRAY, Column, Float, Integer, MetaData, Table
 
@@ -124,14 +138,15 @@ t_simple_items = Table(
 )
 """
 
-    def test_enum_detection(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('enum', VARCHAR(255)),
-            CheckConstraint(r"simple_items.enum IN ('A', '\'B', 'C')")
-        )
 
-        assert self.generate_code() == """\
+def test_enum_detection(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('enum', VARCHAR(255)),
+        CheckConstraint(r"simple_items.enum IN ('A', '\'B', 'C')")
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Enum, MetaData, Table
 
@@ -144,14 +159,15 @@ t_simple_items = Table(
 )
 """
 
-    def test_column_adaptation(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', BIGINT),
-            Column('length', DOUBLE_PRECISION)
-        )
 
-        assert self.generate_code() == """\
+def test_column_adaptation(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', BIGINT),
+        Column('length', DOUBLE_PRECISION)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import BigInteger, Column, Float, MetaData, Table
 
@@ -165,14 +181,16 @@ t_simple_items = Table(
 )
 """
 
-    def test_mysql_column_types(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', mysql.INTEGER),
-            Column('name', mysql.VARCHAR(255))
-        )
 
-        assert self.generate_code() == """\
+@pytest.mark.parametrize('metadata', ['mysql'], indirect=['metadata'])
+def test_mysql_column_types(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', mysql.INTEGER),
+        Column('name', mysql.VARCHAR(255))
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, String, Table
 
@@ -186,16 +204,17 @@ t_simple_items = Table(
 )
 """
 
-    def test_constraints_table(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER),
-            Column('number', INTEGER),
-            CheckConstraint('number > 0'),
-            UniqueConstraint('id', 'number')
-        )
 
-        assert self.generate_code() == """\
+def test_constraints_table(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER),
+        Column('number', INTEGER),
+        CheckConstraint('number > 0'),
+        UniqueConstraint('id', 'number')
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table, UniqueConstraint
 
@@ -211,16 +230,17 @@ t_simple_items = Table(
 )
 """
 
-    def test_constraints_class(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('number', INTEGER),
-            CheckConstraint('number > 0'),
-            UniqueConstraint('id', 'number')
-        )
 
-        assert self.generate_code() == """\
+def test_constraints_class(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('number', INTEGER),
+        CheckConstraint('number > 0'),
+        UniqueConstraint('id', 'number')
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
@@ -240,15 +260,16 @@ class SimpleItem(Base):
     number = Column(Integer)
 """
 
-    def test_noindexes_table(self):
-        simple_items = Table(
-            'simple_items', self.metadata,
-            Column('number', INTEGER),
-            CheckConstraint('number > 2')
-        )
-        simple_items.indexes.add(Index('idx_number', simple_items.c.number))
 
-        assert self.generate_code(noindexes=True) == """\
+def test_noindexes_table(metadata):
+    simple_items = Table(
+        'simple_items', metadata,
+        Column('number', INTEGER),
+        CheckConstraint('number > 2')
+    )
+    simple_items.indexes.add(Index('idx_number', simple_items.c.number))
+
+    assert generate_code(metadata, noindexes=True) == """\
 # coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table
 
@@ -262,15 +283,16 @@ t_simple_items = Table(
 )
 """
 
-    def test_noconstraints_table(self):
-        simple_items = Table(
-            'simple_items', self.metadata,
-            Column('number', INTEGER),
-            CheckConstraint('number > 2')
-        )
-        simple_items.indexes.add(Index('idx_number', simple_items.c.number))
 
-        assert self.generate_code(noconstraints=True) == """\
+def test_noconstraints_table(metadata):
+    simple_items = Table(
+        'simple_items', metadata,
+        Column('number', INTEGER),
+        CheckConstraint('number > 2')
+    )
+    simple_items.indexes.add(Index('idx_number', simple_items.c.number))
+
+    assert generate_code(metadata, noconstraints=True) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, Table
 
@@ -283,19 +305,20 @@ t_simple_items = Table(
 )
 """
 
-    def test_indexes_table(self):
-        simple_items = Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER),
-            Column('number', INTEGER),
-            Column('text', VARCHAR)
-        )
-        simple_items.indexes.add(Index('idx_number', simple_items.c.number))
-        simple_items.indexes.add(Index('idx_text_number', simple_items.c.text,
-                                       simple_items.c.number, unique=True))
-        simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
-        assert self.generate_code() == """\
+def test_indexes_table(metadata):
+    simple_items = Table(
+        'simple_items', metadata,
+        Column('id', INTEGER),
+        Column('number', INTEGER),
+        Column('text', VARCHAR)
+    )
+    simple_items.indexes.add(Index('idx_number', simple_items.c.number))
+    simple_items.indexes.add(Index('idx_text_number', simple_items.c.text,
+                                   simple_items.c.number, unique=True))
+    simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Index, Integer, MetaData, String, Table
 
@@ -311,19 +334,20 @@ t_simple_items = Table(
 )
 """
 
-    def test_indexes_class(self):
-        simple_items = Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('number', INTEGER),
-            Column('text', VARCHAR)
-        )
-        simple_items.indexes.add(Index('idx_number', simple_items.c.number))
-        simple_items.indexes.add(Index('idx_text_number', simple_items.c.text,
-                                       simple_items.c.number))
-        simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
-        assert self.generate_code() == """\
+def test_indexes_class(metadata):
+    simple_items = Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('number', INTEGER),
+        Column('text', VARCHAR)
+    )
+    simple_items.indexes.add(Index('idx_number', simple_items.c.number))
+    simple_items.indexes.add(Index('idx_text_number', simple_items.c.text,
+                                   simple_items.c.number))
+    simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Index, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
@@ -343,19 +367,19 @@ class SimpleItem(Base):
     text = Column(String, unique=True)
 """
 
-    def test_onetomany(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('container_id', INTEGER),
-            ForeignKeyConstraint(['container_id'], ['simple_containers.id']),
-        )
-        Table(
-            'simple_containers', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
+def test_onetomany(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('container_id', INTEGER),
+        ForeignKeyConstraint(['container_id'], ['simple_containers.id']),
+    )
+    Table(
+        'simple_containers', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
 
-        assert self.generate_code() == """\
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -380,15 +404,16 @@ class SimpleItem(Base):
     container = relationship('SimpleContainer')
 """
 
-    def test_onetomany_selfref(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('parent_item_id', INTEGER),
-            ForeignKeyConstraint(['parent_item_id'], ['simple_items.id'])
-        )
 
-        assert self.generate_code() == """\
+def test_onetomany_selfref(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('parent_item_id', INTEGER),
+        ForeignKeyConstraint(['parent_item_id'], ['simple_items.id'])
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -407,17 +432,18 @@ class SimpleItem(Base):
     parent_item = relationship('SimpleItem', remote_side=[id])
 """
 
-    def test_onetomany_selfref_multi(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('parent_item_id', INTEGER),
-            Column('top_item_id', INTEGER),
-            ForeignKeyConstraint(['parent_item_id'], ['simple_items.id']),
-            ForeignKeyConstraint(['top_item_id'], ['simple_items.id'])
-        )
 
-        assert self.generate_code() == """\
+def test_onetomany_selfref_multi(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('parent_item_id', INTEGER),
+        Column('top_item_id', INTEGER),
+        ForeignKeyConstraint(['parent_item_id'], ['simple_items.id']),
+        ForeignKeyConstraint(['top_item_id'], ['simple_items.id'])
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -440,23 +466,24 @@ primaryjoin='SimpleItem.parent_item_id == SimpleItem.id')
 primaryjoin='SimpleItem.top_item_id == SimpleItem.id')
 """
 
-    def test_onetomany_composite(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('container_id1', INTEGER),
-            Column('container_id2', INTEGER),
-            ForeignKeyConstraint(['container_id1', 'container_id2'],
-                                 ['simple_containers.id1', 'simple_containers.id2'],
-                                 ondelete='CASCADE', onupdate='CASCADE')
-        )
-        Table(
-            'simple_containers', self.metadata,
-            Column('id1', INTEGER, primary_key=True),
-            Column('id2', INTEGER, primary_key=True)
-        )
 
-        assert self.generate_code() == """\
+def test_onetomany_composite(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('container_id1', INTEGER),
+        Column('container_id2', INTEGER),
+        ForeignKeyConstraint(['container_id1', 'container_id2'],
+                             ['simple_containers.id1', 'simple_containers.id2'],
+                             ondelete='CASCADE', onupdate='CASCADE')
+    )
+    Table(
+        'simple_containers', metadata,
+        Column('id1', INTEGER, primary_key=True),
+        Column('id2', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKeyConstraint, Integer
 from sqlalchemy.orm import relationship
@@ -487,21 +514,22 @@ class SimpleItem(Base):
     simple_container = relationship('SimpleContainer')
 """
 
-    def test_onetomany_multiref(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('parent_container_id', INTEGER),
-            Column('top_container_id', INTEGER),
-            ForeignKeyConstraint(['parent_container_id'], ['simple_containers.id']),
-            ForeignKeyConstraint(['top_container_id'], ['simple_containers.id'])
-        )
-        Table(
-            'simple_containers', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
 
-        assert self.generate_code() == """\
+def test_onetomany_multiref(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('parent_container_id', INTEGER),
+        Column('top_container_id', INTEGER),
+        ForeignKeyConstraint(['parent_container_id'], ['simple_containers.id']),
+        ForeignKeyConstraint(['top_container_id'], ['simple_containers.id'])
+    )
+    Table(
+        'simple_containers', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -530,20 +558,21 @@ primaryjoin='SimpleItem.parent_container_id == SimpleContainer.id')
 primaryjoin='SimpleItem.top_container_id == SimpleContainer.id')
 """
 
-    def test_onetoone(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('other_item_id', INTEGER),
-            ForeignKeyConstraint(['other_item_id'], ['other_items.id']),
-            UniqueConstraint('other_item_id')
-        )
-        Table(
-            'other_items', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
 
-        assert self.generate_code() == """\
+def test_onetoone(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('other_item_id', INTEGER),
+        ForeignKeyConstraint(['other_item_id'], ['other_items.id']),
+        UniqueConstraint('other_item_id')
+    )
+    Table(
+        'other_items', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -568,19 +597,20 @@ class SimpleItem(Base):
     other_item = relationship('OtherItem', uselist=False)
 """
 
-    def test_onetomany_noinflect(self):
-        Table(
-            'oglkrogk', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('fehwiuhfiwID', INTEGER),
-            ForeignKeyConstraint(['fehwiuhfiwID'], ['fehwiuhfiw.id']),
-        )
-        Table(
-            'fehwiuhfiw', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
 
-        assert self.generate_code() == """\
+def test_onetomany_noinflect(metadata):
+    Table(
+        'oglkrogk', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('fehwiuhfiwID', INTEGER),
+        ForeignKeyConstraint(['fehwiuhfiwID'], ['fehwiuhfiw.id']),
+    )
+    Table(
+        'fehwiuhfiw', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -605,24 +635,25 @@ class Oglkrogk(Base):
     fehwiuhfiw = relationship('Fehwiuhfiw')
 """
 
-    def test_manytomany(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
-        Table(
-            'simple_containers', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
-        Table(
-            'container_items', self.metadata,
-            Column('item_id', INTEGER),
-            Column('container_id', INTEGER),
-            ForeignKeyConstraint(['item_id'], ['simple_items.id']),
-            ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
-        )
 
-        assert self.generate_code() == """\
+def test_manytomany(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+    Table(
+        'simple_containers', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+    Table(
+        'container_items', metadata,
+        Column('item_id', INTEGER),
+        Column('container_id', INTEGER),
+        ForeignKeyConstraint(['item_id'], ['simple_items.id']),
+        ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import relationship
@@ -653,20 +684,21 @@ class SimpleItem(Base):
     id = Column(Integer, primary_key=True)
 """
 
-    def test_manytomany_selfref(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
-        Table(
-            'child_items', self.metadata,
-            Column('parent_id', INTEGER),
-            Column('child_id', INTEGER),
-            ForeignKeyConstraint(['parent_id'], ['simple_items.id']),
-            ForeignKeyConstraint(['child_id'], ['simple_items.id'])
-        )
 
-        assert self.generate_code() == """\
+def test_manytomany_selfref(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+    Table(
+        'child_items', metadata,
+        Column('parent_id', INTEGER),
+        Column('child_id', INTEGER),
+        ForeignKeyConstraint(['parent_id'], ['simple_items.id']),
+        ForeignKeyConstraint(['child_id'], ['simple_items.id'])
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import relationship
@@ -696,30 +728,31 @@ class SimpleItem(Base):
     )
 """
 
-    def test_manytomany_composite(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id1', INTEGER, primary_key=True),
-            Column('id2', INTEGER, primary_key=True)
-        )
-        Table(
-            'simple_containers', self.metadata,
-            Column('id1', INTEGER, primary_key=True),
-            Column('id2', INTEGER, primary_key=True)
-        )
-        Table(
-            'container_items', self.metadata,
-            Column('item_id1', INTEGER),
-            Column('item_id2', INTEGER),
-            Column('container_id1', INTEGER),
-            Column('container_id2', INTEGER),
-            ForeignKeyConstraint(['item_id1', 'item_id2'],
-                                 ['simple_items.id1', 'simple_items.id2']),
-            ForeignKeyConstraint(['container_id1', 'container_id2'],
-                                 ['simple_containers.id1', 'simple_containers.id2'])
-        )
 
-        assert self.generate_code() == """\
+def test_manytomany_composite(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id1', INTEGER, primary_key=True),
+        Column('id2', INTEGER, primary_key=True)
+    )
+    Table(
+        'simple_containers', metadata,
+        Column('id1', INTEGER, primary_key=True),
+        Column('id2', INTEGER, primary_key=True)
+    )
+    Table(
+        'container_items', metadata,
+        Column('item_id1', INTEGER),
+        Column('item_id2', INTEGER),
+        Column('container_id1', INTEGER),
+        Column('container_id2', INTEGER),
+        ForeignKeyConstraint(['item_id1', 'item_id2'],
+                             ['simple_items.id1', 'simple_items.id2']),
+        ForeignKeyConstraint(['container_id1', 'container_id2'],
+                             ['simple_containers.id1', 'simple_containers.id2'])
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKeyConstraint, Integer, Table
 from sqlalchemy.orm import relationship
@@ -757,26 +790,27 @@ class SimpleItem(Base):
     id2 = Column(Integer, primary_key=True, nullable=False)
 """
 
-    def test_joined_inheritance(self):
-        Table(
-            'simple_sub_items', self.metadata,
-            Column('simple_items_id', INTEGER, primary_key=True),
-            Column('data3', INTEGER),
-            ForeignKeyConstraint(['simple_items_id'], ['simple_items.super_item_id'])
-        )
-        Table(
-            'simple_super_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('data1', INTEGER)
-        )
-        Table(
-            'simple_items', self.metadata,
-            Column('super_item_id', INTEGER, primary_key=True),
-            Column('data2', INTEGER),
-            ForeignKeyConstraint(['super_item_id'], ['simple_super_items.id'])
-        )
 
-        assert self.generate_code() == """\
+def test_joined_inheritance(metadata):
+    Table(
+        'simple_sub_items', metadata,
+        Column('simple_items_id', INTEGER, primary_key=True),
+        Column('data3', INTEGER),
+        ForeignKeyConstraint(['simple_items_id'], ['simple_items.super_item_id'])
+    )
+    Table(
+        'simple_super_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('data1', INTEGER)
+    )
+    Table(
+        'simple_items', metadata,
+        Column('super_item_id', INTEGER, primary_key=True),
+        Column('data2', INTEGER),
+        ForeignKeyConstraint(['super_item_id'], ['simple_super_items.id'])
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -806,13 +840,14 @@ class SimpleSubItem(SimpleItem):
     data3 = Column(Integer)
 """
 
-    def test_no_inflect(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
 
-        assert self.generate_code(noinflect=True) == """\
+def test_no_inflect(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata, noinflect=True) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -827,13 +862,14 @@ class SimpleItems(Base):
     id = Column(Integer, primary_key=True)
 """
 
-    def test_no_classes(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
 
-        assert self.generate_code(noclasses=True) == """\
+def test_no_classes(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata, noclasses=True) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, Table
 
@@ -846,14 +882,15 @@ t_simple_items = Table(
 )
 """
 
-    def test_table_kwargs(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            schema='testschema'
-        )
 
-        assert self.generate_code() == """\
+def test_table_kwargs(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        schema='testschema'
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -869,16 +906,17 @@ class SimpleItem(Base):
     id = Column(Integer, primary_key=True)
 """
 
-    def test_table_args_kwargs(self):
-        simple_items = Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('name', VARCHAR),
-            schema='testschema'
-        )
-        simple_items.indexes.add(Index('testidx', simple_items.c.id, simple_items.c.name))
 
-        assert self.generate_code() == """\
+def test_table_args_kwargs(metadata):
+    simple_items = Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('name', VARCHAR),
+        schema='testschema'
+    )
+    simple_items.indexes.add(Index('testidx', simple_items.c.id, simple_items.c.name))
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Index, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
@@ -898,14 +936,15 @@ class SimpleItem(Base):
     name = Column(String)
 """
 
-    def test_schema_table(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('name', VARCHAR),
-            schema='testschema'
-        )
 
-        assert self.generate_code() == """\
+def test_schema_table(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('name', VARCHAR),
+        schema='testschema'
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, MetaData, String, Table
 
@@ -919,15 +958,16 @@ t_simple_items = Table(
 )
 """
 
-    def test_schema_boolean(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('bool1', INTEGER),
-            CheckConstraint('testschema.simple_items.bool1 IN (0, 1)'),
-            schema='testschema'
-        )
 
-        assert self.generate_code() == """\
+def test_schema_boolean(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('bool1', INTEGER),
+        CheckConstraint('testschema.simple_items.bool1 IN (0, 1)'),
+        schema='testschema'
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Boolean, Column, MetaData, Table
 
@@ -941,15 +981,16 @@ t_simple_items = Table(
 )
 """
 
-    def test_foreign_key_options(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('name', VARCHAR, ForeignKey(
-                'simple_items.name', ondelete='CASCADE', onupdate='CASCADE', deferrable=True,
-                initially='DEFERRED'))
-        )
 
-        assert self.generate_code() == """\
+def test_foreign_key_options(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('name', VARCHAR, ForeignKey(
+            'simple_items.name', ondelete='CASCADE', onupdate='CASCADE', deferrable=True,
+            initially='DEFERRED'))
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, MetaData, String, Table
 
@@ -963,20 +1004,21 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
 )
 """
 
-    def test_foreign_key_schema(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('other_item_id', INTEGER),
-            ForeignKeyConstraint(['other_item_id'], ['otherschema.other_items.id'])
-        )
-        Table(
-            'other_items', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            schema='otherschema'
-        )
 
-        assert self.generate_code() == """\
+def test_foreign_key_schema(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('other_item_id', INTEGER),
+        ForeignKeyConstraint(['other_item_id'], ['otherschema.other_items.id'])
+    )
+    Table(
+        'other_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        schema='otherschema'
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -1002,13 +1044,14 @@ class OtherItem(Base):
     id = Column(Integer, primary_key=True)
 """
 
-    def test_pk_default(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True, server_default=text('uuid_generate_v4()'))
-        )
 
-        assert self.generate_code() == """\
+def test_pk_default(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True, server_default=text('uuid_generate_v4()'))
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, text
 from sqlalchemy.ext.declarative import declarative_base
@@ -1023,16 +1066,17 @@ class SimpleItem(Base):
     id = Column(Integer, primary_key=True, server_default=text("uuid_generate_v4()"))
 """
 
-    def test_server_default_multiline(self):
-        Table(
-            'simple_items', self.metadata,
-            Column('id', INTEGER, primary_key=True, server_default=text("""\
+
+def test_server_default_multiline(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True, server_default=text("""\
 /*Comment*/
 /*Next line*/
 something()"""))
-        )
+    )
 
-        assert self.generate_code() == """\
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, text
 from sqlalchemy.ext.declarative import declarative_base
@@ -1050,16 +1094,17 @@ class SimpleItem(Base):
 something()\"""))
 """
 
-    def test_invalid_attribute_names(self):
-        Table(
-            'simple-items', self.metadata,
-            Column('id-test', INTEGER, primary_key=True),
-            Column('4test', INTEGER),
-            Column('_4test', INTEGER),
-            Column('def', INTEGER)
-        )
 
-        assert self.generate_code() == """\
+def test_invalid_attribute_names(metadata):
+    Table(
+        'simple-items', metadata,
+        Column('id-test', INTEGER, primary_key=True),
+        Column('4test', INTEGER),
+        Column('_4test', INTEGER),
+        Column('def', INTEGER)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -1077,13 +1122,14 @@ class SimpleItem(Base):
     _def = Column('def', Integer)
 """
 
-    def test_pascal(self):
-        Table(
-            'CustomerAPIPreference', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
 
-        assert self.generate_code() == """\
+def test_pascal(metadata):
+    Table(
+        'CustomerAPIPreference', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -1098,13 +1144,14 @@ class CustomerAPIPreference(Base):
     id = Column(Integer, primary_key=True)
 """
 
-    def test_underscore(self):
-        Table(
-            'customer_api_preference', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
 
-        assert self.generate_code() == """\
+def test_underscore(metadata):
+    Table(
+        'customer_api_preference', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -1119,13 +1166,14 @@ class CustomerApiPreference(Base):
     id = Column(Integer, primary_key=True)
 """
 
-    def test_pascal_underscore(self):
-        Table(
-            'customer_API_Preference', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
 
-        assert self.generate_code() == """\
+def test_pascal_underscore(metadata):
+    Table(
+        'customer_API_Preference', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -1140,13 +1188,14 @@ class CustomerAPIPreference(Base):
     id = Column(Integer, primary_key=True)
 """
 
-    def test_pascal_multiple_underscore(self):
-        Table(
-            'customer_API__Preference', self.metadata,
-            Column('id', INTEGER, primary_key=True)
-        )
 
-        assert self.generate_code() == """\
+def test_pascal_multiple_underscore(metadata):
+    Table(
+        'customer_API__Preference', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -1161,14 +1210,15 @@ class CustomerAPIPreference(Base):
     id = Column(Integer, primary_key=True)
 """
 
-    def test_metadata_column(self):
-        Table(
-            'simple', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('metadata', VARCHAR)
-        )
 
-        assert self.generate_code() == """\
+def test_metadata_column(metadata):
+    Table(
+        'simple', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('metadata', VARCHAR)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
