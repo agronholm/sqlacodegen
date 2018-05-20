@@ -763,18 +763,6 @@ Base = declarative_base()
 metadata = Base.metadata
 
 
-t_container_items = Table(
-    'container_items', metadata,
-    Column('item_id1', Integer),
-    Column('item_id2', Integer),
-    Column('container_id1', Integer),
-    Column('container_id2', Integer),
-    ForeignKeyConstraint(['container_id1', 'container_id2'], \
-['simple_containers.id1', 'simple_containers.id2']),
-    ForeignKeyConstraint(['item_id1', 'item_id2'], ['simple_items.id1', 'simple_items.id2'])
-)
-
-
 class SimpleContainer(Base):
     __tablename__ = 'simple_containers'
 
@@ -789,6 +777,18 @@ class SimpleItem(Base):
 
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
+
+
+t_container_items = Table(
+    'container_items', metadata,
+    Column('item_id1', Integer),
+    Column('item_id2', Integer),
+    Column('container_id1', Integer),
+    Column('container_id2', Integer),
+    ForeignKeyConstraint(['container_id1', 'container_id2'], \
+['simple_containers.id1', 'simple_containers.id2']),
+    ForeignKeyConstraint(['item_id1', 'item_id2'], ['simple_items.id1', 'simple_items.id2'])
+)
 """
 
 
@@ -1029,6 +1029,13 @@ Base = declarative_base()
 metadata = Base.metadata
 
 
+class OtherItem(Base):
+    __tablename__ = 'other_items'
+    __table_args__ = {'schema': 'otherschema'}
+
+    id = Column(Integer, primary_key=True)
+
+
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
 
@@ -1036,13 +1043,6 @@ class SimpleItem(Base):
     other_item_id = Column(ForeignKey('otherschema.other_items.id'))
 
     other_item = relationship('OtherItem')
-
-
-class OtherItem(Base):
-    __tablename__ = 'other_items'
-    __table_args__ = {'schema': 'otherschema'}
-
-    id = Column(Integer, primary_key=True)
 """
 
 
