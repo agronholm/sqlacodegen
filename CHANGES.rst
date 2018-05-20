@@ -21,6 +21,8 @@ Version history
 
 * Fixed attribute name of columns named ``metadata`` in mapped classes (fixes #62)
 
+* Fixed rendered column types being changed from the original (fixes #11)
+
 
 1.1.6
 -----

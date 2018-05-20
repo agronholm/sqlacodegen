@@ -11,7 +11,7 @@ from keyword import iskeyword
 import sqlalchemy
 from sqlalchemy import (
     Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckConstraint, UniqueConstraint, Table,
-    Column)
+    Column, Float)
 from sqlalchemy.schema import ForeignKey
 from sqlalchemy.sql.expression import TextClause
 from sqlalchemy.types import Boolean, String
@@ -115,23 +115,32 @@ class Model(object):
 
         # Adapt column types to the most reasonable generic types (ie. VARCHAR -> String)
         for column in table.columns:
-            column.type = self._get_adapted_type(column.type)
+            column.type = self._get_adapted_type(column.type, column.table.bind)
 
-    def _get_adapted_type(self, coltype):
+    def _get_adapted_type(self, coltype, bind):
+        compiled_type = coltype.compile(bind.dialect)
         for supercls in coltype.__class__.__mro__:
             if not supercls.__name__.startswith('_') and hasattr(supercls, '__visit_name__'):
+                # If the adapted column type does not render the same as the original, don't
+                # substitute it
+                new_coltype = coltype.adapt(supercls)
+                if new_coltype.compile(bind.dialect) != compiled_type:
+                    # Make an exception to the rule for Float, since at least on PostgreSQL,
+                    # Float can accurately represent both REAL and DOUBLE_PRECISION
+                    if not isinstance(new_coltype, Float):
+                        break
+
                 # Hack to fix adaptation of the Enum class which is broken since SQLAlchemy 1.2
                 kw = {}
                 if supercls is Enum:
                     kw['name'] = coltype.name
 
-                coltype = coltype.adapt(supercls)
-
+                coltype = new_coltype
                 for key, value in kw.items():
                     setattr(coltype, key, value)
 
                 if isinstance(coltype, ARRAY):
-                    coltype.item_type = self._get_adapted_type(coltype.item_type)
+                    coltype.item_type = self._get_adapted_type(coltype.item_type, bind)
 
                 # Stop on the first valid non-uppercase column type class
                 if supercls.__name__ != supercls.__name__.upper():

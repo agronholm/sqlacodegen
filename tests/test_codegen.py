@@ -35,7 +35,7 @@ def metadata(request):
     if dialect == 'postgresql':
         engine = create_engine('postgresql:///testdb')
     elif dialect == 'mysql':
-        engine = create_engine('mysql+oursql://testdb')
+        engine = create_engine('mysql+mysqlconnector://testdb')
     else:
         engine = create_engine('sqlite:///:memory:')
 
@@ -160,6 +160,7 @@ t_simple_items = Table(
 """
 
 
+@pytest.mark.parametrize('metadata', ['postgresql'], indirect=['metadata'])
 def test_column_adaptation(metadata):
     Table(
         'simple_items', metadata,
@@ -366,6 +367,7 @@ class SimpleItem(Base):
     number = Column(Integer, index=True)
     text = Column(String, unique=True)
 """
+
 
 def test_onetomany(metadata):
     Table(
@@ -1232,4 +1234,28 @@ class Simple(Base):
 
     id = Column(Integer, primary_key=True)
     metadata_ = Column('metadata', String)
+"""
+
+    def test_mysql_timestamp(self):
+        self.metadata.bind = create_engine('mysql+oursql://foo')
+        Table(
+            'simple', self.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('timestamp', mysql.TIMESTAMP)
+        )
+
+        assert self.generate_code() == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer, TIMESTAMP
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(TIMESTAMP)
 """
