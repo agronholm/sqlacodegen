@@ -664,13 +664,6 @@ Base = declarative_base()
 metadata = Base.metadata
 
 
-t_container_items = Table(
-    'container_items', metadata,
-    Column('item_id', ForeignKey('simple_items.id')),
-    Column('container_id', ForeignKey('simple_containers.id'))
-)
-
-
 class SimpleContainer(Base):
     __tablename__ = 'simple_containers'
 
@@ -683,6 +676,13 @@ class SimpleItem(Base):
     __tablename__ = 'simple_items'
 
     id = Column(Integer, primary_key=True)
+
+
+t_container_items = Table(
+    'container_items', metadata,
+    Column('item_id', ForeignKey('simple_items.id')),
+    Column('container_id', ForeignKey('simple_containers.id'))
+)
 """
 
 
@@ -709,13 +709,6 @@ Base = declarative_base()
 metadata = Base.metadata
 
 
-t_child_items = Table(
-    'child_items', metadata,
-    Column('parent_id', ForeignKey('simple_items.id')),
-    Column('child_id', ForeignKey('simple_items.id'))
-)
-
-
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
 
@@ -727,6 +720,13 @@ class SimpleItem(Base):
         primaryjoin='SimpleItem.id == child_items.c.child_id',
         secondaryjoin='SimpleItem.id == child_items.c.parent_id'
     )
+
+
+t_child_items = Table(
+    'child_items', metadata,
+    Column('parent_id', ForeignKey('simple_items.id')),
+    Column('child_id', ForeignKey('simple_items.id'))
+)
 """
 
 

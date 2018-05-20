@@ -344,7 +344,7 @@ class CodeGenerator(object):
         self.models = []
         self.collector = ImportCollector()
         classes = {}
-        for table in sorted(metadata.tables.values(), key=lambda t: (t.schema or '', t.name)):
+        for table in metadata.sorted_tables:
             # Support for Alembic and sqlalchemy-migrate -- never expose the schema version tables
             if table.name in self.ignored_tables:
                 continue
