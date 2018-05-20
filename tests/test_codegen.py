@@ -1096,6 +1096,28 @@ something()\"""))
 """
 
 
+def test_server_default_double_quotes(metadata):
+    Table(
+        'simple', metadata,
+        Column('id', INTEGER, primary_key=True, server_default=text("nextval(\"foo\")")),
+    )
+
+    assert generate_code(metadata) == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer, text
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+
+    id = Column(Integer, primary_key=True, server_default=text("nextval(\\"foo\\")"))
+"""
+
+
 def test_invalid_attribute_names(metadata):
     Table(
         'simple-items', metadata,

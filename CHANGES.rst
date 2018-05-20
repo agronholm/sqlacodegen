@@ -23,6 +23,8 @@ Version history
 
 * Fixed rendered column types being changed from the original (fixes #11)
 
+* Fixed server defaults which contain double quotes (fixes #7, #17, #28, #33, #36)
+
 
 1.1.6
 -----

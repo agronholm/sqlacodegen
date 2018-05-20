@@ -537,10 +537,12 @@ class CodeGenerator(object):
             column.index = True
             kwarg.append('index')
         if column.server_default:
+            # The quote escaping does not cover pathological cases but should mostly work
             default_expr = self._get_compiled_expression(column.server_default.arg)
             if '\n' in default_expr:
                 server_default = 'server_default=text("""\\\n{0}""")'.format(default_expr)
             else:
+                default_expr = default_expr.replace('"', '\\"')
                 server_default = 'server_default=text("{0}")'.format(default_expr)
 
         return 'Column({0})'.format(', '.join(
