@@ -47,6 +47,7 @@ def generate_code(metadata, **kwargs):
     return remove_unicode_prefixes(sio.getvalue())
 
 
+@pytest.mark.parametrize('metadata', ['postgresql'], indirect=['metadata'])
 def test_fancy_coltypes(metadata):
     Table(
         'simple_items', metadata,
@@ -1235,6 +1236,7 @@ class Simple(Base):
 """
 
 
+@pytest.mark.parametrize('metadata', ['mysql'], indirect=['metadata'])
 def test_mysql_timestamp(metadata):
     Table(
         'simple', metadata,

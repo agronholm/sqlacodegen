@@ -80,28 +80,28 @@ class Model(object):
         compiled_type = coltype.compile(bind.dialect)
         for supercls in coltype.__class__.__mro__:
             if not supercls.__name__.startswith('_') and hasattr(supercls, '__visit_name__'):
+                # Hack to fix adaptation of the Enum class which is broken since SQLAlchemy 1.2
+                kw = {}
+                if supercls is Enum:
+                    kw['name'] = coltype.name
+
+                new_coltype = coltype.adapt(supercls)
+                for key, value in kw.items():
+                    setattr(new_coltype, key, value)
+
                 # If the adapted column type does not render the same as the original, don't
                 # substitute it
-                new_coltype = coltype.adapt(supercls)
                 if new_coltype.compile(bind.dialect) != compiled_type:
                     # Make an exception to the rule for Float, since at least on PostgreSQL,
                     # Float can accurately represent both REAL and DOUBLE_PRECISION
                     if not isinstance(new_coltype, Float):
                         break
 
-                # Hack to fix adaptation of the Enum class which is broken since SQLAlchemy 1.2
-                kw = {}
-                if supercls is Enum:
-                    kw['name'] = coltype.name
-
-                coltype = new_coltype
-                for key, value in kw.items():
-                    setattr(coltype, key, value)
-
                 if isinstance(coltype, ARRAY):
-                    coltype.item_type = self._get_adapted_type(coltype.item_type, bind)
+                    new_coltype.item_type = self._get_adapted_type(new_coltype.item_type, bind)
 
                 # Stop on the first valid non-uppercase column type class
+                coltype = new_coltype
                 if supercls.__name__ != supercls.__name__.upper():
                     break
 
