@@ -1234,15 +1234,15 @@ class Simple(Base):
     metadata_ = Column('metadata', String)
 """
 
-    def test_mysql_timestamp(self):
-        self.metadata.bind = create_engine('mysql+oursql://foo')
-        Table(
-            'simple', self.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('timestamp', mysql.TIMESTAMP)
-        )
 
-        assert self.generate_code() == """\
+def test_mysql_timestamp(metadata):
+    Table(
+        'simple', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('timestamp', mysql.TIMESTAMP)
+    )
+
+    assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
