@@ -51,6 +51,16 @@ To see the full list of options::
     sqlacodegen --help
 
 
+Why does it sometimes generate classes and sometimes Tables?
+------------------------------------------------------------
+
+Unless the ``--noclasses`` option is used, sqlacodegen tries to generate declarative model classes
+from each table. There are two circumstances in which a ``Table`` is generated instead:
+
+* the table has no primary key constraint (which is required by SQLAlchemy for every model class)
+* the table is an association table between two other tables (see below for the specifics)
+
+
 Model class naming logic
 ------------------------
 
