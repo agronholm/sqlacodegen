@@ -733,6 +733,7 @@ t_child_items = Table(
 """
 
 
+@pytest.mark.skipif(sqlalchemy.__version__ < '1.0', reason='SQLA < 1.0 gives inconsistent results')
 def test_manytomany_composite(metadata):
     Table(
         'simple_items', metadata,
