@@ -697,7 +697,8 @@ def test_manytomany_selfref(metadata):
         Column('parent_id', INTEGER),
         Column('child_id', INTEGER),
         ForeignKeyConstraint(['parent_id'], ['simple_items.id']),
-        ForeignKeyConstraint(['child_id'], ['simple_items.id'])
+        ForeignKeyConstraint(['child_id'], ['simple_items.id']),
+        schema='otherschema'
     )
 
     assert generate_code(metadata) == """\
@@ -717,7 +718,7 @@ class SimpleItem(Base):
 
     parents = relationship(
         'SimpleItem',
-        secondary='child_items',
+        secondary='otherschema.child_items',
         primaryjoin='SimpleItem.id == child_items.c.child_id',
         secondaryjoin='SimpleItem.id == child_items.c.parent_id'
     )
@@ -726,7 +727,8 @@ class SimpleItem(Base):
 t_child_items = Table(
     'child_items', metadata,
     Column('parent_id', ForeignKey('simple_items.id')),
-    Column('child_id', ForeignKey('simple_items.id'))
+    Column('child_id', ForeignKey('simple_items.id')),
+    schema='otherschema'
 )
 """
 

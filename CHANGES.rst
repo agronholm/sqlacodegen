@@ -25,6 +25,8 @@ Version history
 
 * Fixed server defaults which contain double quotes (fixes #7, #17, #28, #33, #36)
 
+* Fixed ``secondary=`` not taking into account the association table's schema name (fixes #30)
+
 * Sort models by foreign key dependencies instead of schema and name (fixes #15, #16)
 
 

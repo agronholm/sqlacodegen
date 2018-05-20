@@ -269,7 +269,8 @@ class ManyToManyRelationship(Relationship):
     def __init__(self, source_cls, target_cls, assocation_table):
         super(ManyToManyRelationship, self).__init__(source_cls, target_cls)
 
-        self.kwargs['secondary'] = repr(assocation_table.name)
+        prefix = (assocation_table.schema + '.') if assocation_table.schema else ''
+        self.kwargs['secondary'] = repr(prefix + assocation_table.name)
         constraints = [c for c in assocation_table.constraints
                        if isinstance(c, ForeignKeyConstraint)]
         constraints.sort(key=_get_constraint_sort_key)
