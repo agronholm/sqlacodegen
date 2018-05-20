@@ -13,7 +13,6 @@ from sqlalchemy import (
     Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckConstraint, UniqueConstraint, Table,
     Column, Float)
 from sqlalchemy.schema import ForeignKey
-from sqlalchemy.sql.expression import TextClause
 from sqlalchemy.types import Boolean, String
 from sqlalchemy.util import OrderedDict
 
@@ -427,26 +426,10 @@ class CodeGenerator(object):
             return 'Base = declarative_base()\nmetadata = Base.metadata'
         return 'metadata = MetaData()'
 
-    @staticmethod
-    def _get_compiled_expression(statement):
-        """Returns the statement in a form where any placeholders have been filled in."""
-        if isinstance(statement, TextClause):
-            return statement.text
-
-        dialect = statement._from_objects[0].bind.dialect
-        compiler = statement._compiler(dialect)
-
-        # Adapted from http://stackoverflow.com/a/5698357/242021
-        class LiteralCompiler(compiler.__class__):
-            def visit_bindparam(self, bindparam, within_columns_clause=False, literal_binds=False,
-                                **kwargs):
-                return super(LiteralCompiler, self).render_literal_bindparam(
-                    bindparam, within_columns_clause=within_columns_clause,
-                    literal_binds=literal_binds, **kwargs
-                )
-
-        compiler = LiteralCompiler(dialect, statement)
-        return compiler.process(statement)
+    def _get_compiled_expression(self, statement):
+        """Return the statement in a form where any placeholders have been filled in."""
+        return str(statement.compile(
+            self.metadata.bind, compile_kwargs={"literal_binds": True}))
 
     @staticmethod
     def _getargspec_init(method):
@@ -492,8 +475,7 @@ class CodeGenerator(object):
 
         return rendered
 
-    @classmethod
-    def render_constraint(cls, constraint):
+    def render_constraint(self, constraint):
         def render_fk_options(*opts):
             opts = [repr(opt) for opt in opts]
             for attr in 'ondelete', 'onupdate', 'deferrable', 'initially', 'match':
@@ -515,7 +497,7 @@ class CodeGenerator(object):
                 render_fk_options(local_columns, remote_columns))
         elif isinstance(constraint, CheckConstraint):
             return 'CheckConstraint({0!r})'.format(
-                cls._get_compiled_expression(constraint.sqltext))
+                self._get_compiled_expression(constraint.sqltext))
         elif isinstance(constraint, UniqueConstraint):
             columns = [repr(col.name) for col in constraint.columns]
             return 'UniqueConstraint({0})'.format(', '.join(columns))
