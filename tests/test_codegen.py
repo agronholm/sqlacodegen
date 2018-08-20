@@ -111,7 +111,7 @@ def test_arrays(metadata):
         assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Float, Integer, MetaData, Table
-from sqlalchemy.dialects.postgresql.base import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY
 
 metadata = MetaData()
 
@@ -1284,4 +1284,30 @@ class Simple(Base):
 
     id = Column(Integer, primary_key=True)
     timestamp = Column(TIMESTAMP)
+"""
+
+
+@pytest.mark.parametrize('metadata', ['mysql'], indirect=['metadata'])
+def test_mysql_integer_display_width(metadata):
+    Table(
+        'simple', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('number', mysql.INTEGER(11))
+    )
+
+    assert generate_code(metadata) == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.dialects.mysql import INTEGER
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+
+    id = Column(Integer, primary_key=True)
+    number = Column(INTEGER(11))
 """
