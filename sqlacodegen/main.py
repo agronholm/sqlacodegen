@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--noclasses', action='store_true',
                         help="don't generate classes, only tables")
     parser.add_argument('--outfile', help='file to write output to (default: stdout)')
+    parser.add_argument('--baseimport', help='path from which to import declarative Base class')
     args = parser.parse_args()
 
     if args.version:
@@ -48,5 +49,5 @@ def main():
     # Write the generated model code to the specified file or standard output
     outfile = io.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints, args.nojoined,
-                              args.noinflect, args.noclasses)
+                              args.noinflect, args.noclasses, base_import=args.baseimport)
     generator.render(outfile)
