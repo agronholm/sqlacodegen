@@ -1285,3 +1285,24 @@ class Simple(Base):
     id = Column(Integer, primary_key=True)
     timestamp = Column(TIMESTAMP)
 """
+
+
+def test_base_import(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata, base_import='my.package') == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from my.package import Base
+
+metadata = Base.metadata
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+"""

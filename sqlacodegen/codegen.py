@@ -310,7 +310,7 @@ class CodeGenerator(object):
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False,
                  noinflect=False, noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable,
-                 class_model=ModelClass,  template=None):
+                 class_model=ModelClass, template=None, base_import=None):
         super(CodeGenerator, self).__init__()
         self.metadata = metadata
         self.noindexes = noindexes
@@ -326,6 +326,8 @@ class CodeGenerator(object):
         if template:
             self.template = template
         self.inflect_engine = self.create_inflect_engine()
+        self.using_declarative = True
+        self.base_import = base_import
 
         # Pick association tables from the metadata into their own set, don't process them normally
         links = defaultdict(lambda: [])
@@ -406,10 +408,14 @@ class CodeGenerator(object):
 
         # Add either the MetaData or declarative_base import depending on whether there are mapped
         # classes or not
-        if not any(isinstance(model, self.class_model) for model in self.models):
-            self.collector.add_literal_import('sqlalchemy', 'MetaData')
+        self.using_declarative = any(isinstance(model, self.class_model) for model in self.models)
+        if self.using_declarative:
+            if self.base_import is None:
+                self.collector.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
+            else:
+                self.collector.add_literal_import(self.base_import, 'Base')
         else:
-            self.collector.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
+            self.collector.add_literal_import('sqlalchemy', 'MetaData')
 
     def create_inflect_engine(self):
         if self.noinflect:
@@ -423,8 +429,11 @@ class CodeGenerator(object):
                          for package, names in self.collector.items())
 
     def render_metadata_declarations(self):
-        if 'sqlalchemy.ext.declarative' in self.collector:
-            return 'Base = declarative_base()\nmetadata = Base.metadata'
+        if self.using_declarative:
+            if self.base_import is None:
+                return 'Base = declarative_base()\nmetadata = Base.metadata'
+            else:
+                return 'metadata = Base.metadata'
         return 'metadata = MetaData()'
 
     def _get_compiled_expression(self, statement):
