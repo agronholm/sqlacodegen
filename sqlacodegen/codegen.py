@@ -10,6 +10,7 @@ from inspect import ArgSpec
 from keyword import iskeyword
 
 import sqlalchemy
+import sqlalchemy.exc
 from sqlalchemy import (
     Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckConstraint, UniqueConstraint, Table,
     Column, Float)
@@ -105,15 +106,20 @@ class Model(object):
                 if isinstance(coltype, ARRAY):
                     new_coltype.item_type = self._get_adapted_type(new_coltype.item_type, bind)
 
-                # If the adapted column type does not render the same as the original, don't
-                # substitute it
-                if new_coltype.compile(bind.dialect) != compiled_type:
-                    # Make an exception to the rule for Float and arrays of Float, since at least
-                    # on PostgreSQL, Float can accurately represent both REAL and DOUBLE_PRECISION
-                    if not isinstance(new_coltype, Float) and \
-                       not (isinstance(new_coltype, ARRAY) and
-                            isinstance(new_coltype.item_type, Float)):
-                        break
+                try:
+                    # If the adapted column type does not render the same as the original, don't
+                    # substitute it
+                    if new_coltype.compile(bind.dialect) != compiled_type:
+                        # Make an exception to the rule for Float and arrays of Float, since at
+                        # least on PostgreSQL, Float can accurately represent both REAL and
+                        # DOUBLE_PRECISION
+                        if not isinstance(new_coltype, Float) and \
+                           not (isinstance(new_coltype, ARRAY) and
+                                isinstance(new_coltype.item_type, Float)):
+                            break
+                except sqlalchemy.exc.CompileError:
+                    # If the adapted column type can't be compiled, don't substitute it
+                    break
 
                 # Stop on the first valid non-uppercase column type class
                 coltype = new_coltype
