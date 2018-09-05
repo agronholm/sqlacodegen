@@ -54,7 +54,3 @@ def main():
         generator.render_multifile()
     else:
         generator.render(outfile)
-
-
-if __name__ == '__main__':
-    main()
