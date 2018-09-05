@@ -4,6 +4,7 @@ from __future__ import unicode_literals, division, print_function, absolute_impo
 import inspect
 import re
 import sys
+import io
 from collections import defaultdict
 from inspect import ArgSpec
 from keyword import iskeyword
@@ -150,6 +151,7 @@ class ModelClass(Model):
         self.name = self._tablename_to_classname(table.name, inflect_engine)
         self.children = []
         self.attributes = OrderedDict()
+        self.table_name = table.name
 
         # Assign attribute names for columns
         for column in table.columns:
@@ -310,7 +312,7 @@ class CodeGenerator(object):
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False,
                  noinflect=False, noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable,
-                 class_model=ModelClass,  template=None):
+                 class_model=ModelClass, template=None):
         super(CodeGenerator, self).__init__()
         self.metadata = metadata
         self.noindexes = noindexes
@@ -663,3 +665,27 @@ class CodeGenerator(object):
             metadata_declarations=self.render_metadata_declarations(),
             models=self.model_separator.join(rendered_models).rstrip('\n'))
         print(output, file=outfile)
+
+    def render_multifile(self):
+        # Make sure we keep the declarative_base import
+        # before re-initialize the collector object for each model
+        sqlalchemy_ext_declarative = self.collector['sqlalchemy.ext.declarative']
+        for model in self.models:
+
+            # Create new collector and add back the declarative_base import
+            self.collector = ImportCollector()
+            self.collector['sqlalchemy.ext.declarative'] = sqlalchemy_ext_declarative
+
+            # Regenerate imports for each model
+            model.add_imports(self.collector)
+
+            outfile = io.open(model.table_name + ".py", 'w', encoding='utf-8')
+            if isinstance(model, self.class_model):
+                rendered_model = self.render_class(model)
+            elif isinstance(model, self.table_model):
+                rendered_model = self.render_table(model)
+            output = self.template.format(
+                imports=self.render_imports(),
+                metadata_declarations=self.render_metadata_declarations(),
+                models=rendered_model)
+            print(output, file=outfile)
