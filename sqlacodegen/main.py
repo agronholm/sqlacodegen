@@ -28,7 +28,8 @@ def main():
     parser.add_argument('--noclasses', action='store_true',
                         help="don't generate classes, only tables")
     parser.add_argument('--outfile', help='file to write output to (default: stdout)')
-    parser.add_argument('--multifile', action='store_true', help='export each model/table to a separate file')
+    parser.add_argument('--multifile', action='store_true',
+                        help='export each model/table to a separate file')
     args = parser.parse_args()
 
     if args.version:
