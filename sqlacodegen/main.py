@@ -28,6 +28,8 @@ def main():
     parser.add_argument('--noclasses', action='store_true',
                         help="don't generate classes, only tables")
     parser.add_argument('--outfile', help='file to write output to (default: stdout)')
+    parser.add_argument('--multifile', action='store_true',
+                        help='export each model/table to a separate file')
     args = parser.parse_args()
 
     if args.version:
@@ -49,4 +51,7 @@ def main():
     outfile = io.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints, args.nojoined,
                               args.noinflect, args.noclasses)
-    generator.render(outfile)
+    if args.multifile:
+        generator.render_multifile()
+    else:
+        generator.render(outfile)
