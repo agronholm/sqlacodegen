@@ -331,7 +331,7 @@ class CodeGenerator(object):
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False,
                  noinflect=False, noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable,
-                 class_model=ModelClass,  template=None):
+                 class_model=ModelClass,  template=None, notables=False):
         super(CodeGenerator, self).__init__()
         self.metadata = metadata
         self.noindexes = noindexes
@@ -344,6 +344,7 @@ class CodeGenerator(object):
         self.ignored_tables = ignored_tables
         self.table_model = table_model
         self.class_model = class_model
+        self.notables = notables
         if template:
             self.template = template
         self.inflect_engine = self.create_inflect_engine()
@@ -676,7 +677,7 @@ class CodeGenerator(object):
         for model in self.models:
             if isinstance(model, self.class_model):
                 rendered_models.append(self.render_class(model))
-            elif isinstance(model, self.table_model):
+            elif isinstance(model, self.table_model) and not self.notables:
                 rendered_models.append(self.render_table(model))
 
         output = self.template.format(
