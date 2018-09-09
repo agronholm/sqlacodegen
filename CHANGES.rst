@@ -1,6 +1,13 @@
 Version history
 ===============
 
+2.0.1
+-----
+
+* Don't adapt dialect specific column types if they need special constructor arguments
+  (thanks Nicholas Martin for the PR)
+
+
 2.0.0
 -----
 
