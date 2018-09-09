@@ -5,10 +5,12 @@ import inspect
 import re
 import sys
 from collections import defaultdict
+from importlib import import_module
 from inspect import ArgSpec
 from keyword import iskeyword
 
 import sqlalchemy
+import sqlalchemy.exc
 from sqlalchemy import (
     Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckConstraint, UniqueConstraint, Table,
     Column, Float)
@@ -58,7 +60,19 @@ def _get_constraint_sort_key(constraint):
 class ImportCollector(OrderedDict):
     def add_import(self, obj):
         type_ = type(obj) if not isinstance(obj, type) else obj
-        pkgname = 'sqlalchemy' if type_.__name__ in sqlalchemy.__all__ else type_.__module__
+        pkgname = type_.__module__
+
+        # The column types have already been adapted towards generic types if possible, so if this
+        # is still a vendor specific type (e.g., MySQL INTEGER) be sure to use that rather than the
+        # generic sqlalchemy type as it might have different constructor parameters.
+        if pkgname.startswith('sqlalchemy.dialects.'):
+            dialect_pkgname = '.'.join(pkgname.split('.')[0:3])
+            dialect_pkg = import_module(dialect_pkgname)
+
+            if type_.__name__ in dialect_pkg.__all__:
+                pkgname = dialect_pkgname
+        else:
+            pkgname = 'sqlalchemy' if type_.__name__ in sqlalchemy.__all__ else type_.__module__
         self.add_literal_import(pkgname, type_.__name__)
 
     def add_literal_import(self, pkgname, name):
@@ -89,16 +103,23 @@ class Model(object):
                 for key, value in kw.items():
                     setattr(new_coltype, key, value)
 
-                # If the adapted column type does not render the same as the original, don't
-                # substitute it
-                if new_coltype.compile(bind.dialect) != compiled_type:
-                    # Make an exception to the rule for Float, since at least on PostgreSQL,
-                    # Float can accurately represent both REAL and DOUBLE_PRECISION
-                    if not isinstance(new_coltype, Float):
-                        break
-
                 if isinstance(coltype, ARRAY):
                     new_coltype.item_type = self._get_adapted_type(new_coltype.item_type, bind)
+
+                try:
+                    # If the adapted column type does not render the same as the original, don't
+                    # substitute it
+                    if new_coltype.compile(bind.dialect) != compiled_type:
+                        # Make an exception to the rule for Float and arrays of Float, since at
+                        # least on PostgreSQL, Float can accurately represent both REAL and
+                        # DOUBLE_PRECISION
+                        if not isinstance(new_coltype, Float) and \
+                           not (isinstance(new_coltype, ARRAY) and
+                                isinstance(new_coltype.item_type, Float)):
+                            break
+                except sqlalchemy.exc.CompileError:
+                    # If the adapted column type can't be compiled, don't substitute it
+                    break
 
                 # Stop on the first valid non-uppercase column type class
                 coltype = new_coltype
