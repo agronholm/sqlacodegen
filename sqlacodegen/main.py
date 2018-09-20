@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--noclasses', action='store_true',
                         help="don't generate classes, only tables")
     parser.add_argument('--outfile', help='file to write output to (default: stdout)')
+    parser.add_argument('--connectarg', action='append', help="add connect args for engine")
     args = parser.parse_args()
 
     if args.version:
@@ -39,8 +40,12 @@ def main():
         parser.print_help()
         return
 
-    # Use reflection to fill in the metadata
-    engine = create_engine(args.url)
+    if args.connectarg:
+        connect_args = {arg: val for arg, val in [x.split('=') for x in args.connectarg]}
+        engine = create_engine(args.url, connect_args=connect_args)
+    else:
+        engine = create_engine(args.url)
+
     metadata = MetaData(engine)
     tables = args.tables.split(',') if args.tables else None
     metadata.reflect(engine, args.schema, not args.noviews, tables)
