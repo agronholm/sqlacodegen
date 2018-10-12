@@ -40,14 +40,10 @@ def main():
         parser.print_help()
         return
 
-    try:
-        url = os.getenv(args.url)
-        print('Using env var {}'.format(args.url))
-    except Exception as e:
-        url = args.url
+    url = os.getenv(args.url, default=args.url)
 
     # Use reflection to fill in the metadata
-    engine = create_engine(args.url)
+    engine = create_engine(url)
     metadata = MetaData(engine)
     tables = args.tables.split(',') if args.tables else None
     metadata.reflect(engine, args.schema, not args.noviews, tables)
