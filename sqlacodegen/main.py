@@ -3,6 +3,7 @@ from __future__ import unicode_literals, division, print_function, absolute_impo
 import argparse
 import io
 import sys
+import os
 
 import pkg_resources
 from sqlalchemy.engine import create_engine
@@ -38,6 +39,12 @@ def main():
         print('You must supply a url\n', file=sys.stderr)
         parser.print_help()
         return
+
+    try:
+        url = os.getenv(args.url)
+        print('Using env var {}'.format(args.url))
+    except Exception as e:
+        url = args.url
 
     # Use reflection to fill in the metadata
     engine = create_engine(args.url)
