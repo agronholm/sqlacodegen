@@ -62,6 +62,7 @@ from each table. There are two circumstances in which a ``Table`` is generated i
 * the table has no primary key constraint (which is required by SQLAlchemy for every model class)
 * the table is an association table between two other tables (see below for the specifics)
 
+This behaviour can be overridden. If for some reason you need it to generate only classes, use the ``--notables`` option.
 
 Model class naming logic
 ------------------------
