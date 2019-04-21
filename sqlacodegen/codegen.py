@@ -558,6 +558,8 @@ class CodeGenerator(object):
         elif has_index:
             column.index = True
             kwarg.append('index')
+        if column.comment:
+            kwarg.append('comment')
         if column.server_default:
             # The quote escaping does not cover pathological cases but should mostly work
             default_expr = self._get_compiled_expression(column.server_default.arg)
@@ -612,6 +614,9 @@ class CodeGenerator(object):
         if model.schema:
             rendered += "{0}schema='{1}',\n".format(self.indentation, model.schema)
 
+        if model.table.comment:
+            rendered += f'{self.indentation}comment="{model.table.comment}",\n'
+
         return rendered.rstrip('\n,') + '\n)\n'
 
     def render_class(self, model):
@@ -634,6 +639,8 @@ class CodeGenerator(object):
         table_kwargs = {}
         if model.schema:
             table_kwargs['schema'] = model.schema
+        if model.table.comment:
+            table_kwargs['comment'] = model.table.comment
 
         kwargs_items = ', '.join('{0!r}: {1!r}'.format(key, table_kwargs[key])
                                  for key in table_kwargs)
