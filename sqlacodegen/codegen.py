@@ -35,6 +35,7 @@ _re_column_name = re.compile(r'(?:(["`]?)(?:.*)\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 _re_invalid_identifier = re.compile(r'[^a-zA-Z0-9_]' if sys.version_info[0] < 3 else r'(?u)\W')
+_render_comment = sqlalchemy.__version__[:3] >= '1.2'
 
 
 class _DummyInflectEngine(object):
@@ -572,8 +573,9 @@ class CodeGenerator(object):
             ([self.render_column_type(column.type)] if render_coltype else []) +
             [self.render_constraint(x) for x in dedicated_fks] +
             [repr(x) for x in column.constraints] +
-            ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg] +
-            ([server_default] if server_default else [])
+            ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg if k != 'comment'] +
+            ([server_default] if server_default else []) +
+            (["comment='{}'".format(column.comment) if _render_comment and column.comment is not None else ''])
         ))
 
     def render_relationship(self, relationship):

@@ -50,3 +50,5 @@ def main():
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints, args.nojoined,
                               args.noinflect, args.noclasses)
     generator.render(outfile)
+
+main()
