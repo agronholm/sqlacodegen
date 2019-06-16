@@ -35,7 +35,6 @@ _re_column_name = re.compile(r'(?:(["`]?)(?:.*)\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 _re_invalid_identifier = re.compile(r'[^a-zA-Z0-9_]' if sys.version_info[0] < 3 else r'(?u)\W')
-_render_comment = sqlalchemy.__version__[:3] >= '1.2'
 
 
 class _DummyInflectEngine(object):
@@ -330,7 +329,7 @@ class CodeGenerator(object):
 {models}"""
 
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False,
-                 noinflect=False, noclasses=False, indentation='    ', model_separator='\n\n',
+                 noinflect=False, noclasses=False, nocomments=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable,
                  class_model=ModelClass,  template=None):
         super(CodeGenerator, self).__init__()
@@ -340,11 +339,13 @@ class CodeGenerator(object):
         self.nojoined = nojoined
         self.noinflect = noinflect
         self.noclasses = noclasses
+        self.nocomments = nocomments
         self.indentation = indentation
         self.model_separator = model_separator
         self.ignored_tables = ignored_tables
         self.table_model = table_model
         self.class_model = class_model
+        self._render_comment = sqlalchemy.__version__[:3] >= '1.2' and self.nocomments is False
         if template:
             self.template = template
         self.inflect_engine = self.create_inflect_engine()
@@ -568,15 +569,16 @@ class CodeGenerator(object):
                 default_expr = default_expr.replace('"', '\\"')
                 server_default = 'server_default=text("{0}")'.format(default_expr)
 
-        return 'Column({0})'.format(', '.join(
-            ([repr(column.name)] if show_name else []) +
-            ([self.render_column_type(column.type)] if render_coltype else []) +
-            [self.render_constraint(x) for x in dedicated_fks] +
-            [repr(x) for x in column.constraints] +
-            ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg if k != 'comment'] +
-            ([server_default] if server_default else []) +
-            (["comment='{}'".format(column.comment) if _render_comment and column.comment is not None else ''])
-        ))
+        snippets = ([repr(column.name)] if show_name else []) + \
+            ([self.render_column_type(column.type)] if render_coltype else []) + \
+            [self.render_constraint(x) for x in dedicated_fks] + \
+            [repr(x) for x in column.constraints] + \
+            ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg if k != 'comment'] + \
+            ([server_default] if server_default else [])
+        if self._render_comment and column.comment is not None:
+            snippets += (["comment='{}'".format(column.comment)])
+
+        return 'Column({0})'.format(', '.join(snippets))
 
     def render_relationship(self, relationship):
         rendered = 'relationship('
