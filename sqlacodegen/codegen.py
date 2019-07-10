@@ -400,7 +400,7 @@ class CodeGenerator(object):
                         if match:
                             colname = _re_column_name.match(match.group(1)).group(3).strip()
                             items = match.group(2)
-                            print(table)
+                            print(table.c)
                             if isinstance(table.c[colname].type, String):
                                 table.constraints.remove(constraint)
                                 if not isinstance(table.c[colname].type, Enum):
