@@ -398,6 +398,7 @@ class CodeGenerator(object):
                         # "column IN (...)" into an Enum
                         match = _re_enum_check_constraint.match(sqltext)
                         if match:
+                            print(sqltext)
                             colname = _re_column_name.match(match.group(1)).group(3).strip()
                             items = match.group(2)
                             if isinstance(table.c[colname].type, String):
