@@ -320,16 +320,23 @@ class ManyToManyRelationship(Relationship):
 
 class CodeGenerator(object):
     template = """\
-# coding: utf-8
 {imports}
 
 {metadata_declarations}
 
 
-{models}"""
+{models}
+
+
+# For Emacs:
+# Local Variables:
+# mode: python
+# coding: utf-8
+# End:
+#"""
 
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False,
-                 noinflect=False, noclasses=False, indentation='    ', model_separator='\n\n',
+                 noinflect=False, noclasses=False, nojson=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable,
                  class_model=ModelClass,  template=None):
         super(CodeGenerator, self).__init__()
@@ -339,6 +346,7 @@ class CodeGenerator(object):
         self.nojoined = nojoined
         self.noinflect = noinflect
         self.noclasses = noclasses
+        self.nojson = nojson
         self.indentation = indentation
         self.model_separator = model_separator
         self.ignored_tables = ignored_tables
@@ -432,6 +440,7 @@ class CodeGenerator(object):
         else:
             self.collector.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
 
+
     def create_inflect_engine(self):
         if self.noinflect:
             return _DummyInflectEngine()
@@ -440,8 +449,12 @@ class CodeGenerator(object):
             return inflect.engine()
 
     def render_imports(self):
-        return '\n'.join('from {0} import {1}'.format(package, ', '.join(sorted(names)))
-                         for package, names in self.collector.items())
+        res = []
+        res.append( '\n'.join('from {0} import {1}'.format(package, ', '.join(sorted(names)))
+                         for package, names in self.collector.items() if package is not None) )
+        res.append( '\n'.join('import {0}'.format(', '.join(sorted(names)))
+                         for package, names in self.collector.items() if package is None) )
+        return '\n'.join(res)
 
     def render_metadata_declarations(self):
         if 'sqlalchemy.ext.declarative' in self.collector:
@@ -615,8 +628,9 @@ class CodeGenerator(object):
         return rendered.rstrip('\n,') + '\n)\n'
 
     def render_class(self, model):
-        rendered = 'class {0}({1}):\n'.format(model.name, model.parent_name)
-        rendered += '{0}__tablename__ = {1!r}\n'.format(self.indentation, model.table.name)
+        rendered = []
+        rendered.append('class {0}({1}):\n'.format(model.name, model.parent_name))
+        rendered.append('{0}__tablename__ = {1!r}\n'.format(self.indentation, model.table.name))
 
         # Render constraints and indexes as __table_args__
         table_args = []
@@ -639,37 +653,60 @@ class CodeGenerator(object):
                                  for key in table_kwargs)
         kwargs_items = '{{{0}}}'.format(kwargs_items) if kwargs_items else None
         if table_kwargs and not table_args:
-            rendered += '{0}__table_args__ = {1}\n'.format(self.indentation, kwargs_items)
+            rendered.append('{0}__table_args__ = {1}\n'.format(self.indentation, kwargs_items))
         elif table_args:
             if kwargs_items:
                 table_args.append(kwargs_items)
             if len(table_args) == 1:
                 table_args[0] += ','
             table_args_joined = ',\n{0}{0}'.format(self.indentation).join(table_args)
-            rendered += '{0}__table_args__ = (\n{0}{0}{1}\n{0})\n'.format(
-                self.indentation, table_args_joined)
+            rendered.append('{0}__table_args__ = (\n{0}{0}{1}\n{0})\n'.format(
+                self.indentation, table_args_joined))
 
         # Render columns
-        rendered += '\n'
+        rendered.append('\n')
         for attr, column in model.attributes.items():
             if isinstance(column, Column):
                 show_name = attr != column.name
-                rendered += '{0}{1} = {2}\n'.format(
-                    self.indentation, attr, self.render_column(column, show_name))
+                rendered.append('{0}{1} = {2}\n'.format(
+                    self.indentation, attr, self.render_column(column, show_name)))
 
         # Render relationships
         if any(isinstance(value, Relationship) for value in model.attributes.values()):
-            rendered += '\n'
+            rendered.append('\n')
         for attr, relationship in model.attributes.items():
             if isinstance(relationship, Relationship):
-                rendered += '{0}{1} = {2}\n'.format(
-                    self.indentation, attr, self.render_relationship(relationship))
+                rendered.append('{0}{1} = {2}\n'.format(
+                    self.indentation, attr, self.render_relationship(relationship)))
 
         # Render subclasses
         for child_class in model.children:
-            rendered += self.model_separator + self.render_class(child_class)
+            rendered.append(self.model_separator + self.render_class(child_class))
 
-        return rendered
+        if not self.nojson:
+            # Add json imports
+            self.collector.add_literal_import(None,'json')
+
+            # Render repr
+            rendered.append('\n{0}def asdict(self):\n'.format(self.indentation))
+            rendered.append('{0}{0}return {{\n'.format(self.indentation))
+            for attr, column in model.attributes.items():
+                if isinstance(column, Column):
+                    show_name = attr != column.name
+                    rendered.append("{0}{0}'{1}': self.{1},\n".format(
+                        self.indentation, attr))
+            rendered.append(('{0}{0}}}\n').format(self.indentation))
+
+            # Render repr
+            rendered.append('\n{0}def __repr__(self):\n'.format(self.indentation))
+            rendered.append(('{0}{0}return json.dumps(self.asdict(), sort_keys=True, default=str)\n')
+                            .format(self.indentation))
+
+            # Render str
+            rendered.append('\n{0}def __str__(self):\n'.format(self.indentation))
+            rendered.append('{0}{0}return self.__repr__()\n'.format(self.indentation))
+
+        return ''.join(rendered)
 
     def render(self, outfile=sys.stdout):
         rendered_models = []
