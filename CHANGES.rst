@@ -1,6 +1,14 @@
 Version history
 ===============
 
+UNRELEASED
+----------
+
+* Dropped support for Python 3.4
+* Added support for Python 3.7 and 3.8
+* Added support for SQLAlchemy 1.3
+
+
 2.0.1
 -----
 

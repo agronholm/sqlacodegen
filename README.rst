@@ -10,7 +10,7 @@ This tool was written as a replacement for `sqlautocode`_, which was suffering f
 Features
 ========
 
-* Supports SQLAlchemy 0.8.x - 1.2.x
+* Supports SQLAlchemy 0.8.x - 1.3.x
 * Produces declarative code that almost looks like it was hand written
 * Produces `PEP 8`_ compliant code
 * Accurately determines relationships, including many-to-many, one-to-one

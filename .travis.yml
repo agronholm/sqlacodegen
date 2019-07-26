@@ -28,8 +28,7 @@ jobs:
     - env: TOXENV=py27-sqla12
       after_success: *after_success
 
-    - env: TOXENV=py34
-      python: "3.4"
+    - env: TOXENV=py27-sqla13
       after_success: *after_success
 
     - env: TOXENV=py35
@@ -38,6 +37,10 @@ jobs:
 
     - env: TOXENV=py36
       python: "3.6"
+      after_success: *after_success
+
+    - env: TOXENV=py37
+      python: "3.7"
       after_success: *after_success
 
     - stage: deploy to pypi
