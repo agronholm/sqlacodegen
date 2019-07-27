@@ -40,8 +40,11 @@ jobs:
       python: "3.7"
       after_success: *after_success
 
+    - env: TOXENV=py38
+      python: "3.8-dev"
+      after_success: *after_success
+
     - stage: deploy to pypi
-      install: pip install "setuptools >= 36.2.7"
       script: skip
       deploy:
         provider: pypi
@@ -52,8 +55,6 @@ jobs:
         on:
           tags: true
 
-install:
-  - pip install "setuptools >= 36.2.7"
-  - pip install tox
+install: pip install tox
 
 script: tox
