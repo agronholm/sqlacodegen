@@ -1,50 +1,57 @@
+dist: xenial
 language: python
-sudo: false
 
 stages:
+  - name: static analysis
   - name: test
   - name: deploy to pypi
     if: type = push AND tag =~ ^\d+\.\d+\.\d+
 
 jobs:
-  fast_finish: true
   include:
-    - env: TOXENV=flake8
+    - stage: static analysis
+      env: TOXENV=flake8
 
-    - env: TOXENV=py27-sqla09
+    - &test
+      stage: test
+      env: TOXENV=py27-sqla09
       after_success: &after_success
         - pip install coveralls
         - coveralls
 
-    - env: TOXENV=py27-sqla10
-      after_success: *after_success
+    - <<: *test
+      env: TOXENV=py27-sqla10
 
-    - env: TOXENV=py27-sqla11
-      after_success: *after_success
+    - <<: *test
+      env: TOXENV=py27-sqla11
 
-    - env: TOXENV=py27-sqla12
-      after_success: *after_success
+    - <<: *test
+      env: TOXENV=py27-sqla12
 
-    - env: TOXENV=py27-sqla13
-      after_success: *after_success
+    - <<: *test
+      env: TOXENV=py27-sqla13
 
-    - env: TOXENV=py35
+    - <<: *test
+      env: TOXENV=py35
       python: "3.5"
-      after_success: *after_success
 
-    - env: TOXENV=py36
+    - <<: *test
+      env: TOXENV=py36
       python: "3.6"
       after_success: *after_success
 
-    - env: TOXENV=py37
+    - <<: *test
+      env: TOXENV=py37
       python: "3.7"
       after_success: *after_success
 
-    - env: TOXENV=py38
+    - <<: *test
+      env: TOXENV=py38
       python: "3.8-dev"
       after_success: *after_success
 
     - stage: deploy to pypi
+      install: true
       script: skip
       deploy:
         provider: pypi
