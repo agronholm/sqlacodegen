@@ -8,6 +8,7 @@ UNRELEASED
 * Dropped support for SQLAlchemy 0.8
 * Added support for Python 3.7 and 3.8
 * Added support for SQLAlchemy 1.3
+* Added support for column comments (requires SQLAlchemy 1.2+; based on PR by koalas8)
 * Fixed crash on unknown column types (``NullType``)
 
 

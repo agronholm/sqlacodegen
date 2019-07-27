@@ -333,7 +333,7 @@ class CodeGenerator(object):
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False,
                  noinflect=False, noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable,
-                 class_model=ModelClass,  template=None):
+                 class_model=ModelClass,  template=None, nocomments=False):
         super(CodeGenerator, self).__init__()
         self.metadata = metadata
         self.noindexes = noindexes
@@ -346,9 +346,10 @@ class CodeGenerator(object):
         self.ignored_tables = ignored_tables
         self.table_model = table_model
         self.class_model = class_model
+        self.nocomments = nocomments
+        self.inflect_engine = self.create_inflect_engine()
         if template:
             self.template = template
-        self.inflect_engine = self.create_inflect_engine()
 
         # Pick association tables from the metadata into their own set, don't process them normally
         links = defaultdict(lambda: [])
@@ -458,7 +459,10 @@ class CodeGenerator(object):
     @staticmethod
     def _getargspec_init(method):
         try:
-            return inspect.getargspec(method)
+            if hasattr(inspect, 'getfullargspec'):
+                return inspect.getfullargspec(method)
+            else:
+                return inspect.getargspec(method)
         except TypeError:
             if method is object.__init__:
                 return ArgSpec(['self'], None, None, None)
@@ -569,13 +573,15 @@ class CodeGenerator(object):
                 default_expr = default_expr.replace('"', '\\"')
                 server_default = 'server_default=text("{0}")'.format(default_expr)
 
+        comment = getattr(column, 'comment', None)
         return 'Column({0})'.format(', '.join(
             ([repr(column.name)] if show_name else []) +
             ([self.render_column_type(column.type)] if render_coltype else []) +
             [self.render_constraint(x) for x in dedicated_fks] +
             [repr(x) for x in column.constraints] +
             ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg] +
-            ([server_default] if server_default else [])
+            ([server_default] if server_default else []) +
+            (['comment={!r}'.format(comment)] if comment else [])
         ))
 
     def render_relationship(self, relationship):

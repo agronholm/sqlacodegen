@@ -1262,6 +1262,29 @@ class Simple(Base):
 """
 
 
+@pytest.mark.skipif(sqlalchemy.__version__ < '1.2', reason='Requires SQLAlchemy 1.2+')
+def test_column_comment(metadata):
+    Table(
+        'simple', metadata,
+        Column('id', INTEGER, primary_key=True, comment="this is a 'comment'")
+    )
+
+    assert generate_code(metadata) == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+
+    id = Column(Integer, primary_key=True, comment="this is a 'comment'")
+"""
+
+
 @pytest.mark.parametrize('metadata', ['mysql'], indirect=['metadata'])
 def test_mysql_timestamp(metadata):
     Table(
