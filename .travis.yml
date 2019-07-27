@@ -11,13 +11,10 @@ jobs:
   include:
     - env: TOXENV=flake8
 
-    - env: TOXENV=py27-sqla08
+    - env: TOXENV=py27-sqla09
       after_success: &after_success
         - pip install coveralls
         - coveralls
-
-    - env: TOXENV=py27-sqla09
-      after_success: *after_success
 
     - env: TOXENV=py27-sqla10
       after_success: *after_success

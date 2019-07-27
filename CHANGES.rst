@@ -5,6 +5,7 @@ UNRELEASED
 ----------
 
 * Dropped support for Python 3.4
+* Dropped support for SQLAlchemy 0.8
 * Added support for Python 3.7 and 3.8
 * Added support for SQLAlchemy 1.3
 * Fixed crash on unknown column types (``NullType``)
