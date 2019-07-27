@@ -15,6 +15,7 @@ from sqlalchemy import (
     Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckConstraint, UniqueConstraint, Table,
     Column, Float)
 from sqlalchemy.schema import ForeignKey
+from sqlalchemy.sql.sqltypes import NullType
 from sqlalchemy.types import Boolean, String
 from sqlalchemy.util import OrderedDict
 
@@ -88,7 +89,8 @@ class Model(object):
 
         # Adapt column types to the most reasonable generic types (ie. VARCHAR -> String)
         for column in table.columns:
-            column.type = self._get_adapted_type(column.type, column.table.bind)
+            if not isinstance(column.type, NullType):
+                column.type = self._get_adapted_type(column.type, column.table.bind)
 
     def _get_adapted_type(self, coltype, bind):
         compiled_type = coltype.compile(bind.dialect)
