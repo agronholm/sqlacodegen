@@ -392,7 +392,7 @@ class CodeGenerator(object):
                         # "column IN (0, 1)" into a Boolean
                         match = _re_boolean_check_constraint.match(sqltext)
                         if match:
-                            colname = _re_column_name.match(match.group(1)).group(3)
+                            colname = _re_column_name.match(match.group(1)).group(3).lower().strip()
                             table.constraints.remove(constraint)
                             table.c[colname].type = Boolean()
                             continue
@@ -401,7 +401,7 @@ class CodeGenerator(object):
                         # "column IN (...)" into an Enum
                         match = _re_enum_check_constraint.match(sqltext)
                         if match:
-                            colname = _re_column_name.match(match.group(1)).group(3)
+                            colname = _re_column_name.match(match.group(1)).group(3).lower().strip()
                             items = match.group(2)
                             if isinstance(table.c[colname].type, String):
                                 table.constraints.remove(constraint)
