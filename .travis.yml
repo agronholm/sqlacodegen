@@ -63,8 +63,7 @@ jobs:
           tags: true
 
 before_install:
-  - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-  - python get-pip.py pip==19.3
+  - pip install --upgrade --force-reinstall pip==19.3
 
 install: python -m pip install tox
 
