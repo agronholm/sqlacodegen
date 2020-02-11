@@ -620,8 +620,9 @@ class CodeGenerator(object):
         if model.schema:
             rendered += "{0}schema='{1}',\n".format(self.indentation, model.schema)
 
-        if model.table.comment:
-            rendered += "{0}comment='{1}',\n".format(self.indentation, model.table.comment)
+        table_comment = getattr(model.table, 'comment', None)
+        if table_comment:
+            rendered += "{0}comment='{1}',\n".format(self.indentation, table_comment)
 
         return rendered.rstrip('\n,') + '\n)\n'
 
@@ -646,8 +647,9 @@ class CodeGenerator(object):
         if model.schema:
             table_kwargs['schema'] = model.schema
 
-        if model.table.comment:
-            table_kwargs['comment'] = model.table.comment
+        table_comment = getattr(model.table, 'comment', None)
+        if table_comment:
+            table_kwargs['comment'] = table_comment
 
         kwargs_items = ', '.join('{0!r}: {1!r}'.format(key, table_kwargs[key])
                                  for key in table_kwargs)
