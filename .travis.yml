@@ -62,6 +62,8 @@ jobs:
         on:
           tags: true
 
+before_install: python -m ensurepip --upgrade
+
 install: python -m pip install tox
 
 script: tox
