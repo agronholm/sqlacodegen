@@ -6,6 +6,7 @@
 .settings
 .tox
 .idea
+.vscode
 .cache
 dist
 build
