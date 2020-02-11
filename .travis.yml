@@ -62,9 +62,6 @@ jobs:
         on:
           tags: true
 
-before_install:
-  - pip install --upgrade --force-reinstall pip==19.3
-
 install: python -m pip install tox
 
 script: tox
