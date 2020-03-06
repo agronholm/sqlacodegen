@@ -44,6 +44,10 @@ Examples::
     sqlacodegen mysql+oursql://user:password@localhost/dbname
     sqlacodegen sqlite:///database.db
 
+Save to text-file:
+
+    sqlacodegen sqlite:///test.db > test.txt
+
 To see the full list of options::
 
     sqlacodegen --help
