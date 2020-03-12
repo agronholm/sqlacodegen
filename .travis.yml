@@ -47,7 +47,7 @@ jobs:
 
     - <<: *test
       env: TOXENV=py38
-      python: "3.8-dev"
+      python: "3.8"
       after_success: *after_success
 
     - stage: deploy to pypi
