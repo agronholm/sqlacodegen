@@ -622,7 +622,8 @@ class CodeGenerator(object):
 
         table_comment = getattr(model.table, 'comment', None)
         if table_comment:
-            rendered += "{0}comment='{1}',\n".format(self.indentation, table_comment)
+            quoted_comment = table_comment.replace("'", "\\'").replace('"', '\\"')
+            rendered += "{0}comment='{1}',\n".format(self.indentation, quoted_comment)
 
         return rendered.rstrip('\n,') + '\n)\n'
 
