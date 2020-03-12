@@ -3,7 +3,6 @@ from __future__ import unicode_literals, division, print_function, absolute_impo
 import re
 import sys
 from io import StringIO
-from textwrap import dedent
 
 import pytest
 import sqlalchemy
@@ -1296,15 +1295,15 @@ def test_table_comment(metadata):
 
     codegen = CodeGenerator(metadata)
     code = codegen.render_table(codegen.models[0])
-    expected = dedent("""
-    t_simple = Table(
-        'simple', metadata,
-        Column('id', Integer, primary_key=True),
-        comment='this is a \\'comment\\''
-    )
-    """)
-    assert code.strip() == expected.strip()
-    assert generate_code(metadata) == """\
+    assert code == """\
+t_simple = Table(
+    'simple', metadata,
+    Column('id', Integer, primary_key=True),
+    comment='this is a \\'comment\\''
+)
+"""
+    code = generate_code(metadata)
+    assert code == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
