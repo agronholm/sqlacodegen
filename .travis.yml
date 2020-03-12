@@ -16,7 +16,7 @@ jobs:
       stage: test
       env: TOXENV=py27-sqla09
       after_success: &after_success
-        - pip install coveralls
+        - python -m pip install coveralls
         - coveralls
 
     - <<: *test
@@ -62,6 +62,6 @@ jobs:
         on:
           tags: true
 
-install: pip install tox
+install: python -m pip install tox
 
 script: tox

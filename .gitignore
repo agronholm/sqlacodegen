@@ -6,6 +6,8 @@
 .settings
 .tox
 .idea
+.vscode
 .cache
+.pytest_cache
 dist
 build
