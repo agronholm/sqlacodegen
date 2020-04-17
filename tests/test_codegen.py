@@ -846,6 +846,44 @@ class SimpleSubItem(SimpleItem):
 """
 
 
+def test_tableprefix(metadata):
+    Table(
+        'prefix_test_table', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('container_id', INTEGER),
+        ForeignKeyConstraint(['container_id'], ['prefix_container_table.id']),
+    )
+    Table(
+        'prefix_container_table', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata, tableprefix='prefix_') == """\
+# coding: utf-8
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class ContainerTable(Base):
+    __tablename__ = 'prefix_container_table'
+
+    id = Column(Integer, primary_key=True)
+
+
+class TestTable(Base):
+    __tablename__ = 'prefix_test_table'
+
+    id = Column(Integer, primary_key=True)
+    container_id = Column(ForeignKey('prefix_container_table.id'))
+
+    container = relationship('ContainerTable')
+"""
+
+
 def test_no_inflect(metadata):
     Table(
         'simple_items', metadata,

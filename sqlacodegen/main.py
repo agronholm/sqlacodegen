@@ -18,6 +18,7 @@ def main():
     parser.add_argument('--version', action='store_true', help="print the version number and exit")
     parser.add_argument('--schema', help='load tables from an alternate schema')
     parser.add_argument('--tables', help='tables to process (comma-separated, default: all)')
+    parser.add_argument('--tableprefix', help='table prefix to ignore in generating class names')
     parser.add_argument('--noviews', action='store_true', help="ignore views")
     parser.add_argument('--noindexes', action='store_true', help='ignore indexes')
     parser.add_argument('--noconstraints', action='store_true', help='ignore constraints')
@@ -49,5 +50,5 @@ def main():
     # Write the generated model code to the specified file or standard output
     outfile = io.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints, args.nojoined,
-                              args.noinflect, args.noclasses, nocomments=args.nocomments)
+                              args.noinflect, args.noclasses, nocomments=args.nocomments, tableprefix=args.tableprefix)
     generator.render(outfile)

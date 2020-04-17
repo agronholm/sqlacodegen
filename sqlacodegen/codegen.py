@@ -168,9 +168,9 @@ class ModelTable(Model):
 class ModelClass(Model):
     parent_name = 'Base'
 
-    def __init__(self, table, association_tables, inflect_engine, detect_joined):
+    def __init__(self, table, association_tables, inflect_engine, detect_joined, tableprefix):
         super(ModelClass, self).__init__(table)
-        self.name = self._tablename_to_classname(table.name, inflect_engine)
+        self.name = self._tablename_to_classname(table.name, inflect_engine, tableprefix)
         self.children = []
         self.attributes = OrderedDict()
 
@@ -183,7 +183,7 @@ class ModelClass(Model):
         for constraint in sorted(table.constraints, key=_get_constraint_sort_key):
             if isinstance(constraint, ForeignKeyConstraint):
                 target_cls = self._tablename_to_classname(constraint.elements[0].column.table.name,
-                                                          inflect_engine)
+                                                          inflect_engine, tableprefix)
                 if (detect_joined and self.parent_name == 'Base' and
                         set(_get_column_names(constraint)) == pk_column_names):
                     self.parent_name = target_cls
@@ -198,12 +198,14 @@ class ModelClass(Model):
                               if isinstance(c, ForeignKeyConstraint)]
             fk_constraints.sort(key=_get_constraint_sort_key)
             target_cls = self._tablename_to_classname(
-                fk_constraints[1].elements[0].column.table.name, inflect_engine)
+                fk_constraints[1].elements[0].column.table.name, inflect_engine, tableprefix)
             relationship_ = ManyToManyRelationship(self.name, target_cls, association_table)
             self._add_attribute(relationship_.preferred_name, relationship_)
 
     @classmethod
-    def _tablename_to_classname(cls, tablename, inflect_engine):
+    def _tablename_to_classname(cls, tablename, inflect_engine, tableprefix):
+        if tableprefix and tablename.startswith(tableprefix):
+            tablename = tablename[len(tableprefix):]
         tablename = cls._convert_to_valid_identifier(tablename)
         camel_case_name = ''.join(part[:1].upper() + part[1:] for part in tablename.split('_'))
         return inflect_engine.singular_noun(camel_case_name) or camel_case_name
@@ -333,7 +335,7 @@ class CodeGenerator(object):
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False,
                  noinflect=False, noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable,
-                 class_model=ModelClass,  template=None, nocomments=False):
+                 class_model=ModelClass,  template=None, nocomments=False, tableprefix=''):
         super(CodeGenerator, self).__init__()
         self.metadata = metadata
         self.noindexes = noindexes
@@ -347,6 +349,7 @@ class CodeGenerator(object):
         self.table_model = table_model
         self.class_model = class_model
         self.nocomments = nocomments
+        self.tableprefix = tableprefix
         self.inflect_engine = self.create_inflect_engine()
         if template:
             self.template = template
@@ -416,7 +419,7 @@ class CodeGenerator(object):
                 model = self.table_model(table)
             else:
                 model = self.class_model(table, links[table.name], self.inflect_engine,
-                                         not nojoined)
+                                         not nojoined, self.tableprefix)
                 classes[model.name] = model
 
             self.models.append(model)
