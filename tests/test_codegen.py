@@ -47,6 +47,12 @@ def generate_code(metadata, **kwargs):
     return remove_unicode_prefixes(sio.getvalue())
 
 
+def test_main_invoke():
+    from sqlacodegen.main import main
+    result = main()
+    assert result == 0
+
+
 @pytest.mark.parametrize('metadata', ['postgresql'], indirect=['metadata'])
 def test_fancy_coltypes(metadata):
     Table(

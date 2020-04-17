@@ -35,11 +35,11 @@ def main():
     if args.version:
         version = pkg_resources.get_distribution('sqlacodegen').parsed_version
         print(version.public)
-        return
+        return 0
     if not args.url:
         print('You must supply a url\n', file=sys.stderr)
         parser.print_help()
-        return
+        return 0
 
     # Use reflection to fill in the metadata
     engine = create_engine(args.url)
