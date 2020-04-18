@@ -15,7 +15,7 @@ from sqlalchemy.schema import (
 from sqlalchemy.sql.expression import text
 from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
 
-from sqlacodegen.codegen import CodeGenerator
+from sqlacodegen.codegen import CodeGenerator, RelationshipType
 
 if sys.version_info < (3,):
     unicode_re = re.compile(r"u(['\"])(.*?)(?<!\\)\1")
@@ -51,6 +51,14 @@ def test_main_invoke():
     from sqlacodegen.main import main
     result = main()
     assert result == 0
+
+
+def test_main_invoke_with_url():
+    from sqlacodegen.main import main
+    sys.argv.append('sqlite:///:memory:')
+    result = main()
+    sys.argv.pop()
+    assert result is None
 
 
 @pytest.mark.parametrize('metadata', ['postgresql'], indirect=['metadata'])
@@ -1491,3 +1499,279 @@ class Simple(Base):
     id = Column(Integer, primary_key=True)
     my_longtext = Column(LONGTEXT)
 """
+
+
+def test_custom_table_class_mapping(metadata):
+    def class_name_fn(table_name):
+        if table_name == "hascustommapping":
+            return "CustomMappedClassName"
+        else:
+            return None
+
+    Table(
+        'has_no_custom_mapping', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    Table(
+        'hascustommapping', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata, class_name_fn=class_name_fn) == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class HasNoCustomMapping(Base):
+    __tablename__ = 'has_no_custom_mapping'
+
+    id = Column(Integer, primary_key=True)
+
+
+class CustomMappedClassName(Base):
+    __tablename__ = 'hascustommapping'
+
+    id = Column(Integer, primary_key=True)
+"""
+
+
+def test_relationship_custom_name(metadata):
+    """Test one side of a relationship can be named using a relationship naming function."""
+    def rel_name_fn(foreign_key_constraint, relationship_type):
+        if 'my_container_id' in foreign_key_constraint.columns \
+           and len(foreign_key_constraint.columns) == 1:
+            return ('custom_name', None)
+
+        return None
+
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('my_container_id', INTEGER),
+        Column('simple_container_id', INTEGER),
+        # has custom name
+        ForeignKeyConstraint(['my_container_id'], ['simple_containers.id']),
+        # has no custom name
+        ForeignKeyConstraint(['simple_container_id'], ['simple_containers.id'])
+    )
+    Table(
+        'simple_containers', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata, rel_name_fn=rel_name_fn) == """\
+# coding: utf-8
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleContainer(Base):
+    __tablename__ = 'simple_containers'
+
+    id = Column(Integer, primary_key=True)
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    my_container_id = Column(ForeignKey('simple_containers.id'))
+    simple_container_id = Column(ForeignKey('simple_containers.id'))
+
+    custom_name = relationship('SimpleContainer', \
+primaryjoin='SimpleItem.my_container_id == SimpleContainer.id')
+    simple_container = relationship('SimpleContainer', \
+primaryjoin='SimpleItem.simple_container_id == SimpleContainer.id')
+"""
+
+
+def test_relationship_custom_name_with_backref(metadata):
+    """Test both sides of relationships can be named using a relationship naming function."""
+    def rel_name_fn(foreign_key_constraint, relationship_type):
+        if 'my_container_id' in foreign_key_constraint.columns \
+           and len(foreign_key_constraint.columns) == 1:
+            return ('custom_name', 'simple_items')
+
+        return None
+
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('my_container_id', INTEGER),
+        Column('simple_container_id', INTEGER),
+        # has custom name
+        ForeignKeyConstraint(['my_container_id'], ['simple_containers.id']),
+        # has no custom name
+        ForeignKeyConstraint(['simple_container_id'], ['simple_containers.id'])
+    )
+    Table(
+        'simple_containers', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata, rel_name_fn=rel_name_fn) == """\
+# coding: utf-8
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleContainer(Base):
+    __tablename__ = 'simple_containers'
+
+    id = Column(Integer, primary_key=True)
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    my_container_id = Column(ForeignKey('simple_containers.id'))
+    simple_container_id = Column(ForeignKey('simple_containers.id'))
+
+    custom_name = relationship('SimpleContainer', \
+backref='simple_items', primaryjoin='SimpleItem.my_container_id == SimpleContainer.id')
+    simple_container = relationship('SimpleContainer', \
+primaryjoin='SimpleItem.simple_container_id == SimpleContainer.id')
+"""
+
+
+def test_relationship_custom_name_with_onetotone_backref(metadata):
+    """Test one-to-one relationships with a backref don't use lists."""
+    def rel_name_fn(foreign_key_constraint, relationship_type):
+        if 'linked_item_id' in foreign_key_constraint.columns \
+           and len(foreign_key_constraint.columns) == 1:
+            return ('extra_info', 'item')
+
+        return None
+
+    Table(
+        'items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('linked_item_id', INTEGER),
+        ForeignKeyConstraint(['linked_item_id'], ['item_extra_info.id']),
+        UniqueConstraint('linked_item_id')
+    )
+    Table(
+        'item_extra_info', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata, rel_name_fn=rel_name_fn) == """\
+# coding: utf-8
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import backref, relationship
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class ItemExtraInfo(Base):
+    __tablename__ = 'item_extra_info'
+
+    id = Column(Integer, primary_key=True)
+
+
+class Item(Base):
+    __tablename__ = 'items'
+
+    id = Column(Integer, primary_key=True)
+    linked_item_id = Column(ForeignKey('item_extra_info.id'), unique=True)
+
+    extra_info = relationship('ItemExtraInfo', uselist=False, \
+backref=backref('item', uselist=False))
+"""
+
+
+def test_onetoone_rel_name_relationship_type_arg(metadata):
+    """Test the correct relationship type is passed into the relationship naming function."""
+    actual_relationship_type = None
+    expected_relationship_type = RelationshipType.ONE_TO_ONE
+
+    def rel_name_fn(foreign_key_constraint, relationship_type):
+        nonlocal actual_relationship_type
+        actual_relationship_type = relationship_type
+        return None
+
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('other_item_id', INTEGER),
+        ForeignKeyConstraint(['other_item_id'], ['other_items.id']),
+        UniqueConstraint('other_item_id')
+    )
+    Table(
+        'other_items', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    generate_code(metadata, rel_name_fn=rel_name_fn)
+    assert(actual_relationship_type == expected_relationship_type)
+
+
+def test_manytoone_rel_name_relationship_type_arg(metadata):
+    """Test the correct relationship type is passed into the relationship naming function."""
+    actual_relationship_type = None
+    expected_relationship_type = RelationshipType.MANY_TO_ONE
+
+    def rel_name_fn(foreign_key_constraint, relationship_type):
+        nonlocal actual_relationship_type
+        actual_relationship_type = relationship_type
+        return None
+
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('container_id', INTEGER),
+        ForeignKeyConstraint(['container_id'], ['simple_containers.id']),
+    )
+    Table(
+        'simple_containers', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    generate_code(metadata, rel_name_fn=rel_name_fn)
+    assert(actual_relationship_type == expected_relationship_type)
+
+
+def test_manytomany_rel_name_relationship_type_arg(metadata):
+    """Test the correct relationship type is passed into the relationship naming function."""
+    actual_relationship_type = None
+    expected_relationship_type = RelationshipType.MANY_TO_MANY
+
+    def rel_name_fn(foreign_key_constraint, relationship_type):
+        nonlocal actual_relationship_type
+        actual_relationship_type = relationship_type
+        return None
+
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+    Table(
+        'simple_containers', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+    Table(
+        'container_items', metadata,
+        Column('item_id', INTEGER),
+        Column('container_id', INTEGER),
+        ForeignKeyConstraint(['item_id'], ['simple_items.id']),
+        ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
+    )
+
+    generate_code(metadata, rel_name_fn=rel_name_fn)
+    assert(actual_relationship_type == expected_relationship_type)

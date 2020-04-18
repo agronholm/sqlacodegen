@@ -5,10 +5,17 @@ import io
 import sys
 
 import pkg_resources
+from importlib import import_module
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
 from sqlacodegen.codegen import CodeGenerator
+
+
+def get_function_from_module(fully_qualified_function_name):
+    module_name, function_name = fully_qualified_function_name.rsplit('.', 1)
+    module = import_module(module_name)
+    return getattr(module, function_name)
 
 
 def main():
@@ -30,6 +37,12 @@ def main():
                         help="don't generate classes, only tables")
     parser.add_argument('--nocomments', action='store_true', help="don't render column comments")
     parser.add_argument('--outfile', help='file to write output to (default: stdout)')
+    parser.add_argument('--classnamefn',
+                        help='''function to map table name to class name for custom class model
+                                naming''')
+    parser.add_argument('--relnamefn',
+                        help='''function to map foreign key constraint object to relationship name
+                                for custom relationship naming''')
     args = parser.parse_args()
 
     if args.version:
@@ -41,6 +54,16 @@ def main():
         parser.print_help()
         return 0
 
+    # Optional custom table naming function
+    class_name_fn = None
+    if args.classnamefn:
+        class_name_fn = get_function_from_module(args.classnamefn)
+
+    # Optional custom relationship naming function
+    rel_name_fn = None
+    if args.relnamefn:
+        rel_name_fn = get_function_from_module(args.relnamefn)
+
     # Use reflection to fill in the metadata
     engine = create_engine(args.url)
     metadata = MetaData(engine)
@@ -51,5 +74,6 @@ def main():
     outfile = io.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints, args.nojoined,
                               args.noinflect, args.noclasses, nocomments=args.nocomments,
-                              tableprefix=args.tableprefix)
+                              tableprefix=args.tableprefix, class_name_fn=class_name_fn,
+                              rel_name_fn=rel_name_fn)
     generator.render(outfile)
