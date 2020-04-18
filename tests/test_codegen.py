@@ -1700,10 +1700,10 @@ def test_onetoone_rel_name_relationship_type_arg(metadata):
     """Test the correct relationship type is passed into the relationship naming function."""
     class context:
         actual_relationship_type = None
-        expected_relationship_type = RelationshipType.ONE_TO_ONE    
+        expected_relationship_type = RelationshipType.ONE_TO_ONE
 
-    def rel_name_fn(foreign_key_constraint, relationship_type):        
-        #nonlocal actual_relationship_type
+    def rel_name_fn(foreign_key_constraint, relationship_type):
+        # nonlocal actual_relationship_type
         context.actual_relationship_type = relationship_type
         return None
 
@@ -1730,7 +1730,7 @@ def test_manytoone_rel_name_relationship_type_arg(metadata):
         expected_relationship_type = RelationshipType.MANY_TO_ONE
 
     def rel_name_fn(foreign_key_constraint, relationship_type):
-        #nonlocal actual_relationship_type
+        # nonlocal actual_relationship_type
         context.actual_relationship_type = relationship_type
         return None
 
@@ -1756,7 +1756,7 @@ def test_manytomany_rel_name_relationship_type_arg(metadata):
         expected_relationship_type = RelationshipType.MANY_TO_MANY
 
     def rel_name_fn(foreign_key_constraint, relationship_type):
-        #nonlocal actual_relationship_type
+        # nonlocal actual_relationship_type
         context.actual_relationship_type = relationship_type
         return None
 
