@@ -1698,12 +1698,13 @@ backref=backref('item', uselist=False))
 
 def test_onetoone_rel_name_relationship_type_arg(metadata):
     """Test the correct relationship type is passed into the relationship naming function."""
-    actual_relationship_type = None
-    expected_relationship_type = RelationshipType.ONE_TO_ONE
+    class context:
+        actual_relationship_type = None
+        expected_relationship_type = RelationshipType.ONE_TO_ONE    
 
-    def rel_name_fn(foreign_key_constraint, relationship_type):
-        nonlocal actual_relationship_type
-        actual_relationship_type = relationship_type
+    def rel_name_fn(foreign_key_constraint, relationship_type):        
+        #nonlocal actual_relationship_type
+        context.actual_relationship_type = relationship_type
         return None
 
     Table(
@@ -1719,17 +1720,18 @@ def test_onetoone_rel_name_relationship_type_arg(metadata):
     )
 
     generate_code(metadata, rel_name_fn=rel_name_fn)
-    assert(actual_relationship_type == expected_relationship_type)
+    assert(context.actual_relationship_type == context.expected_relationship_type)
 
 
 def test_manytoone_rel_name_relationship_type_arg(metadata):
     """Test the correct relationship type is passed into the relationship naming function."""
-    actual_relationship_type = None
-    expected_relationship_type = RelationshipType.MANY_TO_ONE
+    class context:
+        actual_relationship_type = None
+        expected_relationship_type = RelationshipType.MANY_TO_ONE
 
     def rel_name_fn(foreign_key_constraint, relationship_type):
-        nonlocal actual_relationship_type
-        actual_relationship_type = relationship_type
+        #nonlocal actual_relationship_type
+        context.actual_relationship_type = relationship_type
         return None
 
     Table(
@@ -1744,17 +1746,18 @@ def test_manytoone_rel_name_relationship_type_arg(metadata):
     )
 
     generate_code(metadata, rel_name_fn=rel_name_fn)
-    assert(actual_relationship_type == expected_relationship_type)
+    assert(context.actual_relationship_type == context.expected_relationship_type)
 
 
 def test_manytomany_rel_name_relationship_type_arg(metadata):
     """Test the correct relationship type is passed into the relationship naming function."""
-    actual_relationship_type = None
-    expected_relationship_type = RelationshipType.MANY_TO_MANY
+    class context:
+        actual_relationship_type = None
+        expected_relationship_type = RelationshipType.MANY_TO_MANY
 
     def rel_name_fn(foreign_key_constraint, relationship_type):
-        nonlocal actual_relationship_type
-        actual_relationship_type = relationship_type
+        #nonlocal actual_relationship_type
+        context.actual_relationship_type = relationship_type
         return None
 
     Table(
@@ -1774,4 +1777,4 @@ def test_manytomany_rel_name_relationship_type_arg(metadata):
     )
 
     generate_code(metadata, rel_name_fn=rel_name_fn)
-    assert(actual_relationship_type == expected_relationship_type)
+    assert(context.actual_relationship_type == context.expected_relationship_type)
