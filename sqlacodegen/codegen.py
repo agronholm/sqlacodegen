@@ -8,7 +8,6 @@ from collections import defaultdict
 from importlib import import_module
 from inspect import ArgSpec
 from keyword import iskeyword
-from enum import Enum as PyEnum
 
 import sqlalchemy
 import sqlalchemy.exc
@@ -257,7 +256,7 @@ class ModelClass(Model):
             child.add_imports(collector)
 
 
-class RelationshipType(PyEnum):
+class RelationshipType():
     ONE_TO_ONE = "ONE_TO_ONE"
     MANY_TO_ONE = "MANY_TO_ONE"
     MANY_TO_MANY = "MANY_TO_MANY"
