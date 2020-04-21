@@ -158,8 +158,22 @@ class Model(object):
             if len(index.columns) > 1:
                 collector.add_import(index)
 
+    @staticmethod
+    def _convert_to_valid_identifier(name):
+        assert name, 'Identifier cannot be empty'
+        if name[0].isdigit() or iskeyword(name):
+            name = '_' + name
+        elif name == 'metadata':
+            name = 'metadata_'
+
+        return _re_invalid_identifier.sub('_', name)
+
 
 class ModelTable(Model):
+    def __init__(self, table):
+        super(ModelTable, self).__init__(table)
+        self.name = self._convert_to_valid_identifier(table.name)
+
     def add_imports(self, collector):
         super(ModelTable, self).add_imports(collector)
         collector.add_import(Table)
@@ -207,16 +221,6 @@ class ModelClass(Model):
         tablename = cls._convert_to_valid_identifier(tablename)
         camel_case_name = ''.join(part[:1].upper() + part[1:] for part in tablename.split('_'))
         return inflect_engine.singular_noun(camel_case_name) or camel_case_name
-
-    @staticmethod
-    def _convert_to_valid_identifier(name):
-        assert name, 'Identifier cannot be empty'
-        if name[0].isdigit() or iskeyword(name):
-            name = '_' + name
-        elif name == 'metadata':
-            name = 'metadata_'
-
-        return _re_invalid_identifier.sub('_', name)
 
     def _add_attribute(self, attrname, value):
         attrname = tempname = self._convert_to_valid_identifier(attrname)
@@ -600,7 +604,7 @@ class CodeGenerator(object):
 
     def render_table(self, model):
         rendered = 't_{0} = Table(\n{1}{0!r}, metadata,\n'.format(
-            model.table.name, self.indentation)
+            model.name, self.indentation)
 
         for column in model.table.columns:
             rendered += '{0}{1},\n'.format(self.indentation, self.render_column(column, True))

@@ -1293,7 +1293,7 @@ def test_table_comment(metadata):
         comment="this is a 'comment'"
     )
 
-    codegen = CodeGenerator(metadata)
+    codegen = CodeGenerator(metadata, noclasses=True)
     code = codegen.render_table(codegen.models[0])
     assert code == """\
 t_simple = Table(
