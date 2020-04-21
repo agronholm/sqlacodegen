@@ -1467,5 +1467,3 @@ t_simple_items_table = Table(
     Column('id', Integer, primary_key=True)
 )
 """
-
-
