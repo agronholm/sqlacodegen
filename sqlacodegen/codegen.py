@@ -599,7 +599,7 @@ class CodeGenerator(object):
         return rendered + delimiter.join(args) + end
 
     def render_table(self, model):
-        rendered = 't_{0} = Table(\n{1}{0!r}, metadata,\n'.format(
+        rendered = '_t_{0} = Table(\n{1}{0!r}, metadata,\n'.format(
             model.table.name, self.indentation)
 
         for column in model.table.columns:
@@ -621,6 +621,18 @@ class CodeGenerator(object):
             rendered += "{0}schema='{1}',\n".format(self.indentation, model.schema)
 
         return rendered.rstrip('\n,') + '\n)\n'
+
+    def render_table_proxy(self, model):
+        camel_case_name = ''.join(part[:1].upper() + part[1:] for part in model.table.name.split('_'))
+        rendered = f'class {camel_case_name}:\n'
+        rendered += '{0}table = {1}\n'.format(self.indentation, f'_t_{model.table.name}')
+
+        for column in model.table.columns:
+            rendered += '{0}{1}: {2} = {3}.c.{4}\n'.format(
+                self.indentation, column.name, f'Column', f'_t_{model.table.name}', column.name
+            )
+
+        return rendered.rstrip('\n,') + '\n\n'
 
     def render_class(self, model):
         rendered = 'class {0}({1}):\n'.format(model.name, model.parent_name)
@@ -686,6 +698,7 @@ class CodeGenerator(object):
                 rendered_models.append(self.render_class(model))
             elif isinstance(model, self.table_model):
                 rendered_models.append(self.render_table(model))
+                rendered_models.append(self.render_table_proxy(model))
 
         output = self.template.format(
             imports=self.render_imports(),
