@@ -1,6 +1,13 @@
 Version history
 ===============
 
+2.2.0
+-----
+
+* Added support for rendering table comments (PR by David Hirschfeld)
+* Fixed bad identifier names being generated for plain tables (PR by softwarepk)
+
+
 2.1.0
 -----
 
