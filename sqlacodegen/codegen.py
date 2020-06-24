@@ -8,6 +8,7 @@ from collections import defaultdict
 from importlib import import_module
 from inspect import ArgSpec
 from keyword import iskeyword
+from textwrap import dedent
 
 import sqlalchemy
 import sqlalchemy.exc
@@ -623,16 +624,45 @@ class CodeGenerator(object):
         return rendered.rstrip('\n,') + '\n)\n'
 
     def render_table_proxy(self, model):
+        """
+        This will generate a proxy variable to t_tablename and make the type of tablename.c available to use:
+
+        --------- Provided:
+        _t_account = Table(
+            ...
+        )
+        --------- Output:
+        class _AccountColumns:
+            id: Column
+            credential_id: Column
+            vendor_id: Column
+            role: Column
+
+        class _AccountTable(Table):  # pylint: disable=too-many-ancestors,abstract-method
+            c: _AccountColumns
+
+        account: _AccountTable = _t_account  # type: ignore
+        """
         camel_case_name = ''.join(part[:1].upper() + part[1:] for part in model.table.name.split('_'))
-        rendered = f'class {camel_case_name}:\n'
-        rendered += '{0}table = {1}\n'.format(self.indentation, f'_t_{model.table.name}')
+        columns_type = f'_{camel_case_name}Columns'
+        proxy_type = f'_{camel_case_name}Table'
+
+        rendered = f'class {columns_type}:\n'
 
         for column in model.table.columns:
-            rendered += '{0}{1}: {2} = {3}.c.{4}\n'.format(
-                self.indentation, column.name, f'Column', f'_t_{model.table.name}', column.name
-            )
+            rendered += f'{self.indentation}{column.name}: Column\n'
 
-        return rendered.rstrip('\n,') + '\n\n'
+        # sqlacademic's Table inherts multiple classes, so we need to disable too-many-ancestors
+        # also Table has abstract methods, we need disable abstract-method too
+        # this also forces mypy to believe table_name's c has our defined columns_type
+        rendered += dedent(f'''\
+        class {proxy_type}(Table):  # pylint: disable=too-many-ancestors,abstract-method
+        {self.indentation}c: {columns_type}
+
+        {model.table.name}: {proxy_type} = _t_{model.table.name} # type: ignore
+        ''')
+
+        return rendered
 
     def render_class(self, model):
         rendered = 'class {0}({1}):\n'.format(model.name, model.parent_name)
