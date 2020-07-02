@@ -585,7 +585,7 @@ class CodeGenerator(object):
             [repr(x) for x in column.constraints] +
             ['{0}={1}'.format(k, repr(getattr(column, k))) for k in kwarg] +
             ([server_default] if server_default else []) +
-            (['comment={!r}'.format(comment)] if comment else [])
+            (['comment={!r}'.format(comment)] if comment and not self.nocomments else [])
         ))
 
     def render_relationship(self, relationship):

@@ -1263,13 +1263,15 @@ class Simple(Base):
 
 
 @pytest.mark.skipif(sqlalchemy.__version__ < '1.2', reason='Requires SQLAlchemy 1.2+')
-def test_column_comment(metadata):
+@pytest.mark.parametrize('nocomments', [False, True])
+def test_column_comment(metadata, nocomments):
     Table(
         'simple', metadata,
         Column('id', INTEGER, primary_key=True, comment="this is a 'comment'")
     )
 
-    assert generate_code(metadata) == """\
+    comment_part = '' if nocomments else ', comment="this is a \'comment\'"'
+    assert generate_code(metadata, nocomments=nocomments) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -1281,8 +1283,8 @@ metadata = Base.metadata
 class Simple(Base):
     __tablename__ = 'simple'
 
-    id = Column(Integer, primary_key=True, comment="this is a 'comment'")
-"""
+    id = Column(Integer, primary_key=True{comment_part})
+""".format(comment_part=comment_part)
 
 
 @pytest.mark.skipif(sqlalchemy.__version__ < '1.2', reason='Requires SQLAlchemy 1.2+')

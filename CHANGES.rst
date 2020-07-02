@@ -1,6 +1,10 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Fixed ``--nocomments`` not taking effect (fix proposed by AzuresYang)
+
 **2.2.0**
 
 - Added support for rendering table comments (PR by David Hirschfeld)
