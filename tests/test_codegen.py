@@ -17,6 +17,13 @@ from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
 
 from sqlacodegen.codegen import CodeGenerator
 
+# SQLAlchemy 1.3.11+
+try:
+    from sqlalchemy import Computed
+except ImportError:
+    Computed = None
+
+
 if sys.version_info < (3,):
     unicode_re = re.compile(r"u(['\"])(.*?)(?<!\\)\1")
 
@@ -1469,3 +1476,31 @@ t_simple_items_table = Table(
     Column('id', Integer, primary_key=True)
 )
 """
+
+
+@pytest.mark.skipif(Computed is None, reason='requires SQLAlchemy 1.3.11+')
+@pytest.mark.parametrize('persisted, extra_args', [
+    (None, ''),
+    (False, ', persisted=False'),
+    (True, ', persisted=True')
+])
+def test_computed_column(metadata, persisted, extra_args):
+    Table(
+        'computed', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('computed', INTEGER, Computed('1 + 2', persisted=persisted))
+    )
+
+    assert generate_code(metadata, noclasses=True) == """\
+# coding: utf-8
+from sqlalchemy import Column, Computed, Integer, MetaData, Table
+
+metadata = MetaData()
+
+
+t_computed = Table(
+    'computed', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('computed', Integer, Computed('1 + 2'{extra_args}))
+)
+""".format(extra_args=extra_args)

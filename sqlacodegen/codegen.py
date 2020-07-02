@@ -25,6 +25,12 @@ try:
 except ImportError:
     from sqlalchemy.dialects.postgresql import ARRAY
 
+# SQLAlchemy 1.3.11+
+try:
+    from sqlalchemy import Computed
+except ImportError:
+    Computed = None
+
 # Conditionally import Geoalchemy2 to enable reflection support
 try:
     import geoalchemy2  # noqa: F401
@@ -137,7 +143,10 @@ class Model(object):
         for column in self.table.columns:
             collector.add_import(column.type)
             if column.server_default:
-                collector.add_literal_import('sqlalchemy', 'text')
+                if isinstance(column.server_default, Computed):
+                    collector.add_literal_import('sqlalchemy', 'Computed')
+                else:
+                    collector.add_literal_import('sqlalchemy', 'text')
 
             if isinstance(column.type, ARRAY):
                 collector.add_import(column.type.item_type.__class__)
@@ -568,7 +577,16 @@ class CodeGenerator(object):
         elif has_index:
             column.index = True
             kwarg.append('index')
-        if column.server_default:
+
+        if Computed and isinstance(column.server_default, Computed):
+            expression = self._get_compiled_expression(column.server_default.sqltext)
+
+            persist_arg = ''
+            if column.server_default.persisted is not None:
+                persist_arg = ', persisted={}'.format(column.server_default.persisted)
+
+            server_default = 'Computed({!r}{})'.format(expression, persist_arg)
+        elif column.server_default:
             # The quote escaping does not cover pathological cases but should mostly work
             default_expr = self._get_compiled_expression(column.server_default.arg)
             if '\n' in default_expr:
