@@ -436,10 +436,6 @@ class CodeGenerator(object):
         else:
             self.collector.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
 
-        # imports for *.c.values()
-        self.collector.add_literal_import('typing', 'List')
-        self.collector.add_literal_import('abc', 'abstractmethod')
-
     def create_inflect_engine(self):
         if self.noinflect:
             return _DummyInflectEngine()
@@ -637,10 +633,6 @@ class CodeGenerator(object):
         )
         --------- Output:
         class _AccountColumns:
-            @abstractmethod
-            def values(self) -> List[Column]:
-                pass
-
             id: Column
             credential_id: Column
             vendor_id: Column
@@ -655,13 +647,7 @@ class CodeGenerator(object):
         columns_type = f'_{camel_case_name}Columns'
         proxy_type = f'_{camel_case_name}Table'
 
-        rendered = dedent(f'''\
-        class {columns_type}:
-            @abstractmethod
-            def values(self) -> List[Column]:
-                pass
-
-        ''')
+        rendered = f'class {columns_type}:\n'
 
         for column in model.table.columns:
             rendered += f'{self.indentation}{column.name}: Column\n'
