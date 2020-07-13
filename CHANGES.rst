@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**2.3.0**
 
 - Added support for rendering computed columns
 - Fixed ``--nocomments`` not taking effect (fix proposed by AzuresYang)
