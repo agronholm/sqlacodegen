@@ -6,7 +6,6 @@ import sys
 
 import pkg_resources
 from sqlalchemy.engine import create_engine
-from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.schema import MetaData
 
 from sqlacodegen.codegen import CodeGenerator

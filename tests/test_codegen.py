@@ -842,7 +842,8 @@ class SimpleContainer(Base):
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
 
-    simple_items = relationship('SimpleItem', secondary='container_items', back_populates='simple_containers')
+    simple_items = relationship('SimpleItem', secondary='container_items', \
+back_populates='simple_containers')
 
 
 class SimpleItem(Base):
@@ -851,7 +852,8 @@ class SimpleItem(Base):
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
 
-    simple_containers = relationship('SimpleContainer', secondary='container_items', back_populates='simple_items')
+    simple_containers = relationship('SimpleContainer', secondary='container_items', \
+back_populates='simple_items')
 
 
 t_container_items = Table(
