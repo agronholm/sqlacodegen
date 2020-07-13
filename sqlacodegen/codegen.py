@@ -107,7 +107,12 @@ class Model(object):
                 if supercls is Enum:
                     kw['name'] = coltype.name
 
-                new_coltype = coltype.adapt(supercls)
+                try:
+                    new_coltype = coltype.adapt(supercls)
+                except TypeError:
+                    # If the adaptation fails, don't try again
+                    break
+
                 for key, value in kw.items():
                     setattr(new_coltype, key, value)
 
@@ -485,30 +490,35 @@ class CodeGenerator(object):
     @classmethod
     def render_column_type(cls, coltype):
         args = []
-        if isinstance(coltype, Enum):
-            args.extend(repr(arg) for arg in coltype.enums)
-            if coltype.name is not None:
-                args.append('name={0!r}'.format(coltype.name))
-        else:
-            # All other types
-            argspec = cls._getargspec_init(coltype.__class__.__init__)
-            defaults = dict(zip(argspec.args[-len(argspec.defaults or ()):],
-                                argspec.defaults or ()))
-            missing = object()
-            use_kwargs = False
-            for attr in argspec.args[1:]:
-                # Remove annoyances like _warn_on_bytestring
-                if attr.startswith('_'):
-                    continue
+        kwargs = OrderedDict()
+        argspec = cls._getargspec_init(coltype.__class__.__init__)
+        defaults = dict(zip(argspec.args[-len(argspec.defaults or ()):],
+                            argspec.defaults or ()))
+        missing = object()
+        use_kwargs = False
+        for attr in argspec.args[1:]:
+            # Remove annoyances like _warn_on_bytestring
+            if attr.startswith('_'):
+                continue
 
-                value = getattr(coltype, attr, missing)
-                default = defaults.get(attr, missing)
-                if value is missing or value == default:
-                    use_kwargs = True
-                elif use_kwargs:
-                    args.append('{0}={1}'.format(attr, repr(value)))
-                else:
-                    args.append(repr(value))
+            value = getattr(coltype, attr, missing)
+            default = defaults.get(attr, missing)
+            if value is missing or value == default:
+                use_kwargs = True
+            elif use_kwargs:
+                kwargs[attr] = repr(value)
+            else:
+                args.append(repr(value))
+
+        if argspec.varargs and hasattr(coltype, argspec.varargs):
+            varargs_repr = [repr(arg) for arg in getattr(coltype, argspec.varargs)]
+            args.extend(varargs_repr)
+
+        if isinstance(coltype, Enum) and coltype.name is not None:
+            kwargs['name'] = repr(coltype.name)
+
+        for key, value in kwargs.items():
+            args.append('{}={}'.format(key, value))
 
         rendered = coltype.__class__.__name__
         if args:

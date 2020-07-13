@@ -194,12 +194,14 @@ def test_mysql_column_types(metadata):
     Table(
         'simple_items', metadata,
         Column('id', mysql.INTEGER),
-        Column('name', mysql.VARCHAR(255))
+        Column('name', mysql.VARCHAR(255)),
+        Column('set', mysql.SET('one', 'two'))
     )
 
     assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, String, Table
+from sqlalchemy.dialects.mysql import SET
 
 metadata = MetaData()
 
@@ -207,7 +209,8 @@ metadata = MetaData()
 t_simple_items = Table(
     'simple_items', metadata,
     Column('id', Integer),
-    Column('name', String(255))
+    Column('name', String(255)),
+    Column('set', SET('one', 'two'))
 )
 """
 

@@ -5,6 +5,7 @@ Version history
 
 - Added support for rendering computed columns
 - Fixed ``--nocomments`` not taking effect (fix proposed by AzuresYang)
+- Fixed handling of MySQL ``SET`` column types (and possibly others as well)
 
 **2.2.0**
 
