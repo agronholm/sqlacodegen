@@ -157,7 +157,7 @@ class Model(object):
         for column in self.table.columns:
             collector.add_import(column.type)
             if column.server_default:
-                if Computed and isinstance(column.server_default, Computed):
+                if Computed is not None and isinstance(column.server_default, Computed):
                     collector.add_literal_import('sqlalchemy', 'Computed')
                 else:
                     collector.add_literal_import('sqlalchemy', 'text')
