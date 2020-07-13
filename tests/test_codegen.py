@@ -405,6 +405,46 @@ class SimpleContainer(Base):
 
     id = Column(Integer, primary_key=True)
 
+    simple_items = relationship('SimpleItem', uselist=False, back_populates='container')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    container_id = Column(ForeignKey('simple_containers.id'))
+
+    container = relationship('SimpleContainer', back_populates='simple_items')
+"""
+
+
+def test_nobackpopulates(metadata):
+    Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('container_id', INTEGER),
+        ForeignKeyConstraint(['container_id'], ['simple_containers.id']),
+    )
+    Table(
+        'simple_containers', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata, nobackpopulates=True) == """\
+# coding: utf-8
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleContainer(Base):
+    __tablename__ = 'simple_containers'
+
+    id = Column(Integer, primary_key=True)
+
 
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
@@ -510,6 +550,8 @@ class SimpleContainer(Base):
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
 
+    simple_items = relationship('SimpleItem', uselist=False, back_populates='simple_container')
+
 
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
@@ -522,7 +564,7 @@ class SimpleItem(Base):
     container_id1 = Column(Integer)
     container_id2 = Column(Integer)
 
-    simple_container = relationship('SimpleContainer')
+    simple_container = relationship('SimpleContainer', back_populates='simple_items')
 """
 
 
@@ -555,6 +597,13 @@ class SimpleContainer(Base):
 
     id = Column(Integer, primary_key=True)
 
+    simple_items = relationship('SimpleItem', \
+primaryjoin='SimpleItem.parent_container_id == SimpleContainer.id', \
+uselist=False, back_populates='parent_container')
+    simple_items1 = relationship('SimpleItem', \
+primaryjoin='SimpleItem.top_container_id == SimpleContainer.id', \
+uselist=False, back_populates='top_container')
+
 
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
@@ -564,9 +613,11 @@ class SimpleItem(Base):
     top_container_id = Column(ForeignKey('simple_containers.id'))
 
     parent_container = relationship('SimpleContainer', \
-primaryjoin='SimpleItem.parent_container_id == SimpleContainer.id')
+primaryjoin='SimpleItem.parent_container_id == SimpleContainer.id', \
+back_populates='simple_items')
     top_container = relationship('SimpleContainer', \
-primaryjoin='SimpleItem.top_container_id == SimpleContainer.id')
+primaryjoin='SimpleItem.top_container_id == SimpleContainer.id', \
+back_populates='simple_items1')
 """
 
 
@@ -598,6 +649,8 @@ class OtherItem(Base):
 
     id = Column(Integer, primary_key=True)
 
+    simple_item = relationship('SimpleItem', uselist=False, back_populates='other_item')
+
 
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
@@ -605,7 +658,7 @@ class SimpleItem(Base):
     id = Column(Integer, primary_key=True)
     other_item_id = Column(ForeignKey('other_items.id'), unique=True)
 
-    other_item = relationship('OtherItem', uselist=False)
+    other_item = relationship('OtherItem', uselist=False, back_populates='simple_item')
 """
 
 
@@ -636,6 +689,8 @@ class Fehwiuhfiw(Base):
 
     id = Column(Integer, primary_key=True)
 
+    oglkrogks = relationship('Oglkrogk', uselist=False, back_populates='fehwiuhfiw')
+
 
 class Oglkrogk(Base):
     __tablename__ = 'oglkrogk'
@@ -643,7 +698,7 @@ class Oglkrogk(Base):
     id = Column(Integer, primary_key=True)
     fehwiuhfiwID = Column(ForeignKey('fehwiuhfiw.id'))
 
-    fehwiuhfiw = relationship('Fehwiuhfiw')
+    fehwiuhfiw = relationship('Fehwiuhfiw', back_populates='oglkrogks')
 """
 
 
@@ -680,13 +735,17 @@ class SimpleContainer(Base):
 
     id = Column(Integer, primary_key=True)
 
-    items = relationship('SimpleItem', secondary='container_items')
+    items = relationship('SimpleItem', \
+secondary='container_items', back_populates='simple_containers')
 
 
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
 
     id = Column(Integer, primary_key=True)
+
+    simple_containers = relationship('SimpleContainer', \
+secondary='container_items', back_populates='items')
 
 
 t_container_items = Table(
@@ -783,7 +842,7 @@ class SimpleContainer(Base):
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
 
-    simple_items = relationship('SimpleItem', secondary='container_items')
+    simple_items = relationship('SimpleItem', secondary='container_items', back_populates='simple_containers')
 
 
 class SimpleItem(Base):
@@ -791,6 +850,8 @@ class SimpleItem(Base):
 
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
+
+    simple_containers = relationship('SimpleContainer', secondary='container_items', back_populates='simple_items')
 
 
 t_container_items = Table(
@@ -1049,6 +1110,8 @@ class OtherItem(Base):
 
     id = Column(Integer, primary_key=True)
 
+    simple_items = relationship('SimpleItem', uselist=False, back_populates='other_item')
+
 
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
@@ -1056,7 +1119,7 @@ class SimpleItem(Base):
     id = Column(Integer, primary_key=True)
     other_item_id = Column(ForeignKey('otherschema.other_items.id'))
 
-    other_item = relationship('OtherItem')
+    other_item = relationship('OtherItem', back_populates='simple_items')
 """
 
 

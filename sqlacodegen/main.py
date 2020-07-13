@@ -6,6 +6,7 @@ import sys
 
 import pkg_resources
 from sqlalchemy.engine import create_engine
+from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.schema import MetaData
 
 from sqlacodegen.codegen import CodeGenerator
@@ -28,6 +29,8 @@ def main():
     parser.add_argument('--noclasses', action='store_true',
                         help="don't generate classes, only tables")
     parser.add_argument('--nocomments', action='store_true', help="don't render column comments")
+    parser.add_argument('--nobackpopulates', action='store_true',
+                        help="don't generate back_populates for relationship")
     parser.add_argument('--outfile', help='file to write output to (default: stdout)')
     args = parser.parse_args()
 
@@ -49,5 +52,10 @@ def main():
     # Write the generated model code to the specified file or standard output
     outfile = io.open(args.outfile, 'w', encoding='utf-8') if args.outfile else sys.stdout
     generator = CodeGenerator(metadata, args.noindexes, args.noconstraints, args.nojoined,
-                              args.noinflect, args.noclasses, nocomments=args.nocomments)
+                              args.noinflect, args.noclasses, nocomments=args.nocomments,
+                              nobackpopulates=args.nobackpopulates)
     generator.render(outfile)
+
+
+if __name__ == '__main__':
+    main()

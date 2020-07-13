@@ -9,6 +9,7 @@ from importlib import import_module
 from inspect import ArgSpec
 from keyword import iskeyword
 
+import inflect
 import sqlalchemy
 import sqlalchemy.exc
 from sqlalchemy import (
@@ -48,6 +49,14 @@ class _DummyInflectEngine(object):
     @staticmethod
     def singular_noun(noun):
         return noun
+
+
+def _ensure_plural_noun(noun):
+    engine = inflect.engine()
+    if engine.singular_noun(noun):
+        return noun
+    else:
+        return engine.plural_noun(noun) or noun
 
 
 # In SQLAlchemy 0.x, constraint.columns is sometimes a list, on 1.x onwards, always a
@@ -201,6 +210,7 @@ class ModelClass(Model):
         self.name = self._tablename_to_classname(table.name, inflect_engine)
         self.children = []
         self.attributes = OrderedDict()
+        self.relationships = []
 
         # Assign attribute names for columns
         for column in table.columns:
@@ -218,7 +228,7 @@ class ModelClass(Model):
                 else:
                     relationship_ = ManyToOneRelationship(self.name, target_cls, constraint,
                                                           inflect_engine)
-                    self._add_attribute(relationship_.preferred_name, relationship_)
+                    self.add_relation(relationship_)
 
         # Add many-to-many relationships
         for association_table in association_tables:
@@ -228,7 +238,7 @@ class ModelClass(Model):
             target_cls = self._tablename_to_classname(
                 fk_constraints[1].elements[0].column.table.name, inflect_engine)
             relationship_ = ManyToManyRelationship(self.name, target_cls, association_table)
-            self._add_attribute(relationship_.preferred_name, relationship_)
+            self.add_relation(relationship_)
 
     @classmethod
     def _tablename_to_classname(cls, tablename, inflect_engine):
@@ -246,6 +256,15 @@ class ModelClass(Model):
         self.attributes[tempname] = value
         return tempname
 
+    def add_relation(self, relation):
+        """
+        Add a Relationship as attribute and save it in the
+        `self.relations`.
+        """
+        name = self._add_attribute(relation.preferred_name, relation)
+        relation.name_in_class = name
+        self.relationships.append(relation)
+
     def add_imports(self, collector):
         super(ModelClass, self).add_imports(collector)
 
@@ -262,11 +281,28 @@ class Relationship(object):
         self.source_cls = source_cls
         self.target_cls = target_cls
         self.kwargs = OrderedDict()
+        self.preferred_name = ""
+        # When invoking the `ModelClass._add_attribute` to add the
+        # relationship, we may add a number as a suffix to prevent
+        # conflicts, and we record the name here because we need it when
+        # setting `back_populates` in `Relationship.set_back_populates`.
+        self.name_in_class = ""
+
+    def reversed(self):
+        raise NotImplementedError
+
+    def set_back_populates(self, relationship):
+        self.kwargs['back_populates'] = "'{}'".format(relationship.name_in_class)
 
 
 class ManyToOneRelationship(Relationship):
     def __init__(self, source_cls, target_cls, constraint, inflect_engine):
         super(ManyToOneRelationship, self).__init__(source_cls, target_cls)
+
+        # Stores the references to the constraint and the inflect engine
+        # which would be used in the `self.reversed`.
+        self._constraint = constraint
+        self._inflect_engine = inflect_engine
 
         column_names = _get_column_names(constraint)
         colname = column_names[0]
@@ -275,11 +311,10 @@ class ManyToOneRelationship(Relationship):
             self.preferred_name = inflect_engine.singular_noun(tablename) or tablename
         else:
             self.preferred_name = colname[:-3]
+        self.name_in_class = self.preferred_name
 
         # Add uselist=False to One-to-One relationships
-        if any(isinstance(c, (PrimaryKeyConstraint, UniqueConstraint)) and
-               set(col.name for col in c.columns) == set(column_names)
-               for c in constraint.table.constraints):
+        if self.is_constraint_one_to_one(constraint):
             self.kwargs['uselist'] = 'False'
 
         # Handle self referential relationships
@@ -297,6 +332,24 @@ class ManyToOneRelationship(Relationship):
                 source_cls, column_names[0], target_cls, constraint.elements[0].column.name)
 
     @staticmethod
+    def is_constraint_one_to_one(constraint):
+        column_names = set(_get_column_names(constraint))
+        for c in constraint.table.constraints:
+            if isinstance(c, (PrimaryKeyConstraint, UniqueConstraint)):
+                if set(col.name for col in c.columns) == column_names:
+                    return True
+        # When performing full reflection using
+        # `Table(..., autoload=True)`, the `UniqueConstraint` would not
+        # represent in `Table.constraints`, so we need loop over the
+        # `Table.indexes` to handle those unique index. See
+        # https://docs.sqlalchemy.org/en/13/dialects/mysql.html#mysql-unique-constraints-and-reflection
+        for index in constraint.table.indexes:
+            if index.unique:
+                if set(col.name for col in index.columns) == column_names:
+                    return True
+        return False
+
+    @staticmethod
     def get_common_fk_constraints(table1, table2):
         """Returns a set of foreign key constraints the two tables have against each other."""
         c1 = set(c for c in table1.constraints if isinstance(c, ForeignKeyConstraint) and
@@ -305,19 +358,39 @@ class ManyToOneRelationship(Relationship):
                  c.elements[0].column.table == table1)
         return c1.union(c2)
 
+    def reversed(self):
+        """
+        Return a reversed relationship(i.e. a One-to-Many relationship).
+        """
+        relationship = Relationship(self.target_cls, self.source_cls)
+        if self.is_constraint_one_to_one(self._constraint):
+            # This is a One-to-One relation.
+            relationship.preferred_name = self._inflect_engine.singular_noun(
+                self._constraint.table.name) or self._constraint.table.name
+        else:
+            # This is a One-to-Many relation whose name would always be plural.
+            relationship.preferred_name = _ensure_plural_noun(self._constraint.table.name)
+        relationship.kwargs = self.kwargs.copy()
+        relationship.kwargs['uselist'] = 'False'
+        return relationship
+
 
 class ManyToManyRelationship(Relationship):
-    def __init__(self, source_cls, target_cls, assocation_table):
+    def __init__(self, source_cls, target_cls, association_table):
         super(ManyToManyRelationship, self).__init__(source_cls, target_cls)
 
-        prefix = (assocation_table.schema + '.') if assocation_table.schema else ''
-        self.kwargs['secondary'] = repr(prefix + assocation_table.name)
-        constraints = [c for c in assocation_table.constraints
+        prefix = (association_table.schema + '.') if association_table.schema else ''
+        self.kwargs['secondary'] = repr(prefix + association_table.name)
+        constraints = [c for c in association_table.constraints
                        if isinstance(c, ForeignKeyConstraint)]
         constraints.sort(key=_get_constraint_sort_key)
         colname = _get_column_names(constraints[1])[0]
         tablename = constraints[1].elements[0].column.table.name
         self.preferred_name = tablename if not colname.endswith('_id') else colname[:-3] + 's'
+        self.name_in_class = self.preferred_name
+
+        # Stores the association table which would be used in the `self.reversed`.
+        self._association_table = association_table
 
         # Handle self referential relationships
         if source_cls == target_cls:
@@ -325,10 +398,10 @@ class ManyToManyRelationship(Relationship):
             pri_pairs = zip(_get_column_names(constraints[0]), constraints[0].elements)
             sec_pairs = zip(_get_column_names(constraints[1]), constraints[1].elements)
             pri_joins = ['{0}.{1} == {2}.c.{3}'.format(source_cls, elem.column.name,
-                                                       assocation_table.name, col)
+                                                       association_table.name, col)
                          for col, elem in pri_pairs]
             sec_joins = ['{0}.{1} == {2}.c.{3}'.format(target_cls, elem.column.name,
-                                                       assocation_table.name, col)
+                                                       association_table.name, col)
                          for col, elem in sec_pairs]
             self.kwargs['primaryjoin'] = (
                 repr('and_({0})'.format(', '.join(pri_joins)))
@@ -336,6 +409,16 @@ class ManyToManyRelationship(Relationship):
             self.kwargs['secondaryjoin'] = (
                 repr('and_({0})'.format(', '.join(sec_joins)))
                 if len(sec_joins) > 1 else repr(sec_joins[0]))
+
+    def reversed(self):
+        relationship = ManyToManyRelationship(
+            self.target_cls, self.source_cls, self._association_table)
+        constraints = [c for c in self._association_table.constraints
+                       if isinstance(c, ForeignKeyConstraint)]
+        constraints.sort(key=_get_constraint_sort_key)
+        table_name = constraints[0].elements[0].column.table.name
+        relationship.preferred_name = _ensure_plural_noun(table_name)
+        return relationship
 
 
 class CodeGenerator(object):
@@ -351,7 +434,7 @@ class CodeGenerator(object):
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False,
                  noinflect=False, noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable,
-                 class_model=ModelClass,  template=None, nocomments=False):
+                 class_model=ModelClass, template=None, nocomments=False, nobackpopulates=False):
         super(CodeGenerator, self).__init__()
         self.metadata = metadata
         self.noindexes = noindexes
@@ -359,6 +442,7 @@ class CodeGenerator(object):
         self.nojoined = nojoined
         self.noinflect = noinflect
         self.noclasses = noclasses
+        self.nobackpopulates = nobackpopulates
         self.indentation = indentation
         self.model_separator = model_separator
         self.ignored_tables = ignored_tables
@@ -446,6 +530,22 @@ class CodeGenerator(object):
                 classes[model.parent_name].children.append(model)
                 self.models.remove(model)
 
+        # Set `back_populates` for model classes' relations.
+        if not self.nobackpopulates:
+            _reversed_relations = []
+            for model in classes.values():  # type: ModelClass
+                for relation in model.relationships:  # type: Relationship
+                    if relation in _reversed_relations:
+                        continue
+                    if relation.source_cls == relation.target_cls:
+                        # Skip the self-referential relationships.
+                        continue
+                    reversed = relation.reversed()  # type: Relationship
+                    classes[relation.target_cls].add_relation(reversed)
+                    relation.set_back_populates(reversed)
+                    reversed.set_back_populates(relation)
+                    _reversed_relations.append(reversed)
+
         # Add either the MetaData or declarative_base import depending on whether there are mapped
         # classes or not
         if not any(isinstance(model, self.class_model) for model in self.models):
@@ -457,7 +557,6 @@ class CodeGenerator(object):
         if self.noinflect:
             return _DummyInflectEngine()
         else:
-            import inflect
             return inflect.engine()
 
     def render_imports(self):
