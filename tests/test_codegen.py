@@ -405,7 +405,7 @@ class SimpleContainer(Base):
 
     id = Column(Integer, primary_key=True)
 
-    simple_items = relationship('SimpleItem', uselist=False, back_populates='container')
+    simple_items = relationship('SimpleItem', back_populates='container')
 
 
 class SimpleItem(Base):
@@ -550,7 +550,7 @@ class SimpleContainer(Base):
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
 
-    simple_items = relationship('SimpleItem', uselist=False, back_populates='simple_container')
+    simple_items = relationship('SimpleItem', back_populates='simple_container')
 
 
 class SimpleItem(Base):
@@ -599,10 +599,10 @@ class SimpleContainer(Base):
 
     simple_items = relationship('SimpleItem', \
 primaryjoin='SimpleItem.parent_container_id == SimpleContainer.id', \
-uselist=False, back_populates='parent_container')
+back_populates='parent_container')
     simple_items1 = relationship('SimpleItem', \
 primaryjoin='SimpleItem.top_container_id == SimpleContainer.id', \
-uselist=False, back_populates='top_container')
+back_populates='top_container')
 
 
 class SimpleItem(Base):
@@ -689,7 +689,7 @@ class Fehwiuhfiw(Base):
 
     id = Column(Integer, primary_key=True)
 
-    oglkrogks = relationship('Oglkrogk', uselist=False, back_populates='fehwiuhfiw')
+    oglkrogks = relationship('Oglkrogk', back_populates='fehwiuhfiw')
 
 
 class Oglkrogk(Base):
@@ -1112,7 +1112,7 @@ class OtherItem(Base):
 
     id = Column(Integer, primary_key=True)
 
-    simple_items = relationship('SimpleItem', uselist=False, back_populates='other_item')
+    simple_items = relationship('SimpleItem', back_populates='other_item')
 
 
 class SimpleItem(Base):

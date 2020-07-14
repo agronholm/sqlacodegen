@@ -371,7 +371,6 @@ class ManyToOneRelationship(Relationship):
             # This is a One-to-Many relation whose name would always be plural.
             relationship.preferred_name = _ensure_plural_noun(self._constraint.table.name)
         relationship.kwargs = self.kwargs.copy()
-        relationship.kwargs['uselist'] = 'False'
         return relationship
 
 
