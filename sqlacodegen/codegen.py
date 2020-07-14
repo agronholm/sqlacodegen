@@ -333,7 +333,7 @@ class CodeGenerator(object):
 
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False,
                  noinflect=False, noclasses=False, indentation='    ', model_separator='\n\n',
-                 ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable,
+                 ignored_tables=('alembic_version', 'migrate_version', 'schema_version'), table_model=ModelTable,
                  class_model=ModelClass,  template=None, nocomments=False):
         super(CodeGenerator, self).__init__()
         self.metadata = metadata
@@ -723,7 +723,7 @@ class CodeGenerator(object):
 
     def render(self, outfile=sys.stdout):
         rendered_models = []
-        for model in self.models:
+        for model in sorted(self.models, key=lambda model: model.table.name):
             if isinstance(model, self.class_model):
                 rendered_models.append(self.render_class(model))
             elif isinstance(model, self.table_model):
