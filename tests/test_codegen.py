@@ -662,6 +662,53 @@ class SimpleItem(Base):
 """
 
 
+def test_onetoone_from_unique_index(metadata):
+    simple_items = Table(
+        'simple_items', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('other_item_id', INTEGER),
+        ForeignKeyConstraint(['other_item_id'], ['other_items.id']),
+    )
+    # When performing full reflection using
+    # `Table(..., autoload=True)`, the `UniqueConstraint` would not
+    # represent in `Table.constraints` on a one-to-one relation,
+    # instead, there would be a unique index on the foreignkey.
+    simple_items.indexes.add(
+        Index('idx_number', simple_items.c.other_item_id, unique=True)
+    )
+    Table(
+        'other_items', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata) == """\
+# coding: utf-8
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class OtherItem(Base):
+    __tablename__ = 'other_items'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_item = relationship('SimpleItem', uselist=False, back_populates='other_item')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    other_item_id = Column(ForeignKey('other_items.id'), unique=True)
+
+    other_item = relationship('OtherItem', uselist=False, back_populates='simple_item')
+"""
+
+
 def test_onetomany_noinflect(metadata):
     Table(
         'oglkrogk', metadata,

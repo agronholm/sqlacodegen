@@ -289,7 +289,7 @@ class Relationship(object):
         self.name_in_class = ""
 
     def reversed(self):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: nocover
 
     def set_back_populates(self, relationship):
         self.kwargs['back_populates'] = "'{}'".format(relationship.name_in_class)
