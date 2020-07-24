@@ -635,8 +635,8 @@ class CodeGenerator(object):
         class _AccountColumns:
             id: Column
             credential_id: Column
-            vendor_id: Column
             role: Column
+            vendor_id: Column
 
         class _AccountTable(Table):  # pylint: disable=too-many-ancestors,abstract-method
             c: _AccountColumns
@@ -649,7 +649,7 @@ class CodeGenerator(object):
 
         rendered = f'class {columns_type}:\n'
 
-        for column in model.table.columns:
+        for column in sorted(model.table.columns, key=lambda column: column.name):
             rendered += f'{self.indentation}{column.name}: Column\n'
 
         # sqlacademic's Table inherts multiple classes, so we need to disable too-many-ancestors
