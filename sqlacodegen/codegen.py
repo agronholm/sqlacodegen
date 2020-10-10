@@ -19,6 +19,12 @@ from sqlalchemy.sql.sqltypes import NullType
 from sqlalchemy.types import Boolean, String
 from sqlalchemy.util import OrderedDict
 
+# Support CIText and CIText[] in PostgreSQL via sqlalchemy-citext
+try:
+    from citext import CIText
+except (NameError, ImportError):
+    pass
+
 # The generic ARRAY type was introduced in SQLAlchemy 1.1
 try:
     from sqlalchemy import ARRAY
