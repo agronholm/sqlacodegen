@@ -21,7 +21,7 @@ from sqlalchemy.util import OrderedDict
 
 # Support CIText and CIText[] in PostgreSQL via sqlalchemy-citext
 try:
-    from citext import CIText
+    from citext import CIText  # noqa: F401
 except (NameError, ImportError):
     pass
 
