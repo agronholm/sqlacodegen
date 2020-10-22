@@ -41,7 +41,7 @@ instructions on how to construct a proper URL.
 Examples::
 
     sqlacodegen postgresql:///some_local_db
-    sqlacodegen mysql+oursql://user:password@localhost/dbname
+    sqlacodegen mysql+pymysql://user:password@localhost/dbname
     sqlacodegen sqlite:///database.db
 
 To see the full list of options::
