@@ -37,6 +37,12 @@ try:
 except ImportError:
     pass
 
+# Support CIText and CIText[] in PostgreSQL via sqlalchemy-citext
+try:
+    import citext  # noqa: F401
+except ImportError:
+    pass
+
 _re_boolean_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?)(?:.*)\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:(?:.*?)\.)?(.*?) IN \((.+)\)")

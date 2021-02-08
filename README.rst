@@ -30,6 +30,10 @@ To install, do::
 
     pip install sqlacodegen
 
+To include support for the PostgreSQL `CITEXT` extension type (which should be considered as tested only under a few environments) specify the `citext` extra::
+
+    pip install sqlacodegen[citext]
+
 
 Example usage
 -------------
