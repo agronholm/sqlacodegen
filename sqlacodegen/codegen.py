@@ -565,7 +565,7 @@ class CodeGenerator(object):
         elif has_index:
             column.index = True
             kwarg.append('index')
-        if column.server_default:
+        if column.server_default and hasattr(column.server_default, "arg"):
             # The quote escaping does not cover pathological cases but should mostly work
             default_expr = self._get_compiled_expression(column.server_default.arg)
             if '\n' in default_expr:
