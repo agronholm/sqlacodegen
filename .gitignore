@@ -11,3 +11,4 @@
 .pytest_cache
 dist
 build
+.venv
