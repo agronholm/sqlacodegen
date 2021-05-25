@@ -1,0 +1,65 @@
+name: Python codeqa/test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x
+    - uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: pip-lint
+    - name: Install dependencies
+      run: pip install pyproject-flake8
+    - name: Run flake8
+      run: pflake8 sqlacodegen tests
+
+  test:
+    needs: [lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.6, 3.9]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: pip-test-${{ matrix.python-version }}-${{ matrix.os }}
+    - name: Install dependencies
+      run: pip install .[test] coveralls
+    - name: Test with pytest
+      run: coverage run -m pytest
+    - name: Upload Coverage
+      run: coveralls --service=github
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        COVERALLS_FLAG_NAME: ${{ matrix.test-name }}
+        COVERALLS_PARALLEL: true
+
+  coveralls:
+    name: Finish Coveralls
+    needs: test
+    runs-on: ubuntu-latest
+    container: python:3-slim
+    steps:
+    - name: Finished
+      run: |
+        pip install coveralls
+        coveralls --service=github --finish
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
