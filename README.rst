@@ -111,7 +111,7 @@ Getting help
 If you have problems or other questions, you can either:
 
 * Ask on the `SQLAlchemy Google group`_, or
-* Ask on the ``#sqlalchemy`` channel on `Freenode IRC`_
+* Ask on the sqlalchemy_ room on Gitter
 
 .. _SQLAlchemy Google group: http://groups.google.com/group/sqlalchemy
-.. _Freenode IRC: http://freenode.net/irc_servers.shtml
+.. _sqlalchemy: https://gitter.im/sqlalchemy/community
