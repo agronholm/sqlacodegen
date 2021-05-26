@@ -10,13 +10,12 @@ from keyword import iskeyword
 import sqlalchemy
 import sqlalchemy.exc
 from sqlalchemy import (
-    Enum, ForeignKeyConstraint, PrimaryKeyConstraint, CheckConstraint, UniqueConstraint, Table,
-    Column, Float)
+    ARRAY, CheckConstraint, Column, Enum, Float, ForeignKeyConstraint, PrimaryKeyConstraint, Table,
+    UniqueConstraint)
 from sqlalchemy.schema import ForeignKey
 from sqlalchemy.sql.sqltypes import NullType
 from sqlalchemy.types import Boolean, String
 from sqlalchemy.util import OrderedDict
-from sqlalchemy import ARRAY
 
 # SQLAlchemy 1.3.11+
 try:

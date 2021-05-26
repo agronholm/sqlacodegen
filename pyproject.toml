@@ -10,6 +10,12 @@ build-backend = "setuptools.build_meta"
 version_scheme = "post-release"
 local_scheme = "dirty-tag"
 
+[tool.isort]
+src_paths = ["src"]
+skip_gitignore = true
+line_length = 99
+multi_line_output = 4
+
 [tool.flake8]
 max-line-length = 99
 

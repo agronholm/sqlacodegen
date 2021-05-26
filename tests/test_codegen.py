@@ -1,19 +1,16 @@
-from __future__ import unicode_literals, division, print_function, absolute_import
-
 import re
 import sys
 from io import StringIO
 
 import pytest
 import sqlalchemy
-from sqlalchemy.dialects import mysql
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import mysql, postgresql
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import (
-    MetaData, Table, Column, CheckConstraint, UniqueConstraint, Index, ForeignKey,
-    ForeignKeyConstraint)
+    CheckConstraint, Column, ForeignKey, ForeignKeyConstraint, Index, MetaData, Table,
+    UniqueConstraint)
 from sqlalchemy.sql.expression import text
-from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
+from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR
 
 from sqlacodegen.codegen import CodeGenerator
 
