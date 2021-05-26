@@ -2,12 +2,15 @@ import argparse
 import io
 import sys
 
-import pkg_resources
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
 from sqlacodegen.codegen import CodeGenerator
 
+if sys.version_info < (3, 8):
+    from importlib_metadata import version
+else:
+    from importlib.metadata import version
 
 def main():
     parser = argparse.ArgumentParser(
@@ -30,8 +33,7 @@ def main():
     args = parser.parse_args()
 
     if args.version:
-        version = pkg_resources.get_distribution('sqlacodegen').parsed_version
-        print(version.public)
+        print(version('sqlacodegen'))
         return
     if not args.url:
         print('You must supply a url\n', file=sys.stderr)
