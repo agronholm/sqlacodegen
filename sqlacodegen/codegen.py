@@ -16,12 +16,7 @@ from sqlalchemy.schema import ForeignKey
 from sqlalchemy.sql.sqltypes import NullType
 from sqlalchemy.types import Boolean, String
 from sqlalchemy.util import OrderedDict
-
-# The generic ARRAY type was introduced in SQLAlchemy 1.1
-try:
-    from sqlalchemy import ARRAY
-except ImportError:
-    from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import ARRAY
 
 # SQLAlchemy 1.3.11+
 try:
@@ -48,17 +43,13 @@ _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 _re_invalid_identifier = re.compile(r'[^a-zA-Z0-9_]' if sys.version_info[0] < 3 else r'(?u)\W')
 
 
-class _DummyInflectEngine(object):
+class _DummyInflectEngine:
     @staticmethod
     def singular_noun(noun):
         return noun
 
 
-# In SQLAlchemy 0.x, constraint.columns is sometimes a list, on 1.x onwards, always a
-# ColumnCollection
 def _get_column_names(constraint):
-    if isinstance(constraint.columns, list):
-        return constraint.columns
     return list(constraint.columns.keys())
 
 
@@ -91,9 +82,9 @@ class ImportCollector(OrderedDict):
         names.add(name)
 
 
-class Model(object):
+class Model:
     def __init__(self, table):
-        super(Model, self).__init__()
+        super().__init__()
         self.table = table
         self.schema = table.schema
 
@@ -260,7 +251,7 @@ class ModelClass(Model):
             child.add_imports(collector)
 
 
-class Relationship(object):
+class Relationship:
     def __init__(self, source_cls, target_cls):
         super(Relationship, self).__init__()
         self.source_cls = source_cls
@@ -342,7 +333,7 @@ class ManyToManyRelationship(Relationship):
                 if len(sec_joins) > 1 else repr(sec_joins[0]))
 
 
-class CodeGenerator(object):
+class CodeGenerator:
     template = """\
 # coding: utf-8
 {imports}
