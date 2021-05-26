@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: pip install pyproject-flake8
     - name: Run flake8
-      run: pflake8 sqlacodegen tests
+      run: pflake8 src tests
 
   test:
     needs: [lint]
