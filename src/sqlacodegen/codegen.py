@@ -55,6 +55,7 @@ def _get_column_names(constraint):
 def _get_constraint_sort_key(constraint):
     if isinstance(constraint, CheckConstraint):
         return 'C{0}'.format(constraint.sqltext)
+
     return constraint.__class__.__name__[0] + repr(_get_column_names(constraint))
 
 
@@ -471,10 +472,7 @@ class CodeGenerator:
     @staticmethod
     def _getargspec_init(method):
         try:
-            if hasattr(inspect, 'getfullargspec'):
-                return inspect.getfullargspec(method)
-            else:
-                return inspect.getargspec(method)
+            return inspect.getfullargspec(method)
         except TypeError:
             if method is object.__init__:
                 return ArgSpec(['self'], None, None, None)
