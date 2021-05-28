@@ -12,7 +12,8 @@ if sys.version_info < (3, 8):
 else:
     from importlib.metadata import version
 
-def main():
+
+def main() -> None:
     parser = argparse.ArgumentParser(
         description='Generates SQLAlchemy model code from an existing database.')
     parser.add_argument('url', nargs='?', help='SQLAlchemy url to the database')
