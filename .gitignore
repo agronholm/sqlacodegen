@@ -9,5 +9,6 @@
 .vscode
 .cache
 .pytest_cache
+.pre-commit-config.yaml
 dist
 build
