@@ -511,8 +511,14 @@ class CodeGenerator:
             return inflect.engine()
 
     def render_imports(self) -> str:
-        return '\n'.join('from {0} import {1}'.format(package, ', '.join(sorted(names)))
-                         for package, names in self.collector.items())
+        rendered = ''
+        if '__future__' in self.collector:
+            imports = ', '.join(self.collector.pop('__future__'))
+            rendered = f'from __future__ import {imports}\n\n'
+
+        rendered += '\n'.join('from {0} import {1}'.format(package, ', '.join(sorted(names)))
+                              for package, names in self.collector.items())
+        return rendered
 
     def render_metadata_declarations(self) -> str:
         if declarative_package in self.collector:
