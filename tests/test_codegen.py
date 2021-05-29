@@ -10,13 +10,19 @@ from sqlalchemy.schema import (
 from sqlalchemy.sql.expression import text
 from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR
 
-from sqlacodegen.codegen import CodeGenerator
+from sqlacodegen.codegen import CodeGenerator, declarative_package, sqla_version
 
 # SQLAlchemy 1.3.11+
 try:
     from sqlalchemy import Computed
 except ImportError:
     Computed = None
+
+if sqla_version < (1, 4):
+    orm_imports = ("from sqlalchemy.orm import relationship\n"
+                   "from sqlalchemy.ext.declarative import declarative_base")
+else:
+    orm_imports = "from sqlalchemy.orm import declarative_base, relationship"
 
 
 @pytest.fixture
@@ -227,9 +233,9 @@ def test_constraints_class(metadata):
         UniqueConstraint('id', 'number')
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -330,9 +336,9 @@ def test_indexes_class(metadata):
                                    simple_items.c.number))
     simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Index, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -362,10 +368,9 @@ def test_onetomany(metadata):
         Column('id', INTEGER, primary_key=True)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -395,10 +400,9 @@ def test_onetomany_selfref(metadata):
         ForeignKeyConstraint(['parent_item_id'], ['simple_items.id'])
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -424,10 +428,9 @@ def test_onetomany_selfref_multi(metadata):
         ForeignKeyConstraint(['top_item_id'], ['simple_items.id'])
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -463,10 +466,9 @@ def test_onetomany_composite(metadata):
         Column('id2', INTEGER, primary_key=True)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKeyConstraint, Integer
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -508,10 +510,9 @@ def test_onetomany_multiref(metadata):
         Column('id', INTEGER, primary_key=True)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -550,10 +551,9 @@ def test_onetoone(metadata):
         Column('id', INTEGER, primary_key=True)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -587,10 +587,9 @@ def test_onetomany_noinflect(metadata):
         Column('id', INTEGER, primary_key=True)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -630,10 +629,9 @@ def test_manytomany(metadata):
         ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKey, Integer, Table
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -675,10 +673,9 @@ def test_manytomany_selfref(metadata):
         schema='otherschema'
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKey, Integer, Table
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -730,10 +727,9 @@ def test_manytomany_composite(metadata):
                              ['simple_containers.id1', 'simple_containers.id2'])
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKeyConstraint, Integer, Table
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -787,9 +783,9 @@ def test_joined_inheritance(metadata):
         ForeignKeyConstraint(['super_item_id'], ['simple_super_items.id'])
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -823,9 +819,9 @@ def test_no_inflect(metadata):
         Column('id', INTEGER, primary_key=True)
     )
 
-    assert generate_code(metadata, noinflect=True) == """\
+    assert generate_code(metadata, noinflect=True) == f"""\
 from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -864,9 +860,9 @@ def test_table_kwargs(metadata):
         schema='testschema'
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -874,7 +870,7 @@ metadata = Base.metadata
 
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
-    __table_args__ = {'schema': 'testschema'}
+    __table_args__ = {{'schema': 'testschema'}}
 
     id = Column(Integer, primary_key=True)
 """
@@ -889,9 +885,9 @@ def test_table_args_kwargs(metadata):
     )
     simple_items.indexes.add(Index('testidx', simple_items.c.id, simple_items.c.name))
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Index, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -901,7 +897,7 @@ class SimpleItem(Base):
     __tablename__ = 'simple_items'
     __table_args__ = (
         Index('testidx', 'id', 'name'),
-        {'schema': 'testschema'}
+        {{'schema': 'testschema'}}
     )
 
     id = Column(Integer, primary_key=True)
@@ -987,10 +983,9 @@ def test_foreign_key_schema(metadata):
         schema='otherschema'
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+{orm_imports}
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -998,7 +993,7 @@ metadata = Base.metadata
 
 class OtherItem(Base):
     __tablename__ = 'other_items'
-    __table_args__ = {'schema': 'otherschema'}
+    __table_args__ = {{'schema': 'otherschema'}}
 
     id = Column(Integer, primary_key=True)
 
@@ -1019,9 +1014,9 @@ def test_pk_default(metadata):
         Column('id', INTEGER, primary_key=True, server_default=text('uuid_generate_v4()'))
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer, text
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1043,9 +1038,9 @@ def test_server_default_multiline(metadata):
 something()"""))
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer, text
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1067,9 +1062,9 @@ def test_server_default_double_quotes(metadata):
         Column('id', INTEGER, primary_key=True, server_default=text("nextval(\"foo\")")),
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer, text
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1091,9 +1086,9 @@ def test_invalid_attribute_names(metadata):
         Column('def', INTEGER)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1115,9 +1110,9 @@ def test_pascal(metadata):
         Column('id', INTEGER, primary_key=True)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1136,9 +1131,9 @@ def test_underscore(metadata):
         Column('id', INTEGER, primary_key=True)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1157,9 +1152,9 @@ def test_pascal_underscore(metadata):
         Column('id', INTEGER, primary_key=True)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1178,9 +1173,9 @@ def test_pascal_multiple_underscore(metadata):
         Column('id', INTEGER, primary_key=True)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1200,9 +1195,9 @@ def test_metadata_column(metadata):
         Column('metadata', VARCHAR)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1225,9 +1220,9 @@ def test_column_comment(metadata, nocomments):
     )
 
     comment_part = '' if nocomments else ', comment="this is a \'comment\'"'
-    assert generate_code(metadata, nocomments=nocomments) == """\
+    assert generate_code(metadata, nocomments=nocomments) == f"""\
 from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1237,7 +1232,7 @@ class Simple(Base):
     __tablename__ = 'simple'
 
     id = Column(Integer, primary_key=True{comment_part})
-""".format(comment_part=comment_part)
+"""
 
 
 @pytest.mark.skipif(sqlalchemy.__version__ < '1.2', reason='Requires SQLAlchemy 1.2+')
@@ -1258,9 +1253,9 @@ t_simple = Table(
 )
 """
     code = generate_code(metadata)
-    assert code == """\
+    assert code == f"""\
 from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1268,7 +1263,7 @@ metadata = Base.metadata
 
 class Simple(Base):
     __tablename__ = 'simple'
-    __table_args__ = {'comment': "this is a 'comment'"}
+    __table_args__ = {{'comment': "this is a 'comment'"}}
 
     id = Column(Integer, primary_key=True)
 """
@@ -1282,9 +1277,9 @@ def test_mysql_timestamp(metadata):
         Column('timestamp', mysql.TIMESTAMP)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer, TIMESTAMP
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1306,10 +1301,10 @@ def test_mysql_integer_display_width(metadata):
         Column('number', mysql.INTEGER(11))
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.mysql import INTEGER
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1331,10 +1326,10 @@ def test_mysql_tinytext(metadata):
         Column('my_tinytext', mysql.TINYTEXT)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.mysql import TINYTEXT
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1356,10 +1351,10 @@ def test_mysql_mediumtext(metadata):
         Column('my_mediumtext', mysql.MEDIUMTEXT)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.mysql import MEDIUMTEXT
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -1381,10 +1376,10 @@ def test_mysql_longtext(metadata):
         Column('my_longtext', mysql.LONGTEXT)
     )
 
-    assert generate_code(metadata) == """\
+    assert generate_code(metadata) == f"""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.mysql import LONGTEXT
-from sqlalchemy.ext.declarative import declarative_base
+from {declarative_package} import declarative_base
 
 Base = declarative_base()
 metadata = Base.metadata

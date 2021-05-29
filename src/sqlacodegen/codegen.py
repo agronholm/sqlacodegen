@@ -41,11 +41,18 @@ try:
 except ImportError:
     pass
 
+if sys.version_info < (3, 8):
+    from importlib_metadata import version
+else:
+    from importlib.metadata import version
+
 _re_boolean_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?).*\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 _re_invalid_identifier = re.compile(r'[^a-zA-Z0-9_]' if sys.version_info[0] < 3 else r'(?u)\W')
+sqla_version = tuple(int(x) for x in version('sqlalchemy').split('.')[:2])
+declarative_package = 'sqlalchemy.ext.declarative' if sqla_version < (1, 4) else 'sqlalchemy.orm'
 
 
 class _DummyInflectEngine(engine):
@@ -490,8 +497,7 @@ class CodeGenerator:
         if not any(isinstance(model, self.class_model) for model in self.models):
             self.collector.add_literal_import('sqlalchemy', 'MetaData')
         else:
-            self.collector.add_literal_import(
-                'sqlalchemy.ext.declarative', 'declarative_base')
+            self.collector.add_literal_import(declarative_package, 'declarative_base')
 
     def create_inflect_engine(self) -> engine:
         if self.noinflect:
@@ -505,7 +511,7 @@ class CodeGenerator:
                          for package, names in self.collector.items())
 
     def render_metadata_declarations(self) -> str:
-        if 'sqlalchemy.ext.declarative' in self.collector:
+        if declarative_package in self.collector:
             return (f'{self.base_class_name} = declarative_base()\n'
                     f'metadata = {self.base_class_name}.metadata')
 
