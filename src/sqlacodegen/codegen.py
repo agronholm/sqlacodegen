@@ -76,6 +76,10 @@ def _get_constraint_sort_key(constraint: Constraint) -> str:
 
 class ImportCollector(OrderedDict):
     def add_import(self, obj: Any) -> None:
+        # Don't store builtin imports
+        if obj.__module__ == 'builtins':
+            return
+
         type_ = type(obj) if not isinstance(obj, type) else obj
         pkgname = type_.__module__
 
