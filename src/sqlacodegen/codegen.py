@@ -103,6 +103,25 @@ class ImportCollector(OrderedDict):
         names = self.setdefault(pkgname, set())
         names.add(name)
 
+    def group_imports(self) -> List[List[str]]:
+        future_imports: List[str] = []
+        stdlib_imports: List[str] = []
+        thirdparty_imports: List[str] = []
+
+        for package in sorted(self):
+            imports = ', '.join(sorted(self[package]))
+            collection: List[str] = thirdparty_imports
+            if package == '__future__':
+                collection = future_imports
+            elif package in sys.builtin_module_names:
+                collection = stdlib_imports
+            elif package in sys.modules and 'site-packages' not in sys.modules[package].__file__:
+                collection = stdlib_imports
+
+            collection.append(f'from {package} import {imports}')
+
+        return [group for group in (future_imports, stdlib_imports, thirdparty_imports) if group]
+
 
 class Relationship:
     def __init__(self, source_cls: str, target_cls: str) -> None:
@@ -511,14 +530,8 @@ class CodeGenerator:
             return inflect.engine()
 
     def render_imports(self) -> str:
-        rendered = ''
-        if '__future__' in self.collector:
-            imports = ', '.join(self.collector.pop('__future__'))
-            rendered = f'from __future__ import {imports}\n\n'
-
-        rendered += '\n'.join('from {0} import {1}'.format(package, ', '.join(sorted(names)))
-                              for package, names in self.collector.items())
-        return rendered
+        groups = self.collector.group_imports()
+        return '\n\n'.join('\n'.join(line for line in group) for group in groups)
 
     def render_metadata_declarations(self) -> str:
         if declarative_package in self.collector:
