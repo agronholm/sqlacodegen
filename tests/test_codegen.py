@@ -1,5 +1,3 @@
-import re
-import sys
 from io import StringIO
 
 import pytest
@@ -21,16 +19,6 @@ except ImportError:
     Computed = None
 
 
-if sys.version_info < (3,):
-    unicode_re = re.compile(r"u(['\"])(.*?)(?<!\\)\1")
-
-    def remove_unicode_prefixes(text):
-        return unicode_re.sub(r"\1\2\1", text)
-else:
-    def remove_unicode_prefixes(text):
-        return text
-
-
 @pytest.fixture
 def metadata(request):
     dialect = getattr(request, 'param', None)
@@ -48,7 +36,7 @@ def generate_code(metadata, **kwargs):
     codegen = CodeGenerator(metadata, **kwargs)
     sio = StringIO()
     codegen.render(sio)
-    return remove_unicode_prefixes(sio.getvalue())
+    return sio.getvalue()
 
 
 @pytest.mark.parametrize('metadata', ['postgresql'], indirect=['metadata'])
