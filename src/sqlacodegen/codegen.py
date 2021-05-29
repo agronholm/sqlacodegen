@@ -368,7 +368,6 @@ class ModelClass(Model):
 
 class CodeGenerator:
     template = """\
-# coding: utf-8
 {imports}
 
 {metadata_declarations}

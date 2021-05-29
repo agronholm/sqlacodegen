@@ -61,7 +61,6 @@ def test_fancy_coltypes(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Boolean, Column, Enum, MetaData, Numeric, Table
 
 metadata = MetaData()
@@ -88,7 +87,6 @@ def test_boolean_detection(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Boolean, Column, MetaData, Table
 
 metadata = MetaData()
@@ -113,7 +111,6 @@ def test_arrays(metadata):
 
     if sqlalchemy.__version__ < '1.1':
         assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Float, Integer, MetaData, Table
 from sqlalchemy.dialects.postgresql import ARRAY
 
@@ -128,7 +125,6 @@ t_simple_items = Table(
 """
     else:
         assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import ARRAY, Column, Float, Integer, MetaData, Table
 
 metadata = MetaData()
@@ -150,7 +146,6 @@ def test_enum_detection(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Enum, MetaData, Table
 
 metadata = MetaData()
@@ -172,7 +167,6 @@ def test_column_adaptation(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import BigInteger, Column, Float, MetaData, Table
 
 metadata = MetaData()
@@ -196,7 +190,6 @@ def test_mysql_column_types(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, String, Table
 from sqlalchemy.dialects.mysql import SET
 
@@ -222,7 +215,6 @@ def test_constraints_table(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table, UniqueConstraint
 
 metadata = MetaData()
@@ -248,7 +240,6 @@ def test_constraints_class(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -277,7 +268,6 @@ def test_noindexes_table(metadata):
     simple_items.indexes.add(Index('idx_number', simple_items.c.number))
 
     assert generate_code(metadata, noindexes=True) == """\
-# coding: utf-8
 from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table
 
 metadata = MetaData()
@@ -300,7 +290,6 @@ def test_noconstraints_table(metadata):
     simple_items.indexes.add(Index('idx_number', simple_items.c.number))
 
     assert generate_code(metadata, noconstraints=True) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, Table
 
 metadata = MetaData()
@@ -326,7 +315,6 @@ def test_indexes_table(metadata):
     simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Index, Integer, MetaData, String, Table
 
 metadata = MetaData()
@@ -355,7 +343,6 @@ def test_indexes_class(metadata):
     simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Index, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -388,7 +375,6 @@ def test_onetomany(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -422,7 +408,6 @@ def test_onetomany_selfref(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -452,7 +437,6 @@ def test_onetomany_selfref_multi(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -492,7 +476,6 @@ def test_onetomany_composite(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKeyConstraint, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -538,7 +521,6 @@ def test_onetomany_multiref(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -581,7 +563,6 @@ def test_onetoone(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -619,7 +600,6 @@ def test_onetomany_noinflect(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -663,7 +643,6 @@ def test_manytomany(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -709,7 +688,6 @@ def test_manytomany_selfref(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -765,7 +743,6 @@ def test_manytomany_composite(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKeyConstraint, Integer, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -823,7 +800,6 @@ def test_joined_inheritance(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -860,7 +836,6 @@ def test_no_inflect(metadata):
     )
 
     assert generate_code(metadata, noinflect=True) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -882,7 +857,6 @@ def test_no_classes(metadata):
     )
 
     assert generate_code(metadata, noclasses=True) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, Table
 
 metadata = MetaData()
@@ -903,7 +877,6 @@ def test_table_kwargs(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -929,7 +902,6 @@ def test_table_args_kwargs(metadata):
     simple_items.indexes.add(Index('testidx', simple_items.c.id, simple_items.c.name))
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Index, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -957,7 +929,6 @@ def test_schema_table(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, MetaData, String, Table
 
 metadata = MetaData()
@@ -980,7 +951,6 @@ def test_schema_boolean(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Boolean, Column, MetaData, Table
 
 metadata = MetaData()
@@ -1003,7 +973,6 @@ def test_foreign_key_options(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, MetaData, String, Table
 
 metadata = MetaData()
@@ -1031,7 +1000,6 @@ def test_foreign_key_schema(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -1064,7 +1032,6 @@ def test_pk_default(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer, text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1089,7 +1056,6 @@ something()"""))
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer, text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1114,7 +1080,6 @@ def test_server_default_double_quotes(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer, text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1139,7 +1104,6 @@ def test_invalid_attribute_names(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1164,7 +1128,6 @@ def test_pascal(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1186,7 +1149,6 @@ def test_underscore(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1208,7 +1170,6 @@ def test_pascal_underscore(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1230,7 +1191,6 @@ def test_pascal_multiple_underscore(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1253,7 +1213,6 @@ def test_metadata_column(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1279,7 +1238,6 @@ def test_column_comment(metadata, nocomments):
 
     comment_part = '' if nocomments else ', comment="this is a \'comment\'"'
     assert generate_code(metadata, nocomments=nocomments) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1313,7 +1271,6 @@ t_simple = Table(
 """
     code = generate_code(metadata)
     assert code == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1338,7 +1295,6 @@ def test_mysql_timestamp(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -1363,7 +1319,6 @@ def test_mysql_integer_display_width(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.ext.declarative import declarative_base
@@ -1389,7 +1344,6 @@ def test_mysql_tinytext(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.mysql import TINYTEXT
 from sqlalchemy.ext.declarative import declarative_base
@@ -1415,7 +1369,6 @@ def test_mysql_mediumtext(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy.ext.declarative import declarative_base
@@ -1441,7 +1394,6 @@ def test_mysql_longtext(metadata):
     )
 
     assert generate_code(metadata) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.ext.declarative import declarative_base
@@ -1465,7 +1417,6 @@ def test_table_name_identifiers(metadata):
     )
 
     assert generate_code(metadata, noclasses=True) == """\
-# coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, Table
 
 metadata = MetaData()
@@ -1492,7 +1443,6 @@ def test_computed_column(metadata, persisted, extra_args):
     )
 
     assert generate_code(metadata, noclasses=True) == """\
-# coding: utf-8
 from sqlalchemy import Column, Computed, Integer, MetaData, Table
 
 metadata = MetaData()
