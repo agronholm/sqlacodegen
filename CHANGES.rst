@@ -1,6 +1,11 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Dropped support for Python < 3.6
+- Added support for SQLAlchemy 1.4
+
 **2.3.0**
 
 - Added support for rendering computed columns
