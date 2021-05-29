@@ -299,11 +299,10 @@ class ModelTable(Model):
 
 
 class ModelClass(Model):
-    parent_name = 'Base'
-
     def __init__(self, table: Table, association_tables: List[Table], inflect_engine: engine,
-                 detect_joined: bool) -> None:
+                 detect_joined: bool, base_class_name: Optional[str]) -> None:
         super().__init__(table)
+        self.parent_name = base_class_name
         self.name = self._tablename_to_classname(table.name, inflect_engine)
         self.children: List[ModelClass] = []
         self.attributes: Dict[str, AttributeType] = OrderedDict()
@@ -319,7 +318,7 @@ class ModelClass(Model):
             if isinstance(constraint, ForeignKeyConstraint):
                 target_cls = self._tablename_to_classname(constraint.elements[0].column.table.name,
                                                           inflect_engine)
-                if (detect_joined and self.parent_name == 'Base' and
+                if (detect_joined and self.parent_name == base_class_name and
                         set(_get_column_names(constraint)) == pk_column_names):
                     self.parent_name = target_cls
                 else:
@@ -381,7 +380,8 @@ class CodeGenerator:
                  ignored_tables: Tuple[str, str] = (
                      'alembic_version', 'migrate_version'),
                  table_model: type = ModelTable, class_model: type = ModelClass,
-                 template: Optional[Any] = None, nocomments: bool = False) -> None:
+                 template: Optional[Any] = None, nocomments: bool = False,
+                 base_class_name: Optional[str] = 'Base') -> None:
         super().__init__()
         self.metadata = metadata
         self.noindexes = noindexes
@@ -395,6 +395,7 @@ class CodeGenerator:
         self.table_model = table_model
         self.class_model = class_model
         self.nocomments = nocomments
+        self.base_class_name = base_class_name
         self.inflect_engine = self.create_inflect_engine()
         if template:
             self.template = template
@@ -472,7 +473,7 @@ class CodeGenerator:
                 model = self.table_model(table)
             else:
                 model = self.class_model(table, links[table.name], self.inflect_engine,
-                                         not nojoined)
+                                         not nojoined, self.base_class_name)
                 classes[model.name] = model
 
             self.models.append(model)
@@ -480,7 +481,7 @@ class CodeGenerator:
 
         # Nest inherited classes in their superclasses to ensure proper ordering
         for model in classes.values():
-            if model.parent_name != 'Base':
+            if model.parent_name != self.base_class_name:
                 classes[model.parent_name].children.append(model)
                 self.models.remove(model)
 
@@ -505,7 +506,9 @@ class CodeGenerator:
 
     def render_metadata_declarations(self) -> str:
         if 'sqlalchemy.ext.declarative' in self.collector:
-            return 'Base = declarative_base()\nmetadata = Base.metadata'
+            return (f'{self.base_class_name} = declarative_base()\n'
+                    f'metadata = {self.base_class_name}.metadata')
+
         return 'metadata = MetaData()'
 
     def _get_compiled_expression(self, statement: ClauseElement) -> str:
