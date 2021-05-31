@@ -694,7 +694,7 @@ class CodeGenerator:
                     len(constraint.columns) == 1):
                 continue
             table_args.append(self.render_constraint(constraint))
-        for index in model.table.indexes:
+        for index in sorted(model.table.indexes, key=_get_constraint_sort_key):
             if len(index.columns) > 1:
                 table_args.append(self.render_index(index))
 
