@@ -180,10 +180,11 @@ AttributeType = Union[ManyToManyRelationship, ManyToOneRelationship, ColumnEleme
 
 
 class Model:
-    def __init__(self, table: Table) -> None:
+    def __init__(self, table: Table, table_name_prefix: str = "") -> None:
         super().__init__()
         self.table = table
         self.schema = table.schema
+        self.table_name_prefix = table_name_prefix
 
         # Adapt column types to the most reasonable generic types (ie. VARCHAR -> String)
         for column in table.columns:
@@ -219,8 +220,8 @@ class Model:
                         # least on PostgreSQL, Float can accurately represent both REAL and
                         # DOUBLE_PRECISION
                         if not isinstance(new_coltype, Float) and \
-                           not (isinstance(new_coltype, ARRAY) and
-                                isinstance(new_coltype.item_type, Float)):
+                                not (isinstance(new_coltype, ARRAY) and
+                                     isinstance(new_coltype.item_type, Float)):
                             break
                 except sqlalchemy.exc.CompileError:
                     # If the adapted column type can't be compiled, don't substitute it
@@ -265,19 +266,29 @@ class Model:
                 collector.add_import(index)
 
     @staticmethod
-    def _convert_to_valid_identifier(name: Union[quoted_name, str]) -> str:
+    def remove_prefix(text: str, prefix: str):
+        if prefix == "":
+            return text
+        if text.startswith(prefix):
+            return text[len(prefix):]
+        return text  # or whatever
+
+    @staticmethod
+    def _convert_to_valid_identifier(name: Union[quoted_name, str], table_name_prefix="") -> str:
         assert name, 'Identifier cannot be empty'
         if name[0].isdigit() or iskeyword(name):
             name = '_' + name
         elif name == 'metadata':
             name = 'metadata_'
 
+        name = Model.remove_prefix(name, table_name_prefix)
+
         return _re_invalid_identifier.sub('_', name)
 
 
 class ModelTable(Model):
-    def __init__(self, table: Table) -> None:
-        super(ModelTable, self).__init__(table)
+    def __init__(self, table: Table, table_name_prefix: str = "") -> None:
+        super(ModelTable, self).__init__(table, table_name_prefix=table_name_prefix)
         self.name = self._convert_to_valid_identifier(table.name)
 
     def add_imports(self, collector: ImportCollector) -> None:
@@ -289,9 +300,9 @@ class ModelClass(Model):
     parent_name = 'Base'
 
     def __init__(self, table: Table, association_tables: List[Table], inflect_engine: engine,
-                 detect_joined: bool) -> None:
-        super(ModelClass, self).__init__(table)
-        self.name = self._tablename_to_classname(table.name, inflect_engine)
+                 detect_joined: bool, table_name_prefix: str = "") -> None:
+        super(ModelClass, self).__init__(table, table_name_prefix=table_name_prefix)
+        self.name = self._tablename_to_classname(table.name, inflect_engine, self.table_name_prefix)
         self.children: List[ModelClass] = []
         self.attributes: Dict[str, AttributeType] = OrderedDict()
         relationship_: Union[ManyToOneRelationship, ManyToManyRelationship]
@@ -305,7 +316,7 @@ class ModelClass(Model):
         for constraint in sorted(table.constraints, key=_get_constraint_sort_key):
             if isinstance(constraint, ForeignKeyConstraint):
                 target_cls = self._tablename_to_classname(constraint.elements[0].column.table.name,
-                                                          inflect_engine)
+                                                          inflect_engine, self.table_name_prefix)
                 if (detect_joined and self.parent_name == 'Base' and
                         set(_get_column_names(constraint)) == pk_column_names):
                     self.parent_name = target_cls
@@ -320,18 +331,18 @@ class ModelClass(Model):
                               if isinstance(c, ForeignKeyConstraint)]
             fk_constraints.sort(key=_get_constraint_sort_key)
             target_cls = self._tablename_to_classname(
-                fk_constraints[1].elements[0].column.table.name, inflect_engine)
+                fk_constraints[1].elements[0].column.table.name, inflect_engine, self.table_name_prefix)
             relationship_ = ManyToManyRelationship(self.name, target_cls, association_table)
             self._add_attribute(relationship_.preferred_name, relationship_)
 
     @classmethod
-    def _tablename_to_classname(cls, tablename: str, inflect_engine: engine) -> str:
-        tablename = cls._convert_to_valid_identifier(tablename)
+    def _tablename_to_classname(cls, tablename: str, inflect_engine: engine, table_name_prefix="") -> str:
+        tablename = cls._convert_to_valid_identifier(tablename, table_name_prefix)
         camel_case_name = ''.join(part[:1].upper() + part[1:] for part in tablename.split('_'))
         return inflect_engine.singular_noun(camel_case_name) or camel_case_name
 
     def _add_attribute(self, attrname: Union[quoted_name, str], value: AttributeType) -> str:
-        attrname = tempname = self._convert_to_valid_identifier(attrname)
+        attrname = tempname = self._convert_to_valid_identifier(attrname, self.table_name_prefix)
         counter = 1
         while tempname in self.attributes:
             tempname = attrname + str(counter)
@@ -365,7 +376,8 @@ class CodeGenerator:
                  indentation: str = '    ', model_separator: str = '\n\n',
                  ignored_tables: Tuple[str, str] = ('alembic_version', 'migrate_version'),
                  table_model: type = ModelTable, class_model: type = ModelClass,
-                 template: Optional[Any] = None, nocomments: bool = False) -> None:
+                 template: Optional[Any] = None, nocomments: bool = False,
+                 table_name_prefix: str = "") -> None:
         super(CodeGenerator, self).__init__()
         self.metadata = metadata
         self.noindexes = noindexes
@@ -379,6 +391,7 @@ class CodeGenerator:
         self.table_model = table_model
         self.class_model = class_model
         self.nocomments = nocomments
+        self.table_name_prefix = table_name_prefix
         self.inflect_engine = self.create_inflect_engine()
         if template:
             self.template = template
@@ -449,10 +462,10 @@ class CodeGenerator:
             # Only form model classes for tables that have a primary key and are not association
             # tables
             if noclasses or not table.primary_key or table.name in association_tables:
-                model = self.table_model(table)
+                model = self.table_model(table, table_name_prefix=self.table_name_prefix)
             else:
                 model = self.class_model(table, links[table.name], self.inflect_engine,
-                                         not nojoined)
+                                         not nojoined, table_name_prefix=self.table_name_prefix)
                 classes[model.name] = model
 
             self.models.append(model)
