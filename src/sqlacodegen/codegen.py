@@ -88,8 +88,9 @@ class ImportCollector(OrderedDict):
 
         self.add_literal_import(pkgname, type_.__name__)
 
-    def add_literal_import(self, pkgname: str, name: str) -> None:
-        names = self.setdefault(pkgname, set())
+    def add_literal_import(self, pkgname: str, name: str, fallback: str = None) -> None:
+        """If a fallback value is set, the key is a tuple of packages for use with try/except, for issue #132"""
+        names = self.setdefault(pkgname if fallback is None else (pkgname, fallback), set())
         names.add(name)
 
 
@@ -469,7 +470,9 @@ class CodeGenerator:
         if not any(isinstance(model, self.class_model) for model in self.models):
             self.collector.add_literal_import('sqlalchemy', 'MetaData')
         else:
-            self.collector.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
+            # SQLAlchemy >= 1.4 deprecates sqlalchemy.ext.declarative; SQLAlchemy >= 2.0 removes it altogether
+            # Emit the import in a try/except, attempting the old import path first, falling back to the new path
+            self.collector.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base', fallback='sqlalchemy.orm')
 
     def create_inflect_engine(self) -> engine:
         if self.noinflect:
@@ -479,11 +482,20 @@ class CodeGenerator:
             return inflect.engine()
 
     def render_imports(self) -> str:
-        return '\n'.join('from {0} import {1}'.format(package, ', '.join(sorted(names)))
-                         for package, names in self.collector.items())
+        """Render imports from the collector map; if key is a tuple, use a try/catch to attempt two package names"""
+        indent = '\n    '
+        # from <package> import <name>[, name, ...]
+        import_map = {k: v for k, v in self.collector.items() if not isinstance(k, tuple)}
+        # try: from <package> import <name>[, name]; except ImportError: from <altpackage> import <name>[, name]
+        try_import_map = {k: v for k, v in self.collector.items() if isinstance(k, tuple)}
+        try_import_blob = '\n'.join([
+            "try:{3}from {0} import {1}\nexcept ImportError:{3}from {2} import {1}\n".format(
+                package, ', '.join(sorted(names)), alt_package, indent) for (package, alt_package), names in try_import_map.items()])
+        bare_import_blob = '\n'.join('from {0} import {1}'.format(package, ', '.join(sorted(names))) for package, names in import_map.items())
+        return '\n'.join((try_import_blob, bare_import_blob))
 
     def render_metadata_declarations(self) -> str:
-        if 'sqlalchemy.ext.declarative' in self.collector:
+        if ('sqlalchemy.ext.declarative', 'sqlalchemy.orm') in self.collector:
             return 'Base = declarative_base()\nmetadata = Base.metadata'
         return 'metadata = MetaData()'
 
