@@ -54,6 +54,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         COVERALLS_FLAG_NAME: ${{ matrix.test-name }}
         COVERALLS_PARALLEL: true
+        SQLALCHEMY_WARN_20: "yes"
 
   coveralls:
     name: Finish Coveralls
