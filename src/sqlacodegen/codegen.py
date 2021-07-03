@@ -638,6 +638,7 @@ class CodeGenerator:
                 server_default = 'server_default=text("{0}")'.format(default_expr)
 
         comment = getattr(column, 'comment', None)
+        server_default = ""
         return 'Column({0})'.format(', '.join(
             ([repr(column.name)] if show_name else []) +
             ([self.render_column_type(column.type)] if render_coltype else []) +
