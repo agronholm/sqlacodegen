@@ -20,11 +20,8 @@ Features
 .. _PEP 8: http://www.python.org/dev/peps/pep-0008/
 
 
-Usage instructions
-==================
-
 Installation
-------------
+============
 
 To install, do::
 
@@ -35,8 +32,8 @@ To include support for the PostgreSQL `CITEXT` extension type (which should be c
     pip install sqlacodegen[citext]
 
 
-Example usage
--------------
+Quickstart
+==========
 
 At the minimum, you have to give sqlacodegen a database URL. The URL is passed directly to
 SQLAlchemy's `create_engine()`_ method so please refer to `SQLAlchemy's documentation`_ for
@@ -45,38 +42,74 @@ instructions on how to construct a proper URL.
 Examples::
 
     sqlacodegen postgresql:///some_local_db
-    sqlacodegen mysql+pymysql://user:password@localhost/dbname
-    sqlacodegen sqlite:///database.db
+    sqlacodegen --generator tables mysql+pymysql://user:password@localhost/dbname
+    sqlacodegen --generator dataclasses sqlite:///database.db
 
-To see the full list of options::
+To see the list of generic options::
 
     sqlacodegen --help
-
 
 .. _create_engine(): http://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.create_engine
 .. _SQLAlchemy's documentation: http://docs.sqlalchemy.org/en/latest/core/engines.html
 
+Available generators
+====================
 
-Why does it sometimes generate classes and sometimes Tables?
-------------------------------------------------------------
+The selection of a generator determines the
 
-Unless the ``--noclasses`` option is used, sqlacodegen tries to generate declarative model classes
-from each table. There are two circumstances in which a ``Table`` is generated instead:
+The following built-in generators are available:
+
+* ``tables`` (only generates ``Table`` objects, for those who don't want to use the ORM)
+* ``declarative`` (the default; generates classes inheriting from ``declarative_base()``
+* ``dataclasses`` (generates dataclass-based models; v1.4+ only)
+
+Generator-specific options
+==========================
+
+The following options can be turned on by passing them using ``--option`` (can be used multiple
+times):
+
+* ``tables``
+
+  * ``noconstraints``: ignore constraints (foreign key, unique etc.)
+  * ``nocomments``: ignore table/column comments
+  * ``noindexes``: ignore indexes
+
+* ``declarative``
+
+  * all the options from ``tables``
+  * ``use_inflect``: use the ``inflect`` library when naming classes and relationships
+    (turning plural names into singular; see below for details)
+  * ``nojoined``: don't try to detect joined-class inheritance (see below for details)
+
+* ``dataclasses``
+
+  * all the options from ``declarative``
+
+Model class generators
+----------------------
+
+The code generators that generate classes try to generate model classes whenever possible.
+There are two circumstances in which a ``Table`` is generated instead:
 
 * the table has no primary key constraint (which is required by SQLAlchemy for every model class)
 * the table is an association table between two other tables (see below for the specifics)
 
-
 Model class naming logic
-------------------------
+++++++++++++++++++++++++
 
-The table name (which is assumed to be in English) is converted to singular form using the
-"inflect" library. Then, every underscore is removed while transforming the next letter to upper
-case. For example, ``sales_invoices`` becomes ``SalesInvoice``.
+By default, table names are converted to valid PEP 8 compliant class names by replacing all
+characters unsuitable for Python identifiers with ``_``. Then, each valid parts (separated by
+underscores) are title cased and then joined together, eliminating the underscores. So,
+``example_name`` becomes ``ExampleName``.
 
+If the ``use_inflect`` option is used, the table name (which is assumed to be in English) is
+converted to singular form using the "inflect" library. For example, ``sales_invoices`` becomes
+``SalesInvoice``. Since table names are not always in English, and the inflection process is far
+from perfect, inflection is disabled by default.
 
 Relationship detection logic
-----------------------------
+++++++++++++++++++++++++++++
 
 Relationships are detected based on existing foreign key constraints as follows:
 
@@ -89,9 +122,8 @@ A table is considered an association table if it satisfies all of the following 
 #. has exactly two foreign key constraints
 #. all its columns are involved in said constraints
 
-
 Relationship naming logic
--------------------------
++++++++++++++++++++++++++
 
 Relationships are typically named based on the opposite class name. For example, if an ``Employee``
 class has a column named ``employer`` which has a foreign key to ``Company.id``, the relationship
@@ -104,6 +136,20 @@ column is named like ``employer_id``. Then the relationship is named ``employer`
 If more than one relationship would be created with the same name, the latter ones are appended
 numeric suffixes, starting from 1.
 
+
+Customizing code generation logic
+=================================
+
+If the built-in generators with all their options don't quite do what you want, you can customize
+the logic by subclassing one of the existing code generator classes. Override whichever methods
+you need, and then add an `entry point`_ in the ``sqlacodegen.generators`` namespace that points
+to your new class. Once the entry point is in place (you typically have to install the project with
+`pip install`), you can use ``--generator <yourentrypoint>`` to invoke your custom code generator.
+
+For examples, you can look at sqlacodegen's own entry points in its `setup.cfg`_.
+
+.. _entry point: https://setuptools.readthedocs.io/en/latest/userguide/entry_point.html
+.. _setup.cfg: https://github.com/agronholm/sqlacodegen/blob/master/setup.cfg
 
 Getting help
 ============

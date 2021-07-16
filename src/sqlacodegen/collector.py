@@ -7,6 +7,10 @@ from sqlalchemy.util import OrderedDict
 
 
 class ImportCollector(OrderedDict):
+    def __init__(self) -> None:
+        super().__init__()
+        self.builtin_module_names = set(sys.builtin_module_names) | {'dataclasses'}
+
     def add_import(self, obj: Any) -> None:
         # Don't store builtin imports
         if obj.__module__ == 'builtins':
@@ -45,7 +49,7 @@ class ImportCollector(OrderedDict):
             collection = thirdparty_imports
             if package == '__future__':
                 collection = future_imports
-            elif package in sys.builtin_module_names:
+            elif package in self.builtin_module_names:
                 collection = stdlib_imports
             elif package in sys.modules and 'site-packages' not in sys.modules[package].__file__:
                 collection = stdlib_imports
@@ -53,3 +57,6 @@ class ImportCollector(OrderedDict):
             collection.append(f'from {package} import {imports}')
 
         return [group for group in (future_imports, stdlib_imports, thirdparty_imports) if group]
+
+    def contains_variable(self, name: str) -> bool:
+        return any(name in names for names in self.values())

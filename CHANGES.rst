@@ -6,6 +6,18 @@ Version history
 - Dropped support for Python < 3.6
 - Added support for Python 3.10
 - Added support for SQLAlchemy 1.4
+- Disabled inflection during table/relationship name generation by default
+  (use ``--option use_inflect`` to re-enable)
+- Refactored the old ``CodeGenerator`` class into separate generator classes, selectable via
+  ``--generator``
+- Refactored several command line options into generator specific options:
+
+  - ``--noindexes`` → ``--option noindexes``
+  - ``--noconstraints`` → ``--option noconstraints``
+  - ``--nocomments`` → ``--option nocomments``
+  - ``--nojoined`` → ``--option nojoined`` (``declarative`` and ``dataclass`` generators only)
+  - ``--noinflect`` → (now the default; use ``--option use_inflect`` instead)
+    (``declarative`` and ``dataclass`` generators only)
 
 **2.3.0**
 
