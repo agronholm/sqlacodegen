@@ -4,6 +4,7 @@ import sys
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
+from importlib import import_module
 from inspect import Parameter
 from itertools import count
 from keyword import iskeyword
@@ -12,13 +13,13 @@ from textwrap import indent
 from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, cast
 
 import inflect
+import sqlalchemy
 from sqlalchemy import (
     ARRAY, Boolean, CheckConstraint, Column, DefaultClause, Enum, Float, ForeignKey,
     ForeignKeyConstraint, Index, MetaData, PrimaryKeyConstraint, String, Table, UniqueConstraint)
 from sqlalchemy.engine import Connectable
 from sqlalchemy.exc import CompileError
 
-from .collector import ImportCollector
 from .models import Model, ModelClass, Relationship, RelationshipType
 from .utils import (
     get_column_names, get_common_fk_constraints, get_compiled_expression, get_constraint_sort_key)
@@ -62,6 +63,7 @@ class CodeGenerator(metaclass=ABCMeta):
 @dataclass(eq=False)
 class TablesGenerator(CodeGenerator):
     valid_options: ClassVar[Set[str]] = {'noindexes', 'noconstraints', 'nocomments'}
+    builtin_module_names: ClassVar[Set[str]] = set(sys.builtin_module_names) | {'dataclasses'}
 
     def __init__(self, metadata: MetaData, bind: Connectable, options: Set[str], *,
                  indentation: str = '    '):
@@ -72,7 +74,8 @@ class TablesGenerator(CodeGenerator):
 
         super().__init__(metadata, bind, options)
         self.indentation = indentation
-        self.collector = ImportCollector()
+        self.imports: Dict[str, Set] = defaultdict(set)
+        self.module_variables: Set[str] = set()
 
     def generate(self) -> str:
         sections: List[str] = []
@@ -114,12 +117,60 @@ class TablesGenerator(CodeGenerator):
             sections.append(rendered_models)
 
         # Render collected imports
-        groups = self.collector.group_imports()
+        groups = self.group_imports()
         imports = '\n\n'.join('\n'.join(line for line in group) for group in groups)
         if imports:
             sections.insert(0, imports)
 
         return '\n\n'.join(sections) + '\n'
+
+    def add_import(self, obj: Any) -> None:
+        # Don't store builtin imports
+        if obj.__module__ == 'builtins':
+            return
+
+        type_ = type(obj) if not isinstance(obj, type) else obj
+        pkgname = type_.__module__
+
+        # The column types have already been adapted towards generic types if possible, so if this
+        # is still a vendor specific type (e.g., MySQL INTEGER) be sure to use that rather than the
+        # generic sqlalchemy type as it might have different constructor parameters.
+        if pkgname.startswith('sqlalchemy.dialects.'):
+            dialect_pkgname = '.'.join(pkgname.split('.')[0:3])
+            dialect_pkg = import_module(dialect_pkgname)
+
+            if type_.__name__ in dialect_pkg.__all__:  # type: ignore[attr-defined]
+                pkgname = dialect_pkgname
+        elif type_.__name__ in sqlalchemy.__all__:  # type: ignore[attr-defined]
+            pkgname = 'sqlalchemy'
+        else:
+            pkgname = type_.__module__
+
+        self.add_literal_import(pkgname, type_.__name__)
+
+    def add_literal_import(self, pkgname: str, name: str) -> None:
+        names = self.imports.setdefault(pkgname, set())
+        names.add(name)
+        self.module_variables.add(name)
+
+    def group_imports(self) -> List[List[str]]:
+        future_imports: List[str] = []
+        stdlib_imports: List[str] = []
+        thirdparty_imports: List[str] = []
+
+        for package in sorted(self.imports):
+            imports = ', '.join(sorted(self.imports[package]))
+            collection = thirdparty_imports
+            if package == '__future__':
+                collection = future_imports
+            elif package in self.builtin_module_names:
+                collection = stdlib_imports
+            elif package in sys.modules and 'site-packages' not in sys.modules[package].__file__:
+                collection = stdlib_imports
+
+            collection.append(f'from {package} import {imports}')
+
+        return [group for group in (future_imports, stdlib_imports, thirdparty_imports) if group]
 
     def generate_models(self) -> List[Model]:
         return [Model(self.generate_table_variable_name(table), table)
@@ -129,7 +180,7 @@ class TablesGenerator(CodeGenerator):
         return self.convert_to_valid_identifier(f't_{table.name}')
 
     def render_module_variables(self, models: List[Model]) -> str:
-        self.collector.add_import(MetaData)
+        self.add_import(MetaData)
         return 'metadata = MetaData()'
 
     def render_models(self, models: List[Model]) -> str:
@@ -142,7 +193,7 @@ class TablesGenerator(CodeGenerator):
 
     def render_table(self, table: Table) -> str:
         # Add imports
-        self.collector.add_import(Table)
+        self.add_import(Table)
 
         args: List[str] = [f'{table.name!r}, metadata']
         for column in table.columns:
@@ -175,7 +226,7 @@ class TablesGenerator(CodeGenerator):
 
     def render_index(self, index: Index) -> str:
         # Add imports
-        self.collector.add_import(Index)
+        self.add_import(Index)
 
         extra_args = [repr(col.name) for col in index.columns]
         if index.unique:
@@ -185,12 +236,12 @@ class TablesGenerator(CodeGenerator):
 
     def render_column(self, column: Column, show_name: bool) -> str:
         # Add imports
-        self.collector.add_import(Column)
+        self.add_import(Column)
         if column.server_default:
             if Computed and isinstance(column.server_default, Computed):
-                self.collector.add_literal_import('sqlalchemy', 'Computed')
+                self.add_literal_import('sqlalchemy', 'Computed')
             else:
-                self.collector.add_literal_import('sqlalchemy', 'text')
+                self.add_literal_import('sqlalchemy', 'text')
 
         kwarg = []
         is_sole_pk = column.primary_key and len(column.table.primary_key) == 1
@@ -222,7 +273,7 @@ class TablesGenerator(CodeGenerator):
             kwarg.append('index')
 
         if Computed and isinstance(column.server_default, Computed):
-            self.collector.add_import(Computed)
+            self.add_import(Computed)
             expression = get_compiled_expression(column.server_default.sqltext, self.bind)
 
             persist_arg = ''
@@ -253,9 +304,9 @@ class TablesGenerator(CodeGenerator):
 
     def render_column_type(self, coltype: Any) -> str:
         # Add imports
-        self.collector.add_import(coltype)
+        self.add_import(coltype)
         if isinstance(coltype, ARRAY):
-            self.collector.add_import(coltype.item_type.__class__)
+            self.add_import(coltype.item_type.__class__)
 
         args = []
         kwargs: Dict[str, Any] = OrderedDict()
@@ -312,9 +363,9 @@ class TablesGenerator(CodeGenerator):
             pass
         elif isinstance(constraint, UniqueConstraint):
             if len(constraint.columns) > 1:
-                self.collector.add_literal_import('sqlalchemy', 'UniqueConstraint')
+                self.add_literal_import('sqlalchemy', 'UniqueConstraint')
         else:
-            self.collector.add_import(constraint)
+            self.add_import(constraint)
 
         if isinstance(constraint, ForeignKey):
             remote_column = f'{constraint.column.table.fullname}.{constraint.column.name}'
@@ -348,7 +399,7 @@ class TablesGenerator(CodeGenerator):
         elif iskeyword(name):
             name += '_'
 
-        while self.collector.contains_variable(name):
+        while name in self.module_variables:
             name += '_'
 
         assert name.isidentifier()
@@ -581,9 +632,9 @@ class DeclarativeGenerator(TablesGenerator):
 
         # Add the imports
         if _sqla_version < (1, 4):
-            self.collector.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
+            self.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
         else:
-            self.collector.add_literal_import('sqlalchemy.orm', 'declarative_base')
+            self.add_literal_import('sqlalchemy.orm', 'declarative_base')
 
         declarations = [f'{self.base_class_name} = declarative_base()']
         if any(not isinstance(model, ModelClass) for model in models):
@@ -692,7 +743,7 @@ class DeclarativeGenerator(TablesGenerator):
 
     def render_relationship(self, attrname: str, relationship: Relationship) -> str:
         # Add imports
-        self.collector.add_literal_import('sqlalchemy.orm', 'relationship')
+        self.add_literal_import('sqlalchemy.orm', 'relationship')
 
         # Render keyword arguments
         kwargs: Dict[str, Any] = OrderedDict()
@@ -770,15 +821,15 @@ class DataclassGenerator(DeclarativeGenerator):
             return super().render_module_variables(models)
 
         declarations: List[str] = []
-        self.collector.add_literal_import('dataclasses', 'dataclass')
-        self.collector.add_literal_import('dataclasses', 'field')
-        self.collector.add_literal_import('sqlalchemy.orm', 'registry')
+        self.add_literal_import('dataclasses', 'dataclass')
+        self.add_literal_import('dataclasses', 'field')
+        self.add_literal_import('sqlalchemy.orm', 'registry')
         declarations.append('mapper_registry = registry()')
         if any(not isinstance(model, ModelClass) for model in models):
             declarations.append('metadata = mapper_registry.metadata')
 
         if not self.quote_annotations:
-            self.collector.add_literal_import('__future__', 'annotations')
+            self.add_literal_import('__future__', 'annotations')
 
         return '\n'.join(declarations)
 
@@ -795,17 +846,17 @@ class DataclassGenerator(DeclarativeGenerator):
         try:
             python_type = column.type.python_type
         except NotImplementedError:
-            self.collector.add_literal_import('typing', 'Any')
+            self.add_literal_import('typing', 'Any')
             python_type_name = 'Any'
         else:
-            self.collector.add_import(python_type)
+            self.add_import(python_type)
             python_type_name = python_type.__name__
 
         kwargs: Dict[str, Any] = OrderedDict()
         if column.autoincrement and column.name in column.table.primary_key:
             kwargs['init'] = False
         elif column.nullable:
-            self.collector.add_literal_import('typing', 'Optional')
+            self.add_literal_import('typing', 'Optional')
             kwargs['default'] = None
             python_type_name = f'Optional[{python_type_name}]'
 
@@ -823,13 +874,13 @@ class DataclassGenerator(DeclarativeGenerator):
             annotation = repr(relationship.target.name)
 
         if relationship.type is RelationshipType.MANY_TO_MANY:
-            self.collector.add_literal_import('typing', 'List')
+            self.add_literal_import('typing', 'List')
             annotation = f'List[{annotation}]'
             kwargs['default_factory'] = 'list'
         else:
             if relationship.constraint:
                 if all(column.nullable for column in relationship.constraint.columns):
-                    self.collector.add_literal_import('typing', 'Optional')
+                    self.add_literal_import('typing', 'Optional')
                     kwargs['default'] = 'None'
                     annotation = f'Optional[{annotation}]'
 
