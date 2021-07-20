@@ -9,7 +9,7 @@ from sqlalchemy.schema import (
     CheckConstraint, Column, ForeignKey, ForeignKeyConstraint, Index, MetaData, Table,
     UniqueConstraint)
 from sqlalchemy.sql.expression import text
-from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR
+from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
 
 from sqlacodegen.generators import (
     CodeGenerator, DataclassGenerator, DeclarativeGenerator, TablesGenerator, _sqla_version)
@@ -42,7 +42,7 @@ def maybe_quote(obj) -> str:
 
 
 @pytest.fixture
-def engine(request):
+def engine(request: FixtureRequest) -> Engine:
     dialect = getattr(request, 'param', None)
     if dialect == 'postgresql':
         return create_engine('postgresql:///testdb')
@@ -53,7 +53,7 @@ def engine(request):
 
 
 @pytest.fixture
-def metadata():
+def metadata() -> MetaData:
     return MetaData()
 
 
@@ -130,6 +130,46 @@ t_simple_items = Table(
     'simple_items', metadata,
     Column('dp_array', ARRAY(Float(precision=53))),
     Column('int_array', ARRAY(Integer()))
+)
+"""
+
+    @pytest.mark.parametrize('engine', ['postgresql'], indirect=['engine'])
+    def test_jsonb(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('jsonb', postgresql.JSONB(astext_type=Text(50)))
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, MetaData, Table, Text
+from sqlalchemy.dialects.postgresql import JSONB
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('jsonb', JSONB(astext_type=Text(length=50)))
+)
+"""
+
+    @pytest.mark.parametrize('engine', ['postgresql'], indirect=['engine'])
+    def test_jsonb_default(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('jsonb', postgresql.JSONB)
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, MetaData, Table
+from sqlalchemy.dialects.postgresql import JSONB
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('jsonb', JSONB)
 )
 """
 

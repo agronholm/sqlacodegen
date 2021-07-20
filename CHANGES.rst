@@ -18,6 +18,7 @@ Version history
   - ``--nojoined`` → ``--option nojoined`` (``declarative`` and ``dataclass`` generators only)
   - ``--noinflect`` → (now the default; use ``--option use_inflect`` instead)
     (``declarative`` and ``dataclass`` generators only)
+- Fixed missing import for ``JSONB`` ``astext_type`` argument
 
 **2.3.0**
 

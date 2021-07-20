@@ -16,7 +16,9 @@ import inflect
 import sqlalchemy
 from sqlalchemy import (
     ARRAY, Boolean, CheckConstraint, Column, DefaultClause, Enum, Float, ForeignKey,
-    ForeignKeyConstraint, Index, MetaData, PrimaryKeyConstraint, String, Table, UniqueConstraint)
+    ForeignKeyConstraint, Index, MetaData, PrimaryKeyConstraint, String, Table, Text,
+    UniqueConstraint)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connectable
 from sqlalchemy.exc import CompileError
 
@@ -126,7 +128,7 @@ class TablesGenerator(CodeGenerator):
 
     def add_import(self, obj: Any) -> None:
         # Don't store builtin imports
-        if obj.__module__ == 'builtins':
+        if getattr(obj, '__module__', 'builtins') == 'builtins':
             return
 
         type_ = type(obj) if not isinstance(obj, type) else obj
@@ -284,11 +286,6 @@ class TablesGenerator(CodeGenerator):
         elif isinstance(column.server_default, DefaultClause):
             # The quote escaping does not cover pathological cases but should mostly work
             default_expr = get_compiled_expression(column.server_default.arg, self.bind)
-            # if '\n' in default_expr:
-            #     server_default = f'server_default=text("""\\\n{default_expr}""")'
-            #     from pdb import set_trace; set_trace()
-            # else:
-            #     default_expr = default_expr.replace('"', '\\"')
             server_default = f'server_default=text({default_expr!r})'
 
         comment = getattr(column, 'comment', None)
@@ -338,6 +335,13 @@ class TablesGenerator(CodeGenerator):
 
         if isinstance(coltype, Enum) and coltype.name is not None:
             kwargs['name'] = repr(coltype.name)
+
+        if isinstance(coltype, JSONB):
+            # Remove astext_type if it's the default, otherwise import the type
+            if isinstance(coltype.astext_type, Text) and coltype.astext_type.length is None:
+                del kwargs['astext_type']
+            else:
+                self.add_import(coltype.astext_type)
 
         for key, value in kwargs.items():
             args.append(f'{key}={value}')
