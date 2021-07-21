@@ -540,10 +540,7 @@ class DeclarativeGenerator(TablesGenerator):
         # Add relationships
         for model in models_by_table_name.values():
             if isinstance(model, ModelClass):
-                for relationship in self.generate_relationships(model, models_by_table_name,
-                                                                links[model.table.name]):
-                    name = self.generate_relationship_name(relationship)
-                    model.relationships[name] = relationship
+                self.generate_relationships(model, models_by_table_name, links[model.table.name])
 
         # Nest inherited classes in their superclasses to ensure proper ordering
         if 'nojoined' not in self.options:
