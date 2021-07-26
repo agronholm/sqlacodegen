@@ -716,6 +716,8 @@ class SimpleContainers(Base):
 
     id = Column(Integer, primary_key=True)
 
+    simple_items = relationship('SimpleItems', back_populates='container')
+
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
@@ -723,7 +725,7 @@ class SimpleItems(Base):
     id = Column(Integer, primary_key=True)
     container_id = Column(ForeignKey('simple_containers.id'))
 
-    container = relationship('SimpleContainers')
+    container = relationship('SimpleContainers', back_populates='simple_items')
 """
 
     def test_onetomany_selfref(self, generator: CodeGenerator) -> None:
@@ -747,7 +749,10 @@ class SimpleItems(Base):
     id = Column(Integer, primary_key=True)
     parent_item_id = Column(ForeignKey('simple_items.id'))
 
-    parent_item = relationship('SimpleItems', remote_side=[id])
+    parent_item = relationship('SimpleItems', remote_side=[id], \
+back_populates='parent_item_reverse')
+    parent_item_reverse = relationship('SimpleItems', remote_side=[parent_item_id], \
+back_populates='parent_item')
 """
 
     def test_onetomany_selfref_multi(self, generator: CodeGenerator) -> None:
@@ -774,10 +779,14 @@ class SimpleItems(Base):
     parent_item_id = Column(ForeignKey('simple_items.id'))
     top_item_id = Column(ForeignKey('simple_items.id'))
 
-    parent_item = relationship('SimpleItems', remote_side=[id], \
-primaryjoin='SimpleItems.parent_item_id == SimpleItems.id')
-    top_item = relationship('SimpleItems', remote_side=[id], \
-primaryjoin='SimpleItems.top_item_id == SimpleItems.id')
+    parent_item = relationship('SimpleItems', remote_side=[id], foreign_keys=[parent_item_id], \
+back_populates='parent_item_reverse')
+    parent_item_reverse = relationship('SimpleItems', remote_side=[parent_item_id], \
+foreign_keys=[parent_item_id], back_populates='parent_item')
+    top_item = relationship('SimpleItems', remote_side=[id], foreign_keys=[top_item_id], \
+back_populates='top_item_reverse')
+    top_item_reverse = relationship('SimpleItems', remote_side=[top_item_id], \
+foreign_keys=[top_item_id], back_populates='top_item')
 """
 
     def test_onetomany_composite(self, generator: CodeGenerator) -> None:
@@ -809,6 +818,8 @@ class SimpleContainers(Base):
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
 
+    simple_items = relationship('SimpleItems', back_populates='simple_containers')
+
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
@@ -821,7 +832,7 @@ class SimpleItems(Base):
     container_id1 = Column(Integer)
     container_id2 = Column(Integer)
 
-    simple_containers = relationship('SimpleContainers')
+    simple_containers = relationship('SimpleContainers', back_populates='simple_items')
 """
 
     def test_onetomany_multiref(self, generator: CodeGenerator) -> None:
@@ -850,6 +861,11 @@ class SimpleContainers(Base):
 
     id = Column(Integer, primary_key=True)
 
+    simple_items = relationship('SimpleItems', foreign_keys=['SimpleItems.parent_container_id'], \
+back_populates='parent_container')
+    simple_items1 = relationship('SimpleItems', foreign_keys=['SimpleItems.top_container_id'], \
+back_populates='top_container')
+
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
@@ -858,10 +874,10 @@ class SimpleItems(Base):
     parent_container_id = Column(ForeignKey('simple_containers.id'))
     top_container_id = Column(ForeignKey('simple_containers.id'))
 
-    parent_container = relationship('SimpleContainers', \
-primaryjoin='SimpleItems.parent_container_id == SimpleContainers.id')
-    top_container = relationship('SimpleContainers', \
-primaryjoin='SimpleItems.top_container_id == SimpleContainers.id')
+    parent_container = relationship('SimpleContainers', foreign_keys=[parent_container_id], \
+back_populates='simple_items')
+    top_container = relationship('SimpleContainers', foreign_keys=[top_container_id], \
+back_populates='simple_items1')
 """
 
     def test_onetoone(self, generator: CodeGenerator) -> None:
@@ -889,6 +905,8 @@ class OtherItems(Base):
 
     id = Column(Integer, primary_key=True)
 
+    simple_items = relationship('SimpleItems', uselist=False, back_populates='other_item')
+
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
@@ -896,7 +914,7 @@ class SimpleItems(Base):
     id = Column(Integer, primary_key=True)
     other_item_id = Column(ForeignKey('other_items.id'), unique=True)
 
-    other_item = relationship('OtherItems', uselist=False)
+    other_item = relationship('OtherItems', back_populates='simple_items')
 """
 
     def test_onetomany_noinflect(self, generator: CodeGenerator) -> None:
@@ -923,6 +941,8 @@ class Fehwiuhfiw(Base):
 
     id = Column(Integer, primary_key=True)
 
+    oglkrogk = relationship('Oglkrogk', back_populates='fehwiuhfiw')
+
 
 class Oglkrogk(Base):
     __tablename__ = 'oglkrogk'
@@ -930,10 +950,96 @@ class Oglkrogk(Base):
     id = Column(Integer, primary_key=True)
     fehwiuhfiwID = Column(ForeignKey('fehwiuhfiw.id'))
 
-    fehwiuhfiw = relationship('Fehwiuhfiw')
+    fehwiuhfiw = relationship('Fehwiuhfiw', back_populates='oglkrogk')
+"""
+
+    @pytest.mark.parametrize('generator', [['nobidi']], indirect=True)
+    def test_manytoone_nobidi(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('container_id', INTEGER),
+            ForeignKeyConstraint(['container_id'], ['simple_containers.id']),
+        )
+        Table(
+            'simple_containers', generator.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+
+        assert generator.generate() == f"""\
+from sqlalchemy import Column, ForeignKey, Integer
+{orm_imports}
+
+Base = declarative_base()
+
+
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
+
+    id = Column(Integer, primary_key=True)
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    container_id = Column(ForeignKey('simple_containers.id'))
+
+    container = relationship('SimpleContainers')
 """
 
     def test_manytomany(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+        Table(
+            'simple_containers', generator.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+        Table(
+            'container_items', generator.metadata,
+            Column('item_id', INTEGER),
+            Column('container_id', INTEGER),
+            ForeignKeyConstraint(['item_id'], ['simple_items.id']),
+            ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
+        )
+
+        assert generator.generate() == f"""\
+from sqlalchemy import Column, ForeignKey, Integer, Table
+{orm_imports}
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
+
+    id = Column(Integer, primary_key=True)
+
+    item = relationship('SimpleItems', secondary='container_items', \
+back_populates='container')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+
+    container = relationship('SimpleContainers', secondary='container_items', \
+back_populates='item')
+
+
+t_container_items = Table(
+    'container_items', metadata,
+    Column('item_id', ForeignKey('simple_items.id')),
+    Column('container_id', ForeignKey('simple_containers.id'))
+)
+"""
+
+    @pytest.mark.parametrize('generator', [['nobidi']], indirect=True)
+    def test_manytomany_nobidi(self, generator: CodeGenerator) -> None:
         Table(
             'simple_items', generator.metadata,
             Column('id', INTEGER, primary_key=True)
@@ -1008,7 +1114,10 @@ class SimpleItems(Base):
 
     parent = relationship('SimpleItems', secondary='otherschema.child_items', \
 primaryjoin='SimpleItems.id == t_child_items.c.child_id', \
-secondaryjoin='SimpleItems.id == t_child_items.c.parent_id')
+secondaryjoin='SimpleItems.id == t_child_items.c.parent_id', back_populates='parent_reverse')
+    parent_reverse = relationship('SimpleItems', secondary='otherschema.child_items', \
+primaryjoin='SimpleItems.id == t_child_items.c.parent_id', \
+secondaryjoin='SimpleItems.id == t_child_items.c.child_id', back_populates='parent')
 
 
 t_child_items = Table(
@@ -1056,7 +1165,8 @@ class SimpleContainers(Base):
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
 
-    simple_items = relationship('SimpleItems', secondary='container_items')
+    simple_items = relationship('SimpleItems', secondary='container_items', \
+back_populates='simple_containers')
 
 
 class SimpleItems(Base):
@@ -1064,6 +1174,9 @@ class SimpleItems(Base):
 
     id1 = Column(Integer, primary_key=True, nullable=False)
     id2 = Column(Integer, primary_key=True, nullable=False)
+
+    simple_containers = relationship('SimpleContainers', secondary='container_items', \
+back_populates='simple_items')
 
 
 t_container_items = Table(
@@ -1219,6 +1332,8 @@ class OtherItems(Base):
 
     id = Column(Integer, primary_key=True)
 
+    simple_items = relationship('SimpleItems', back_populates='other_item')
+
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
@@ -1226,7 +1341,7 @@ class SimpleItems(Base):
     id = Column(Integer, primary_key=True)
     other_item_id = Column(ForeignKey('otherschema.other_items.id'))
 
-    other_item = relationship('OtherItems')
+    other_item = relationship('OtherItems', back_populates='simple_items')
 """
 
     def test_invalid_attribute_names(self, generator: CodeGenerator) -> None:
@@ -1424,7 +1539,7 @@ class Simple:
 
         assert generator.generate() == f"""\
 {future_imports}from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import registry, relationship
@@ -1440,6 +1555,9 @@ class SimpleContainers:
 
     id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
 
+    simple_items: List[{maybe_quote('SimpleItems')}] = field(default_factory=list, \
+metadata={{'sa': relationship('SimpleItems', back_populates='container')}})
+
 
 @mapper_registry.mapped
 @dataclass
@@ -1452,7 +1570,7 @@ class SimpleItems:
 metadata={{'sa': Column(ForeignKey('simple_containers.id'))}})
 
     container: Optional[{maybe_quote('SimpleContainers')}] = field(default=None, \
-metadata={{'sa': relationship('SimpleContainers')}})
+metadata={{'sa': relationship('SimpleContainers', back_populates='simple_items')}})
 """
 
     def test_onetomany_mandatory(self, generator: CodeGenerator) -> None:
@@ -1469,6 +1587,7 @@ metadata={{'sa': relationship('SimpleContainers')}})
 
         assert generator.generate() == f"""\
 {future_imports}from dataclasses import dataclass, field
+from typing import List
 
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import registry, relationship
@@ -1484,6 +1603,9 @@ class SimpleContainers:
 
     id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
 
+    simple_items: List[{maybe_quote('SimpleItems')}] = field(default_factory=list, \
+metadata={{'sa': relationship('SimpleItems', back_populates='container')}})
+
 
 @mapper_registry.mapped
 @dataclass
@@ -1496,7 +1618,7 @@ class SimpleItems:
 metadata={{'sa': Column(ForeignKey('simple_containers.id'), nullable=False)}})
 
     container: {maybe_quote('SimpleContainers')} = field(\
-metadata={{'sa': relationship('SimpleContainers')}})
+metadata={{'sa': relationship('SimpleContainers', back_populates='simple_items')}})
 """
 
     def test_manytomany(self, generator: CodeGenerator) -> None:
@@ -1536,7 +1658,7 @@ class SimpleContainers:
     id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
 
     item: List[{maybe_quote('SimpleItems')}] = field(default_factory=list, metadata=\
-{{'sa': relationship('SimpleItems', secondary='container_items')}})
+{{'sa': relationship('SimpleItems', secondary='container_items', back_populates='container')}})
 
 
 @mapper_registry.mapped
@@ -1546,6 +1668,9 @@ class SimpleItems:
     __sa_dataclass_metadata_key__ = 'sa'
 
     id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
+
+    container: List[{maybe_quote('SimpleContainers')}] = field(default_factory=list, metadata=\
+{{'sa': relationship('SimpleContainers', secondary='container_items', back_populates='item')}})
 
 
 t_container_items = Table(

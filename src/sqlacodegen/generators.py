@@ -491,7 +491,8 @@ class TablesGenerator(CodeGenerator):
 
 
 class DeclarativeGenerator(TablesGenerator):
-    valid_options: ClassVar[Set[str]] = TablesGenerator.valid_options | {'use_inflect', 'nojoined'}
+    valid_options: ClassVar[Set[str]] = TablesGenerator.valid_options | {'use_inflect', 'nojoined',
+                                                                         'nobidi'}
 
     def __init__(self, metadata: MetaData, bind: Connectable, options: Set[str], *,
                  indentation: str = '    ', base_class_name: str = 'Base'):
@@ -571,7 +572,7 @@ class DeclarativeGenerator(TablesGenerator):
                                association_tables: List[Model]) -> List[Relationship]:
         relationships: List[Relationship] = []
 
-        # Add many-to-one relationships
+        # Add many-to-one (and one-to-many) relationships
         pk_column_names = set(col.name for col in source.table.primary_key.columns)
         for constraint in sorted(source.table.foreign_key_constraints,
                                  key=get_constraint_sort_key):
@@ -598,6 +599,38 @@ class DeclarativeGenerator(TablesGenerator):
                 name = self.generate_relationship_name(relationship)
                 source.relationships[name] = relationship
 
+                # For self referential relationships, remote_side needs to be set
+                if source is target:
+                    relationship.remote_side = [
+                        col.name for col in constraint.referred_table.primary_key]
+
+                # If the two tables share more than one foreign key constraint,
+                # SQLAlchemy needs an explicit primaryjoin to figure out which column(s) it needs
+                common_fk_constraints = get_common_fk_constraints(source.table, target.table)
+                if len(common_fk_constraints) > 1:
+                    relationship.foreign_keys = constraint.column_keys
+
+                # Generate the opposite end of the relationship in the target class
+                if 'nobidi' not in self.options:
+                    if r_type is RelationshipType.MANY_TO_ONE:
+                        r_type = RelationshipType.ONE_TO_MANY
+
+                    reverse_relationship = Relationship(r_type, target, source, constraint,
+                                                        backref=name)
+                    name = relationship.backref = self.generate_relationship_name(
+                        reverse_relationship)
+                    target.relationships[name] = reverse_relationship
+
+                    # For self referential relationships, remote_side needs to be set
+                    if source is target:
+                        reverse_relationship.remote_side = constraint.column_keys
+
+                    for c in relationship.foreign_keys:
+                        if source is not target:
+                            reverse_relationship.foreign_keys.append(repr(f'{source.name}.{c}'))
+                        else:
+                            reverse_relationship.foreign_keys.append(c)
+
         # Add many-to-many relationships
         for association_table in association_tables:
             fk_constraints = sorted(association_table.table.foreign_key_constraints,
@@ -609,23 +642,76 @@ class DeclarativeGenerator(TablesGenerator):
                 name = self.generate_relationship_name(relationship)
                 source.relationships[name] = relationship
 
+                # Generate the opposite end of the relationship in the target class
+                backref = None
+                if 'nobidi' not in self.options:
+                    backref = Relationship(RelationshipType.MANY_TO_MANY, target, source,
+                                           fk_constraints[0], association_table, name)
+                    name = relationship.backref = self.generate_relationship_name(backref)
+                    target.relationships[name] = backref
+
+                # Add a primary/secondary join for self-referential many-to-many relationships
+                if source is target:
+                    both_relationships = [relationship]
+                    reverse_flags = [False, True]
+                    if backref:
+                        both_relationships.append(backref)
+
+                    for relationship, reverse in zip(both_relationships, reverse_flags):
+                        if not relationship.association_table or not relationship.constraint:
+                            continue
+
+                        constraints = sorted(relationship.constraint.table.foreign_key_constraints,
+                                             key=get_constraint_sort_key, reverse=reverse)
+                        pri_pairs = zip(get_column_names(constraints[0]), constraints[0].elements)
+                        sec_pairs = zip(get_column_names(constraints[1]), constraints[1].elements)
+                        pri_joins = [f'{relationship.source.name}.{elem.column.name} == '
+                                     f'{relationship.association_table.name}.c.{col}'
+                                     for col, elem in pri_pairs]
+                        sec_joins = [f'{relationship.target.name}.{elem.column.name} == '
+                                     f'{relationship.association_table.name}.c.{col}'
+                                     for col, elem in sec_pairs]
+                        relationship.primaryjoin = (
+                            f'and_({", ".join(pri_joins)})'
+                            if len(pri_joins) > 1 else repr(pri_joins[0]))
+                        relationship.secondaryjoin = (
+                            f'and_({", ".join(sec_joins)})'
+                            if len(sec_joins) > 1 else repr(sec_joins[0]))
+
         return relationships
 
     def generate_relationship_name(self, relationship: Relationship) -> str:
-        if relationship.constraint:
-            column_names = [c.name for c in relationship.constraint.columns]
-            if len(column_names) == 1:
-                colname = column_names[0]
-                if colname.endswith('_id'):
-                    return colname[:-3]
+        # Self referential reverse relationships
+        if relationship.source is relationship.target and relationship.backref:
+            name = relationship.backref + '_reverse'
+        else:
+            name = relationship.target.table.name
 
-        if 'use_inflect' in self.options:
-            if relationship.type in (RelationshipType.ONE_TO_MANY, RelationshipType.MANY_TO_MANY):
-                return self.inflect_engine.plural_noun(relationship.target.table.name)
+            # If there's a constraint with a single column that ends with "_id", use the preceding
+            # part as the relationship name
+            if relationship.constraint:
+                is_source = relationship.source.table is relationship.constraint.table
+                if is_source or relationship.type not in (RelationshipType.ONE_TO_ONE,
+                                                          RelationshipType.ONE_TO_MANY):
+                    column_names = [c.name for c in relationship.constraint.columns]
+                    if len(column_names) == 1 and column_names[0].endswith('_id'):
+                        name = column_names[0][:-3]
+
+            if 'use_inflect' in self.options:
+                if relationship.type in (RelationshipType.ONE_TO_MANY,
+                                         RelationshipType.MANY_TO_MANY):
+                    name = self.inflect_engine.plural_noun(name)
+                else:
+                    name = self.inflect_engine.singular_noun(name)
+
+        original_name = name
+        for i in count(1):
+            if name in relationship.source.columns or name in relationship.source.relationships:
+                name = original_name + str(i)
             else:
-                return self.inflect_engine.singular_noun(relationship.target.table.name)
+                break
 
-        return relationship.target.table.name
+        return self.convert_to_valid_identifier(name)
 
     def render_module_variables(self, models: List[Model]) -> str:
         if not any(isinstance(model, ModelClass) for model in models):
@@ -748,55 +834,32 @@ class DeclarativeGenerator(TablesGenerator):
 
         # Render keyword arguments
         kwargs: Dict[str, Any] = OrderedDict()
-        if relationship.type is RelationshipType.ONE_TO_ONE:
-            kwargs['uselist'] = False
+        if relationship.type is RelationshipType.ONE_TO_ONE and relationship.constraint:
+            if relationship.constraint.referred_table is relationship.source.table:
+                kwargs['uselist'] = False
 
-        if relationship.constraint:
-            # Add the "secondary" keyword for many-to-many relationships
-            if relationship.constraint.table is not relationship.source.table:
-                table_ref = relationship.constraint.table.name
-                if relationship.constraint.table.schema:
-                    table_ref = f'{relationship.constraint.table.schema}.{table_ref}'
+        # Add the "secondary" keyword for many-to-many relationships
+        if relationship.association_table:
+            table_ref = relationship.association_table.table.name
+            if relationship.association_table.schema:
+                table_ref = f'{relationship.association_table.schema}.{table_ref}'
 
-                kwargs['secondary'] = repr(table_ref)
+            kwargs['secondary'] = repr(table_ref)
 
-            # Handle self-referential relationships
-            if relationship.source.name == relationship.target.name:
-                # Add a primary/secondary join for self-referential many-to-many relationships
-                if relationship.association_table:
-                    constraints = sorted(relationship.constraint.table.foreign_key_constraints,
-                                         key=get_constraint_sort_key)
-                    pri_pairs = zip(get_column_names(constraints[0]), constraints[0].elements)
-                    sec_pairs = zip(get_column_names(constraints[1]), constraints[1].elements)
-                    pri_joins = [f'{relationship.source.name}.{elem.column.name} == '
-                                 f'{relationship.association_table.name}.c.{col}'
-                                 for col, elem in pri_pairs]
-                    sec_joins = [f'{relationship.target.name}.{elem.column.name} == '
-                                 f'{relationship.association_table.name}.c.{col}'
-                                 for col, elem in sec_pairs]
-                    kwargs['primaryjoin'] = (
-                        repr(f'and_({", ".join(pri_joins)})')
-                        if len(pri_joins) > 1 else repr(pri_joins[0]))
-                    kwargs['secondaryjoin'] = (
-                        repr(f'and_({", ".join(sec_joins)})')
-                        if len(sec_joins) > 1 else repr(sec_joins[0]))
-                else:
-                    column_names = [
-                        c.name for c in relationship.constraint.referred_table.primary_key.columns]
-                    kwargs['remote_side'] = '[' + ', '.join(column_names) + ']'
+        if relationship.remote_side:
+            kwargs['remote_side'] = '[' + ', '.join(relationship.remote_side) + ']'
 
-            # If the two tables share more than one foreign key constraint,
-            # SQLAlchemy needs an explicit primaryjoin to figure out which column(s) it needs
-            if not relationship.association_table:
-                common_fk_constraints = get_common_fk_constraints(
-                    relationship.constraint.table,
-                    relationship.constraint.elements[0].column.table)
-                if len(common_fk_constraints) > 1 and 'primaryjoin' not in kwargs:
-                    source_column_name = relationship.constraint.column_keys[0]
-                    target_column_name = relationship.constraint.elements[0].column.name
-                    kwargs['primaryjoin'] = repr(
-                        f"{relationship.source.name}.{source_column_name} == "
-                        f"{relationship.target.name}.{target_column_name}")
+        if relationship.foreign_keys:
+            kwargs['foreign_keys'] = '[' + ', '.join(relationship.foreign_keys) + ']'
+
+        if relationship.primaryjoin:
+            kwargs['primaryjoin'] = relationship.primaryjoin
+
+        if relationship.secondaryjoin:
+            kwargs['secondaryjoin'] = relationship.secondaryjoin
+
+        if relationship.backref:
+            kwargs['back_populates'] = repr(relationship.backref)
 
         rendered_kwargs = ''
         if kwargs:
@@ -874,7 +937,7 @@ class DataclassGenerator(DeclarativeGenerator):
         if self.quote_annotations:
             annotation = repr(relationship.target.name)
 
-        if relationship.type is RelationshipType.MANY_TO_MANY:
+        if relationship.type in (RelationshipType.ONE_TO_MANY, RelationshipType.MANY_TO_MANY):
             self.add_literal_import('typing', 'List')
             annotation = f'List[{annotation}]'
             kwargs['default_factory'] = 'list'

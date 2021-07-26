@@ -38,3 +38,8 @@ class Relationship:
     target: ModelClass
     constraint: Optional[ForeignKeyConstraint] = None
     association_table: Optional[Model] = None
+    backref: Optional[str] = None
+    remote_side: List[str] = field(default_factory=list)
+    foreign_keys: List[str] = field(default_factory=list)
+    primaryjoin: Optional[str] = None
+    secondaryjoin: Optional[str] = None

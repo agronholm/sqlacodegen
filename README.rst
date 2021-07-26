@@ -81,6 +81,8 @@ times):
   * ``use_inflect``: use the ``inflect`` library when naming classes and relationships
     (turning plural names into singular; see below for details)
   * ``nojoined``: don't try to detect joined-class inheritance (see below for details)
+  * ``nobidi``: generate relationships in a unidirectional fashion, so only the many-to-one
+    or first side of many-to-many relationships gets a relationship attribute, as on v2.X
 
 * ``dataclasses``
 

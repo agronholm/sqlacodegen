@@ -6,6 +6,7 @@ Version history
 - Dropped support for Python < 3.6
 - Added support for Python 3.10
 - Added support for SQLAlchemy 1.4
+- Added support for bidirectional relationships (use ``--option nobidi``) to disable
 - Disabled inflection during table/relationship name generation by default
   (use ``--option use_inflect`` to re-enable)
 - Refactored the old ``CodeGenerator`` class into separate generator classes, selectable via
