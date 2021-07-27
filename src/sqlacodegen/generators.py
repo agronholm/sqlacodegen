@@ -10,19 +10,20 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, cast
+from typing import Any, ClassVar, DefaultDict, Dict, Iterable, List, Optional, Set, cast
 
 import inflect
 import sqlalchemy
 from sqlalchemy import (
-    ARRAY, Boolean, CheckConstraint, Column, DefaultClause, Enum, Float, ForeignKey,
+    ARRAY, Boolean, CheckConstraint, Column, Constraint, DefaultClause, Enum, Float, ForeignKey,
     ForeignKeyConstraint, Index, MetaData, PrimaryKeyConstraint, String, Table, Text,
     UniqueConstraint)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connectable
 from sqlalchemy.exc import CompileError
 
-from .models import Model, ModelClass, Relationship, RelationshipType
+from .models import (
+    ColumnAttribute, JoinType, Model, ModelClass, RelationshipAttribute, RelationshipType)
 from .utils import (
     get_column_names, get_common_fk_constraints, get_compiled_expression, get_constraint_sort_key)
 
@@ -77,7 +78,6 @@ class TablesGenerator(CodeGenerator):
         super().__init__(metadata, bind, options)
         self.indentation = indentation
         self.imports: Dict[str, Set] = defaultdict(set)
-        self.module_variables: Set[str] = set()
 
     def generate(self) -> str:
         sections: List[str] = []
@@ -108,6 +108,12 @@ class TablesGenerator(CodeGenerator):
         # Generate the models
         models: List[Model] = self.generate_models()
 
+        # Render collected imports
+        groups = self.group_imports()
+        imports = '\n\n'.join('\n'.join(line for line in group) for group in groups)
+        if imports:
+            sections.append(imports)
+
         # Render module level variables
         variables = self.render_module_variables(models)
         if variables:
@@ -118,13 +124,63 @@ class TablesGenerator(CodeGenerator):
         if rendered_models:
             sections.append(rendered_models)
 
-        # Render collected imports
-        groups = self.group_imports()
-        imports = '\n\n'.join('\n'.join(line for line in group) for group in groups)
-        if imports:
-            sections.insert(0, imports)
-
         return '\n\n'.join(sections) + '\n'
+
+    def collect_imports(self, models: Iterable[Model]) -> None:
+        self.collect_global_imports()
+        for model in models:
+            self.collect_imports_for_model(model)
+
+    def collect_global_imports(self) -> None:
+        self.add_import(MetaData)
+
+    def collect_imports_for_model(self, model: Model) -> None:
+        if model.__class__ is Model:
+            self.add_import(Table)
+
+        for column in model.table.c:
+            self.collect_imports_for_column(column)
+
+        for constraint in model.table.constraints:
+            self.collect_imports_for_constraint(constraint)
+
+        for index in model.table.indexes:
+            self.collect_imports_for_index(index)
+
+    def collect_imports_for_column(self, column: Column) -> None:
+        self.add_import(Column)
+        self.add_import(column.type)
+
+        if isinstance(column.type, ARRAY):
+            self.add_import(column.type.item_type.__class__)
+        elif isinstance(column.type, JSONB):
+            if (not isinstance(column.type.astext_type, Text)
+                    or column.type.astext_type.length is not None):
+                self.add_import(column.type.astext_type)
+
+        if column.server_default:
+            if Computed and isinstance(column.server_default, Computed):
+                self.add_literal_import('sqlalchemy', 'Computed')
+            else:
+                self.add_literal_import('sqlalchemy', 'text')
+
+    def collect_imports_for_constraint(self, constraint: Constraint) -> None:
+        if isinstance(constraint, PrimaryKeyConstraint):
+            pass
+        elif isinstance(constraint, UniqueConstraint):
+            if len(constraint.columns) > 1:
+                self.add_literal_import('sqlalchemy', 'UniqueConstraint')
+        elif isinstance(constraint, ForeignKeyConstraint):
+            if len(constraint.columns) > 1:
+                self.add_literal_import('sqlalchemy', 'ForeignKeyConstraint')
+            else:
+                self.add_import(ForeignKey)
+        else:
+            self.add_import(constraint)
+
+    def collect_imports_for_index(self, index: Index) -> None:
+        if len(index.columns) > 1:
+            self.add_import(Index)
 
     def add_import(self, obj: Any) -> None:
         # Don't store builtin imports
@@ -153,7 +209,6 @@ class TablesGenerator(CodeGenerator):
     def add_literal_import(self, pkgname: str, name: str) -> None:
         names = self.imports.setdefault(pkgname, set())
         names.add(name)
-        self.module_variables.add(name)
 
     def group_imports(self) -> List[List[str]]:
         future_imports: List[str] = []
@@ -175,14 +230,28 @@ class TablesGenerator(CodeGenerator):
         return [group for group in (future_imports, stdlib_imports, thirdparty_imports) if group]
 
     def generate_models(self) -> List[Model]:
-        return [Model(self.generate_table_variable_name(table), table)
-                for table in self.metadata.sorted_tables]
+        models = [Model(self.generate_table_variable_name(table), table)
+                  for table in self.metadata.sorted_tables]
+
+        # Collect the imports
+        self.collect_imports(models)
+
+        # Rename models that conflict with imports
+        global_names = set(name for namespace in self.imports.values() for name in namespace)
+        for model in models:
+            self.fix_model_conflicts(model, global_names)
+
+        return models
+
+    def fix_model_conflicts(self, model: Model, global_names: Set[str]) -> None:
+        name = self.generate_table_variable_name(model.table)
+        model.name = self.find_free_name(name, global_names, set())
+        global_names.add(model.name)
 
     def generate_table_variable_name(self, table: Table) -> str:
-        return self.convert_to_valid_identifier(f't_{table.name}')
+        return f't_{table.name}'
 
     def render_module_variables(self, models: List[Model]) -> str:
-        self.add_import(MetaData)
         return 'metadata = MetaData()'
 
     def render_models(self, models: List[Model]) -> str:
@@ -194,9 +263,6 @@ class TablesGenerator(CodeGenerator):
         return '\n\n'.join(rendered)
 
     def render_table(self, table: Table) -> str:
-        # Add imports
-        self.add_import(Table)
-
         args: List[str] = [f'{table.name!r}, metadata']
         for column in table.columns:
             # Cast is required because of a bug in the SQLAlchemy stubs regarding Table.columns
@@ -227,9 +293,6 @@ class TablesGenerator(CodeGenerator):
         return f'Table(\n{self.indentation}{rendered_args}\n)'
 
     def render_index(self, index: Index) -> str:
-        # Add imports
-        self.add_import(Index)
-
         extra_args = [repr(col.name) for col in index.columns]
         if index.unique:
             extra_args.append('unique=True')
@@ -237,14 +300,6 @@ class TablesGenerator(CodeGenerator):
         return f'Index({index.name!r}, {", ".join(extra_args)})'
 
     def render_column(self, column: Column, show_name: bool) -> str:
-        # Add imports
-        self.add_import(Column)
-        if column.server_default:
-            if Computed and isinstance(column.server_default, Computed):
-                self.add_literal_import('sqlalchemy', 'Computed')
-            else:
-                self.add_literal_import('sqlalchemy', 'text')
-
         kwarg = []
         is_sole_pk = column.primary_key and len(column.table.primary_key) == 1
         dedicated_fks = [c for c in column.foreign_keys
@@ -275,7 +330,6 @@ class TablesGenerator(CodeGenerator):
             kwarg.append('index')
 
         if Computed and isinstance(column.server_default, Computed):
-            self.add_import(Computed)
             expression = get_compiled_expression(column.server_default.sqltext, self.bind)
 
             persist_arg = ''
@@ -300,11 +354,6 @@ class TablesGenerator(CodeGenerator):
         ))
 
     def render_column_type(self, coltype: Any) -> str:
-        # Add imports
-        self.add_import(coltype)
-        if isinstance(coltype, ARRAY):
-            self.add_import(coltype.item_type.__class__)
-
         args = []
         kwargs: Dict[str, Any] = OrderedDict()
         sig = inspect.signature(coltype.__class__.__init__)
@@ -337,11 +386,9 @@ class TablesGenerator(CodeGenerator):
             kwargs['name'] = repr(coltype.name)
 
         if isinstance(coltype, JSONB):
-            # Remove astext_type if it's the default, otherwise import the type
+            # Remove astext_type if it's the default
             if isinstance(coltype.astext_type, Text) and coltype.astext_type.length is None:
                 del kwargs['astext_type']
-            else:
-                self.add_import(coltype.astext_type)
 
         for key, value in kwargs.items():
             args.append(f'{key}={value}')
@@ -361,15 +408,6 @@ class TablesGenerator(CodeGenerator):
                     options.append(f'{attr}={value!r}')
 
             return ', '.join(options)
-
-        # Add imports
-        if isinstance(constraint, PrimaryKeyConstraint):
-            pass
-        elif isinstance(constraint, UniqueConstraint):
-            if len(constraint.columns) > 1:
-                self.add_literal_import('sqlalchemy', 'UniqueConstraint')
-        else:
-            self.add_import(constraint)
 
         if isinstance(constraint, ForeignKey):
             remote_column = f'{constraint.column.table.fullname}.{constraint.column.name}'
@@ -394,8 +432,8 @@ class TablesGenerator(CodeGenerator):
         # Support for Alembic and sqlalchemy-migrate -- never expose the schema version tables
         return table.name in ('alembic_version', 'migrate_version')
 
-    def convert_to_valid_identifier(self, name: str) -> str:
-        assert isinstance(name, str)
+    def find_free_name(self, name: str, global_names: Set[str], local_names: Set[str]) -> str:
+        """Generate an attribute name that does not clash with other local or global names."""
         assert name, 'Identifier cannot be empty'
         name = _re_invalid_identifier.sub('_', name)
         if name[0].isdigit():
@@ -403,10 +441,13 @@ class TablesGenerator(CodeGenerator):
         elif iskeyword(name):
             name += '_'
 
-        while name in self.module_variables:
-            name += '_'
+        original = name
+        for i in count():
+            if name not in global_names and name not in local_names:
+                break
 
-        assert name.isidentifier()
+            name = original + (str(i) if i else '_')
+
         return name
 
     def fix_column_types(self, table: Table) -> None:
@@ -500,6 +541,38 @@ class DeclarativeGenerator(TablesGenerator):
         self.base_class_name = base_class_name
         self.inflect_engine = inflect.engine()
 
+    def fix_model_conflicts(self, model: Model, global_names: Set[str]) -> None:
+        if isinstance(model, ModelClass):
+            preferred_name = self.generate_class_name(model)
+            model.name = self.find_free_name(preferred_name, global_names, set())
+            global_names.add(model.name)
+
+            local_names: Set[str] = set()
+            for column_attr in model.columns:
+                preferred_name = self.generate_column_attr_name(column_attr)
+                column_attr.name = self.find_free_name(preferred_name, global_names, local_names)
+                local_names.add(column_attr.name)
+
+            for relationship_attr in model.relationships:
+                preferred_name = self.generate_relationship_name(relationship_attr)
+                relationship_attr.name = self.find_free_name(preferred_name, global_names,
+                                                             local_names)
+                local_names.add(relationship_attr.name)
+        else:
+            super().fix_model_conflicts(model, global_names)
+
+    def collect_global_imports(self) -> None:
+        if _sqla_version < (1, 4):
+            self.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
+        else:
+            self.add_literal_import('sqlalchemy.orm', 'declarative_base')
+
+    def collect_imports_for_model(self, model: Model) -> None:
+        super().collect_imports_for_model(model)
+        if isinstance(model, ModelClass):
+            if model.relationships:
+                self.add_literal_import('sqlalchemy.orm', 'relationship')
+
     def generate_models(self) -> List[Model]:
         models_by_table_name: Dict[str, Model] = OrderedDict()
 
@@ -522,21 +595,13 @@ class DeclarativeGenerator(TablesGenerator):
                 variable_name = self.generate_table_variable_name(table)
                 models_by_table_name[table.name] = Model(variable_name, table)
             else:
-                class_name = self.generate_class_name(table)
-                model = ModelClass(class_name, table)
+                model = ModelClass('', table)
                 models_by_table_name[table.name] = model
 
                 # Fill in the columns
                 for column in table.c:
-                    # Assign a non-conflicting attribute name
-                    attrname = orig_name = self.convert_to_valid_identifier(column.name)
-                    for i in count(1):
-                        if attrname not in model.columns:
-                            break
-
-                        attrname = f'{orig_name}{i}'
-
-                    model.columns[attrname] = column
+                    column_attr = ColumnAttribute('', model, column)
+                    model.columns.append(column_attr)
 
         # Add relationships
         for model in models_by_table_name.values():
@@ -557,20 +622,32 @@ class DeclarativeGenerator(TablesGenerator):
                             model.parent_class = target
                             target.children.append(model)
 
+        # Collect the imports
+        self.collect_imports(models_by_table_name.values())
+
+        # Rename models and their attributes that conflict with imports or other attributes
+        global_names = set(name for namespace in self.imports.values() for name in namespace)
+        for model in models_by_table_name.values():
+            self.fix_model_conflicts(model, global_names)
+
         return list(models_by_table_name.values())
 
-    def generate_class_name(self, table: Table) -> str:
-        class_name = _re_invalid_identifier.sub('_', table.name)
+    def generate_class_name(self, model: ModelClass) -> str:
+        class_name = _re_invalid_identifier.sub('_', model.table.name)
         class_name = ''.join(part[:1].upper() + part[1:] for part in class_name.split('_'))
         if 'use_inflect' in self.options:
             class_name = self.inflect_engine.singular_noun(class_name)
 
-        return self.convert_to_valid_identifier(class_name)
+        return class_name
+
+    def generate_column_attr_name(self, column_attr: ColumnAttribute) -> str:
+        return column_attr.column.name
 
     def generate_relationships(self, source: ModelClass,
                                models_by_table_name: Dict[str, Model],
-                               association_tables: List[Model]) -> List[Relationship]:
-        relationships: List[Relationship] = []
+                               association_tables: List[Model]) -> List[RelationshipAttribute]:
+        relationships: List[RelationshipAttribute] = []
+        reverse_relationship: Optional[RelationshipAttribute]
 
         # Add many-to-one (and one-to-many) relationships
         pk_column_names = set(col.name for col in source.table.primary_key.columns)
@@ -595,41 +672,38 @@ class DeclarativeGenerator(TablesGenerator):
                 else:
                     r_type = RelationshipType.MANY_TO_ONE
 
-                relationship = Relationship(r_type, source, target, constraint)
-                name = self.generate_relationship_name(relationship)
-                source.relationships[name] = relationship
+                relationship = RelationshipAttribute('', r_type, source, target, constraint)
+                source.relationships.append(relationship)
 
                 # For self referential relationships, remote_side needs to be set
                 if source is target:
                     relationship.remote_side = [
-                        col.name for col in constraint.referred_table.primary_key]
+                        source.get_column_attribute(col.name)
+                        for col in constraint.referred_table.primary_key]
 
                 # If the two tables share more than one foreign key constraint,
                 # SQLAlchemy needs an explicit primaryjoin to figure out which column(s) it needs
                 common_fk_constraints = get_common_fk_constraints(source.table, target.table)
                 if len(common_fk_constraints) > 1:
-                    relationship.foreign_keys = constraint.column_keys
+                    relationship.foreign_keys = [source.get_column_attribute(key)
+                                                 for key in constraint.column_keys]
 
                 # Generate the opposite end of the relationship in the target class
                 if 'nobidi' not in self.options:
                     if r_type is RelationshipType.MANY_TO_ONE:
                         r_type = RelationshipType.ONE_TO_MANY
 
-                    reverse_relationship = Relationship(r_type, target, source, constraint,
-                                                        backref=name)
-                    name = relationship.backref = self.generate_relationship_name(
-                        reverse_relationship)
-                    target.relationships[name] = reverse_relationship
+                    reverse_relationship = RelationshipAttribute(
+                        '', r_type, target, source, constraint,
+                        foreign_keys=relationship.foreign_keys, backref=relationship)
+                    relationship.backref = reverse_relationship
+                    target.relationships.append(reverse_relationship)
 
                     # For self referential relationships, remote_side needs to be set
                     if source is target:
-                        reverse_relationship.remote_side = constraint.column_keys
-
-                    for c in relationship.foreign_keys:
-                        if source is not target:
-                            reverse_relationship.foreign_keys.append(repr(f'{source.name}.{c}'))
-                        else:
-                            reverse_relationship.foreign_keys.append(c)
+                        reverse_relationship.remote_side = [
+                            source.get_column_attribute(colname)
+                            for colname in constraint.column_keys]
 
         # Add many-to-many relationships
         for association_table in association_tables:
@@ -637,25 +711,26 @@ class DeclarativeGenerator(TablesGenerator):
                                     key=get_constraint_sort_key)
             target = models_by_table_name[fk_constraints[1].elements[0].column.table.name]
             if isinstance(target, ModelClass):
-                relationship = Relationship(RelationshipType.MANY_TO_MANY, source, target,
-                                            fk_constraints[1], association_table)
-                name = self.generate_relationship_name(relationship)
-                source.relationships[name] = relationship
+                relationship = RelationshipAttribute(
+                    '', RelationshipType.MANY_TO_MANY, source, target,
+                    fk_constraints[1], association_table)
+                source.relationships.append(relationship)
 
                 # Generate the opposite end of the relationship in the target class
-                backref = None
+                reverse_relationship = None
                 if 'nobidi' not in self.options:
-                    backref = Relationship(RelationshipType.MANY_TO_MANY, target, source,
-                                           fk_constraints[0], association_table, name)
-                    name = relationship.backref = self.generate_relationship_name(backref)
-                    target.relationships[name] = backref
+                    reverse_relationship = RelationshipAttribute(
+                        '', RelationshipType.MANY_TO_MANY, target, source, fk_constraints[0],
+                        association_table, relationship)
+                    relationship.backref = reverse_relationship
+                    target.relationships.append(reverse_relationship)
 
                 # Add a primary/secondary join for self-referential many-to-many relationships
                 if source is target:
                     both_relationships = [relationship]
                     reverse_flags = [False, True]
-                    if backref:
-                        both_relationships.append(backref)
+                    if reverse_relationship:
+                        both_relationships.append(reverse_relationship)
 
                     for relationship, reverse in zip(both_relationships, reverse_flags):
                         if not relationship.association_table or not relationship.constraint:
@@ -665,25 +740,23 @@ class DeclarativeGenerator(TablesGenerator):
                                              key=get_constraint_sort_key, reverse=reverse)
                         pri_pairs = zip(get_column_names(constraints[0]), constraints[0].elements)
                         sec_pairs = zip(get_column_names(constraints[1]), constraints[1].elements)
-                        pri_joins = [f'{relationship.source.name}.{elem.column.name} == '
-                                     f'{relationship.association_table.name}.c.{col}'
-                                     for col, elem in pri_pairs]
-                        sec_joins = [f'{relationship.target.name}.{elem.column.name} == '
-                                     f'{relationship.association_table.name}.c.{col}'
-                                     for col, elem in sec_pairs]
-                        relationship.primaryjoin = (
-                            f'and_({", ".join(pri_joins)})'
-                            if len(pri_joins) > 1 else repr(pri_joins[0]))
-                        relationship.secondaryjoin = (
-                            f'and_({", ".join(sec_joins)})'
-                            if len(sec_joins) > 1 else repr(sec_joins[0]))
+                        relationship.primaryjoin = [
+                            (relationship.source, elem.column.name,
+                             relationship.association_table, col)
+                            for col, elem in pri_pairs]
+                        relationship.secondaryjoin = [
+                            (relationship.target, elem.column.name,
+                             relationship.association_table, col)
+                            for col, elem in sec_pairs]
 
         return relationships
 
-    def generate_relationship_name(self, relationship: Relationship) -> str:
+    def generate_relationship_name(self, relationship: RelationshipAttribute) -> str:
         # Self referential reverse relationships
-        if relationship.source is relationship.target and relationship.backref:
-            name = relationship.backref + '_reverse'
+        if (relationship.type in (RelationshipType.ONE_TO_MANY, RelationshipType.ONE_TO_ONE)
+                and relationship.source is relationship.target
+                and relationship.backref and relationship.backref.name):
+            name = relationship.backref.name + '_reverse'
         else:
             name = relationship.target.table.name
 
@@ -704,24 +777,11 @@ class DeclarativeGenerator(TablesGenerator):
                 else:
                     name = self.inflect_engine.singular_noun(name)
 
-        original_name = name
-        for i in count(1):
-            if name in relationship.source.columns or name in relationship.source.relationships:
-                name = original_name + str(i)
-            else:
-                break
-
-        return self.convert_to_valid_identifier(name)
+        return name
 
     def render_module_variables(self, models: List[Model]) -> str:
         if not any(isinstance(model, ModelClass) for model in models):
             return super().render_module_variables(models)
-
-        # Add the imports
-        if _sqla_version < (1, 4):
-            self.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
-        else:
-            self.add_literal_import('sqlalchemy.orm', 'declarative_base')
 
         declarations = [f'{self.base_class_name} = declarative_base()']
         if any(not isinstance(model, ModelClass) for model in models):
@@ -750,17 +810,16 @@ class DeclarativeGenerator(TablesGenerator):
         # Render column attributes
         rendered_column_attributes: List[str] = []
         for nullable in (False, True):
-            for attr, column in model.columns.items():
-                if column.nullable is nullable:
-                    rendered_column_attributes.append(self.render_column_attribute(attr, column))
+            for column_attr in model.columns:
+                if column_attr.column.nullable is nullable:
+                    rendered_column_attributes.append(self.render_column_attribute(column_attr))
 
         if rendered_column_attributes:
             sections.append('\n'.join(rendered_column_attributes))
 
         # Render relationship attributes
         rendered_relationship_attributes: List[str] = [
-            self.render_relationship(attrname, relationship)
-            for attrname, relationship in model.relationships.items()]
+            self.render_relationship(relationship) for relationship in model.relationships]
 
         if rendered_relationship_attributes:
             sections.append('\n'.join(rendered_relationship_attributes))
@@ -824,13 +883,37 @@ class DeclarativeGenerator(TablesGenerator):
         else:
             return ''
 
-    def render_column_attribute(self, attrname: str, column: Column) -> str:
-        rendered_column = self.render_column(column, attrname != column.name)
-        return f'{attrname} = {rendered_column}'
+    def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
+        column = column_attr.column
+        rendered_column = self.render_column(column, column_attr.name != column.name)
+        return f'{column_attr.name} = {rendered_column}'
 
-    def render_relationship(self, attrname: str, relationship: Relationship) -> str:
-        # Add imports
-        self.add_literal_import('sqlalchemy.orm', 'relationship')
+    def render_relationship(self, relationship: RelationshipAttribute) -> str:
+        def render_column_attrs(column_attrs: List[ColumnAttribute]) -> str:
+            rendered = []
+            for attr in column_attrs:
+                if attr.model is relationship.source:
+                    rendered.append(attr.name)
+                else:
+                    rendered.append(repr(f'{attr.model.name}.{attr.name}'))
+
+            return '[' + ', '.join(rendered) + ']'
+
+        def render_join(terms: List[JoinType]) -> str:
+            rendered_joins = []
+            for source, source_col, target, target_col in terms:
+                rendered = f'{source.name}.{source_col} == {target.name}.'
+                if target.__class__ is Model:
+                    rendered += 'c.'
+
+                rendered += str(target_col)
+                rendered_joins.append(rendered)
+
+            if len(rendered_joins) > 1:
+                rendered = ', '.join(rendered_joins)
+                return f'and_({rendered})'
+            else:
+                return repr(rendered_joins[0])
 
         # Render keyword arguments
         kwargs: Dict[str, Any] = OrderedDict()
@@ -847,25 +930,25 @@ class DeclarativeGenerator(TablesGenerator):
             kwargs['secondary'] = repr(table_ref)
 
         if relationship.remote_side:
-            kwargs['remote_side'] = '[' + ', '.join(relationship.remote_side) + ']'
+            kwargs['remote_side'] = render_column_attrs(relationship.remote_side)
 
         if relationship.foreign_keys:
-            kwargs['foreign_keys'] = '[' + ', '.join(relationship.foreign_keys) + ']'
+            kwargs['foreign_keys'] = render_column_attrs(relationship.foreign_keys)
 
         if relationship.primaryjoin:
-            kwargs['primaryjoin'] = relationship.primaryjoin
+            kwargs['primaryjoin'] = render_join(relationship.primaryjoin)
 
         if relationship.secondaryjoin:
-            kwargs['secondaryjoin'] = relationship.secondaryjoin
+            kwargs['secondaryjoin'] = render_join(relationship.secondaryjoin)
 
         if relationship.backref:
-            kwargs['back_populates'] = repr(relationship.backref)
+            kwargs['back_populates'] = repr(relationship.backref.name)
 
         rendered_kwargs = ''
         if kwargs:
             rendered_kwargs = ', ' + ', '.join(f'{key}={value}' for key, value in kwargs.items())
 
-        return f'{attrname} = relationship({relationship.target.name!r}{rendered_kwargs})'
+        return f'{relationship.name} = relationship({relationship.target.name!r}{rendered_kwargs})'
 
 
 class DataclassGenerator(DeclarativeGenerator):
@@ -880,15 +963,41 @@ class DataclassGenerator(DeclarativeGenerator):
         else:
             self.quote_annotations = sys.version_info < (3, 7)
 
+    def collect_global_imports(self) -> None:
+        if not self.quote_annotations:
+            self.add_literal_import('__future__', 'annotations')
+
+        self.add_literal_import('dataclasses', 'dataclass')
+        self.add_literal_import('dataclasses', 'field')
+        self.add_literal_import('sqlalchemy.orm', 'registry')
+
+    def collect_imports_for_model(self, model: Model) -> None:
+        super().collect_imports_for_model(model)
+        if isinstance(model, ModelClass):
+            for column_attr in model.columns:
+                if column_attr.column.nullable:
+                    self.add_literal_import('typing', 'Optional')
+                    break
+
+            for relationship_attr in model.relationships:
+                if relationship_attr.type in (RelationshipType.ONE_TO_MANY,
+                                              RelationshipType.MANY_TO_MANY):
+                    self.add_literal_import('typing', 'List')
+
+    def collect_imports_for_column(self, column: Column) -> None:
+        super().collect_imports_for_column(column)
+        try:
+            python_type = column.type.python_type
+        except NotImplementedError:
+            self.add_literal_import('typing', 'Any')
+        else:
+            self.add_import(python_type)
+
     def render_module_variables(self, models: List[Model]) -> str:
         if not any(isinstance(model, ModelClass) for model in models):
             return super().render_module_variables(models)
 
-        declarations: List[str] = []
-        self.add_literal_import('dataclasses', 'dataclass')
-        self.add_literal_import('dataclasses', 'field')
-        self.add_literal_import('sqlalchemy.orm', 'registry')
-        declarations.append('mapper_registry = registry()')
+        declarations: List[str] = ['mapper_registry = registry()']
         if any(not isinstance(model, ModelClass) for model in models):
             declarations.append('metadata = mapper_registry.metadata')
 
@@ -906,14 +1015,13 @@ class DataclassGenerator(DeclarativeGenerator):
                      f'__sa_dataclass_metadata_key__ = {self.metadata_key!r}']
         return '\n'.join(variables)
 
-    def render_column_attribute(self, attrname: str, column: Column) -> str:
+    def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
+        column = column_attr.column
         try:
             python_type = column.type.python_type
         except NotImplementedError:
-            self.add_literal_import('typing', 'Any')
             python_type_name = 'Any'
         else:
-            self.add_import(python_type)
             python_type_name = python_type.__name__
 
         kwargs: Dict[str, Any] = OrderedDict()
@@ -924,13 +1032,13 @@ class DataclassGenerator(DeclarativeGenerator):
             kwargs['default'] = None
             python_type_name = f'Optional[{python_type_name}]'
 
-        rendered_column = self.render_column(column, attrname != column.name)
+        rendered_column = self.render_column(column, column_attr.name != column.name)
         kwargs['metadata'] = f'{{{self.metadata_key!r}: {rendered_column}}}'
         rendered_kwargs = ', '.join(f'{key}={value}' for key, value in kwargs.items())
-        return f'{attrname}: {python_type_name} = field({rendered_kwargs})'
+        return f'{column_attr.name}: {python_type_name} = field({rendered_kwargs})'
 
-    def render_relationship(self, attrname: str, relationship: Relationship) -> str:
-        rendered = super().render_relationship(attrname, relationship).partition(' = ')[2]
+    def render_relationship(self, relationship: RelationshipAttribute) -> str:
+        rendered = super().render_relationship(relationship).partition(' = ')[2]
         kwargs: Dict[str, Any] = OrderedDict()
 
         annotation = relationship.target.name
@@ -950,4 +1058,4 @@ class DataclassGenerator(DeclarativeGenerator):
 
         kwargs['metadata'] = f'{{{self.metadata_key!r}: {rendered}}}'
         rendered_kwargs = ', '.join(f'{key}={value}' for key, value in kwargs.items())
-        return f'{attrname}: {annotation} = field({rendered_kwargs})'
+        return f'{relationship.name}: {annotation} = field({rendered_kwargs})'

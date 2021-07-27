@@ -863,7 +863,7 @@ class SimpleContainers(Base):
 
     simple_items = relationship('SimpleItems', foreign_keys=['SimpleItems.parent_container_id'], \
 back_populates='parent_container')
-    simple_items1 = relationship('SimpleItems', foreign_keys=['SimpleItems.top_container_id'], \
+    simple_items_ = relationship('SimpleItems', foreign_keys=['SimpleItems.top_container_id'], \
 back_populates='top_container')
 
 
@@ -877,7 +877,7 @@ class SimpleItems(Base):
     parent_container = relationship('SimpleContainers', foreign_keys=[parent_container_id], \
 back_populates='simple_items')
     top_container = relationship('SimpleContainers', foreign_keys=[top_container_id], \
-back_populates='simple_items1')
+back_populates='simple_items_')
 """
 
     def test_onetoone(self, generator: CodeGenerator) -> None:
@@ -951,6 +951,80 @@ class Oglkrogk(Base):
     fehwiuhfiwID = Column(ForeignKey('fehwiuhfiw.id'))
 
     fehwiuhfiw = relationship('Fehwiuhfiw', back_populates='oglkrogk')
+"""
+
+    def test_onetomany_conflicting_column(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('container_id', INTEGER),
+            ForeignKeyConstraint(['container_id'], ['simple_containers.id']),
+        )
+        Table(
+            'simple_containers', generator.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('relationship', Text)
+        )
+
+        assert generator.generate() == f"""\
+from sqlalchemy import Column, ForeignKey, Integer, Text
+{orm_imports}
+
+Base = declarative_base()
+
+
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
+
+    id = Column(Integer, primary_key=True)
+    relationship_ = Column('relationship', Text)
+
+    simple_items = relationship('SimpleItems', back_populates='container')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    container_id = Column(ForeignKey('simple_containers.id'))
+
+    container = relationship('SimpleContainers', back_populates='simple_items')
+"""
+
+    def test_onetomany_conflicting_relationship(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('relationship_id', INTEGER),
+            ForeignKeyConstraint(['relationship_id'], ['relationship.id']),
+        )
+        Table(
+            'relationship', generator.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+
+        assert generator.generate() == f"""\
+from sqlalchemy import Column, ForeignKey, Integer
+{orm_imports}
+
+Base = declarative_base()
+
+
+class Relationship(Base):
+    __tablename__ = 'relationship'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_items = relationship('SimpleItems', back_populates='relationship_')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    relationship_id = Column(ForeignKey('relationship.id'))
+
+    relationship_ = relationship('Relationship', back_populates='simple_items')
 """
 
     @pytest.mark.parametrize('generator', [['nobidi']], indirect=True)
@@ -1114,8 +1188,8 @@ class SimpleItems(Base):
 
     parent = relationship('SimpleItems', secondary='otherschema.child_items', \
 primaryjoin='SimpleItems.id == t_child_items.c.child_id', \
-secondaryjoin='SimpleItems.id == t_child_items.c.parent_id', back_populates='parent_reverse')
-    parent_reverse = relationship('SimpleItems', secondary='otherschema.child_items', \
+secondaryjoin='SimpleItems.id == t_child_items.c.parent_id', back_populates='child')
+    child = relationship('SimpleItems', secondary='otherschema.child_items', \
 primaryjoin='SimpleItems.id == t_child_items.c.parent_id', \
 secondaryjoin='SimpleItems.id == t_child_items.c.child_id', back_populates='parent')
 
@@ -1365,7 +1439,7 @@ class SimpleItems(Base):
 
     id_test = Column('id-test', Integer, primary_key=True)
     _4test = Column('4test', Integer)
-    _4test1 = Column('_4test', Integer)
+    _4test_ = Column('_4test', Integer)
     def_ = Column('def', Integer)
 """
 
