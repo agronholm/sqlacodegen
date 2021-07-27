@@ -20,6 +20,7 @@ Version history
   - ``--noinflect`` → (now the default; use ``--option use_inflect`` instead)
     (``declarative`` and ``dataclass`` generators only)
 - Fixed missing import for ``JSONB`` ``astext_type`` argument
+- Fixed generated column or relationship names colliding with imports or each other
 
 **2.3.0**
 
