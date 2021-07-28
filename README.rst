@@ -127,17 +127,17 @@ A table is considered an association table if it satisfies all of the following 
 Relationship naming logic
 +++++++++++++++++++++++++
 
-Relationships are typically named based on the opposite class name. For example, if an ``Employee``
-class has a column named ``employer`` which has a foreign key to ``Company.id``, the relationship
-is named ``company``.
+Relationships are typically named based on the table name of the opposite class.
+For example, if a class has a relationship to another class with the table named ``companies``, the
+relationship would be named ``companies`` (unless the ``use_inflect`` option was enabled, in which
+case it would be named ``company`` in the case of a many-to-one or one-to-one relationship).
 
 A special case for single column many-to-one and one-to-one relationships, however, is if the
 column is named like ``employer_id``. Then the relationship is named ``employer`` due to that
 ``_id`` suffix.
 
-If more than one relationship would be created with the same name, the latter ones are appended
-numeric suffixes, starting from 1.
-
+For self referential relationships, the reverse side of the relationship will be named with the
+``_reverse`` suffix appended to it.
 
 Customizing code generation logic
 =================================
@@ -146,7 +146,8 @@ If the built-in generators with all their options don't quite do what you want, 
 the logic by subclassing one of the existing code generator classes. Override whichever methods
 you need, and then add an `entry point`_ in the ``sqlacodegen.generators`` namespace that points
 to your new class. Once the entry point is in place (you typically have to install the project with
-`pip install`), you can use ``--generator <yourentrypoint>`` to invoke your custom code generator.
+``pip install``), you can use ``--generator <yourentrypoint>`` to invoke your custom code
+generator.
 
 For examples, you can look at sqlacodegen's own entry points in its `setup.cfg`_.
 
