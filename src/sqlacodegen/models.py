@@ -7,8 +7,8 @@ from sqlalchemy.sql.schema import Column, ForeignKeyConstraint, Table
 
 @dataclass
 class Model:
-    name: str
     table: Table
+    name: str = field(init=False, default='')
 
     @property
     def schema(self) -> str:
@@ -39,9 +39,9 @@ class RelationshipType(Enum):
 
 @dataclass
 class ColumnAttribute:
-    name: str
     model: ModelClass
     column: Column
+    name: str = field(init=False, default='')
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(name={self.name!r}, type={self.column.type})'
@@ -55,7 +55,6 @@ JoinType = Tuple[Model, Union[ColumnAttribute, str], Model, Union[ColumnAttribut
 
 @dataclass
 class RelationshipAttribute:
-    name: str
     type: RelationshipType
     source: ModelClass
     target: ModelClass
@@ -66,6 +65,7 @@ class RelationshipAttribute:
     foreign_keys: List[ColumnAttribute] = field(default_factory=list)
     primaryjoin: List[JoinType] = field(default_factory=list)
     secondaryjoin: List[JoinType] = field(default_factory=list)
+    name: str = field(init=False, default='')
 
     def __repr__(self) -> str:
         return (f'{self.__class__.__name__}(name={self.name!r}, type={self.type}, '

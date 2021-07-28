@@ -230,8 +230,7 @@ class TablesGenerator(CodeGenerator):
         return [group for group in (future_imports, stdlib_imports, thirdparty_imports) if group]
 
     def generate_models(self) -> List[Model]:
-        models = [Model(self.generate_table_variable_name(table), table)
-                  for table in self.metadata.sorted_tables]
+        models = [Model(table) for table in self.metadata.sorted_tables]
 
         # Collect the imports
         self.collect_imports(models)
@@ -586,8 +585,7 @@ class DeclarativeGenerator(TablesGenerator):
             # them
             fk_constraints = sorted(table.foreign_key_constraints, key=get_constraint_sort_key)
             if len(fk_constraints) == 2 and all(col.foreign_keys for col in table.columns):
-                variable_name = self.generate_table_variable_name(table)
-                model = models_by_table_name[table.name] = Model(variable_name, table)
+                model = models_by_table_name[table.name] = Model(table)
                 tablename = fk_constraints[0].elements[0].column.table.name
                 links[tablename].append(model)
                 continue
@@ -595,15 +593,14 @@ class DeclarativeGenerator(TablesGenerator):
             # Only form model classes for tables that have a primary key and are not association
             # tables
             if not table.primary_key:
-                variable_name = self.generate_table_variable_name(table)
-                models_by_table_name[table.name] = Model(variable_name, table)
+                models_by_table_name[table.name] = Model(table)
             else:
-                model = ModelClass('', table)
+                model = ModelClass(table)
                 models_by_table_name[table.name] = model
 
                 # Fill in the columns
                 for column in table.c:
-                    column_attr = ColumnAttribute('', model, column)
+                    column_attr = ColumnAttribute(model, column)
                     model.columns.append(column_attr)
 
         # Add relationships
@@ -675,7 +672,7 @@ class DeclarativeGenerator(TablesGenerator):
                 else:
                     r_type = RelationshipType.MANY_TO_ONE
 
-                relationship = RelationshipAttribute('', r_type, source, target, constraint)
+                relationship = RelationshipAttribute(r_type, source, target, constraint)
                 source.relationships.append(relationship)
 
                 # For self referential relationships, remote_side needs to be set
@@ -697,7 +694,7 @@ class DeclarativeGenerator(TablesGenerator):
                         r_type = RelationshipType.ONE_TO_MANY
 
                     reverse_relationship = RelationshipAttribute(
-                        '', r_type, target, source, constraint,
+                        r_type, target, source, constraint,
                         foreign_keys=relationship.foreign_keys, backref=relationship)
                     relationship.backref = reverse_relationship
                     target.relationships.append(reverse_relationship)
@@ -715,7 +712,7 @@ class DeclarativeGenerator(TablesGenerator):
             target = models_by_table_name[fk_constraints[1].elements[0].column.table.name]
             if isinstance(target, ModelClass):
                 relationship = RelationshipAttribute(
-                    '', RelationshipType.MANY_TO_MANY, source, target,
+                    RelationshipType.MANY_TO_MANY, source, target,
                     fk_constraints[1], association_table)
                 source.relationships.append(relationship)
 
@@ -723,7 +720,7 @@ class DeclarativeGenerator(TablesGenerator):
                 reverse_relationship = None
                 if 'nobidi' not in self.options:
                     reverse_relationship = RelationshipAttribute(
-                        '', RelationshipType.MANY_TO_MANY, target, source, fk_constraints[0],
+                        RelationshipType.MANY_TO_MANY, target, source, fk_constraints[0],
                         association_table, relationship)
                     relationship.backref = reverse_relationship
                     target.relationships.append(reverse_relationship)
