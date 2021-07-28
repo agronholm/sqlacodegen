@@ -10,8 +10,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import (
-    Any, ClassVar, Collection, DefaultDict, Dict, Iterable, List, Optional, Set, cast)
+from typing import Any, ClassVar, Collection, DefaultDict, Dict, Iterable, List, Optional, Set
 
 import inflect
 import sqlalchemy
@@ -269,7 +268,7 @@ class TablesGenerator(CodeGenerator):
         args: List[str] = [f'{table.name!r}, metadata']
         for column in table.columns:
             # Cast is required because of a bug in the SQLAlchemy stubs regarding Table.columns
-            args.append(self.render_column(cast(Column, column), True))
+            args.append(self.render_column(column, True))
 
         for constraint in sorted(table.constraints, key=get_constraint_sort_key):
             if isinstance(constraint, PrimaryKeyConstraint):
