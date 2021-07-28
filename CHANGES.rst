@@ -3,6 +3,11 @@ Version history
 
 **UNRELEASED**
 
+**NOTE**: Both the API and the command line interface have been refactored in a backwards
+incompatible fashion. Notably several command line options have been moved to specific generators
+and are no longer visible from ``sqlacodegen --help``. Their replacement are documented in the
+README.
+
 - Dropped support for Python < 3.6
 - Added support for Python 3.10
 - Added support for SQLAlchemy 1.4
