@@ -10,7 +10,8 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar, DefaultDict, Dict, Iterable, List, Optional, Set, cast
+from typing import (
+    Any, ClassVar, Collection, DefaultDict, Dict, Iterable, List, Optional, Set, cast)
 
 import inflect
 import sqlalchemy
@@ -235,20 +236,17 @@ class TablesGenerator(CodeGenerator):
         # Collect the imports
         self.collect_imports(models)
 
-        # Rename models that conflict with imports
+        # Generate names for models
         global_names = set(name for namespace in self.imports.values() for name in namespace)
         for model in models:
-            self.fix_model_conflicts(model, global_names)
+            self.generate_model_name(model, global_names)
+            global_names.add(model.name)
 
         return models
 
-    def fix_model_conflicts(self, model: Model, global_names: Set[str]) -> None:
-        name = self.generate_table_variable_name(model.table)
-        model.name = self.find_free_name(name, global_names, set())
-        global_names.add(model.name)
-
-    def generate_table_variable_name(self, table: Table) -> str:
-        return f't_{table.name}'
+    def generate_model_name(self, model: Model, global_names: Set[str]) -> None:
+        preferred_name = f't_{model.table.name}'
+        model.name = self.find_free_name(preferred_name, global_names)
 
     def render_module_variables(self, models: List[Model]) -> str:
         return 'metadata = MetaData()'
@@ -431,7 +429,8 @@ class TablesGenerator(CodeGenerator):
         # Support for Alembic and sqlalchemy-migrate -- never expose the schema version tables
         return table.name in ('alembic_version', 'migrate_version')
 
-    def find_free_name(self, name: str, global_names: Set[str], local_names: Set[str]) -> str:
+    def find_free_name(self, name: str, global_names: Set[str],
+                       local_names: Collection[str] = ()) -> str:
         """Generate an attribute name that does not clash with other local or global names."""
         assert name, 'Identifier cannot be empty'
         name = _re_invalid_identifier.sub('_', name)
@@ -543,26 +542,6 @@ class DeclarativeGenerator(TablesGenerator):
         self.base_class_name = base_class_name
         self.inflect_engine = inflect.engine()
 
-    def fix_model_conflicts(self, model: Model, global_names: Set[str]) -> None:
-        if isinstance(model, ModelClass):
-            preferred_name = self.generate_class_name(model)
-            model.name = self.find_free_name(preferred_name, global_names, set())
-            global_names.add(model.name)
-
-            local_names: Set[str] = set()
-            for column_attr in model.columns:
-                preferred_name = self.generate_column_attr_name(column_attr)
-                column_attr.name = self.find_free_name(preferred_name, global_names, local_names)
-                local_names.add(column_attr.name)
-
-            for relationship_attr in model.relationships:
-                preferred_name = self.generate_relationship_name(relationship_attr)
-                relationship_attr.name = self.find_free_name(preferred_name, global_names,
-                                                             local_names)
-                local_names.add(relationship_attr.name)
-        else:
-            super().fix_model_conflicts(model, global_names)
-
     def collect_global_imports(self) -> None:
         if _sqla_version < (1, 4):
             self.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
@@ -628,20 +607,9 @@ class DeclarativeGenerator(TablesGenerator):
         # Rename models and their attributes that conflict with imports or other attributes
         global_names = set(name for namespace in self.imports.values() for name in namespace)
         for model in models_by_table_name.values():
-            self.fix_model_conflicts(model, global_names)
+            self.generate_model_name(model, global_names)
 
         return list(models_by_table_name.values())
-
-    def generate_class_name(self, model: ModelClass) -> str:
-        class_name = _re_invalid_identifier.sub('_', model.table.name)
-        class_name = ''.join(part[:1].upper() + part[1:] for part in class_name.split('_'))
-        if 'use_inflect' in self.options:
-            class_name = self.inflect_engine.singular_noun(class_name)
-
-        return class_name
-
-    def generate_column_attr_name(self, column_attr: ColumnAttribute) -> str:
-        return column_attr.column.name
 
     def generate_relationships(self, source: ModelClass,
                                models_by_table_name: Dict[str, Model],
@@ -751,14 +719,42 @@ class DeclarativeGenerator(TablesGenerator):
 
         return relationships
 
-    def generate_relationship_name(self, relationship: RelationshipAttribute) -> str:
+    def generate_model_name(self, model: Model, global_names: Set[str]) -> None:
+        if isinstance(model, ModelClass):
+            preferred_name = _re_invalid_identifier.sub('_', model.table.name)
+            preferred_name = ''.join(part[:1].upper() + part[1:]
+                                     for part in preferred_name.split('_'))
+            if 'use_inflect' in self.options:
+                preferred_name = self.inflect_engine.singular_noun(preferred_name)
+
+            model.name = self.find_free_name(preferred_name, global_names)
+
+            # Fill in the names for column attributes
+            local_names: Set[str] = set()
+            for column_attr in model.columns:
+                self.generate_column_attr_name(column_attr, global_names, local_names)
+                local_names.add(column_attr.name)
+
+            # Fill in the names for relationship attributes
+            for relationship in model.relationships:
+                self.generate_relationship_name(relationship, global_names, local_names)
+                local_names.add(relationship.name)
+        else:
+            super().generate_model_name(model, global_names)
+
+    def generate_column_attr_name(self, column_attr: ColumnAttribute,
+                                  global_names: Set[str], local_names: Set[str]) -> None:
+        column_attr.name = self.find_free_name(column_attr.column.name, global_names, local_names)
+
+    def generate_relationship_name(self, relationship: RelationshipAttribute,
+                                   global_names: Set[str], local_names: Set[str]) -> None:
         # Self referential reverse relationships
         if (relationship.type in (RelationshipType.ONE_TO_MANY, RelationshipType.ONE_TO_ONE)
                 and relationship.source is relationship.target
                 and relationship.backref and relationship.backref.name):
-            name = relationship.backref.name + '_reverse'
+            preferred_name = relationship.backref.name + '_reverse'
         else:
-            name = relationship.target.table.name
+            preferred_name = relationship.target.table.name
 
             # If there's a constraint with a single column that ends with "_id", use the preceding
             # part as the relationship name
@@ -768,16 +764,16 @@ class DeclarativeGenerator(TablesGenerator):
                                                           RelationshipType.ONE_TO_MANY):
                     column_names = [c.name for c in relationship.constraint.columns]
                     if len(column_names) == 1 and column_names[0].endswith('_id'):
-                        name = column_names[0][:-3]
+                        preferred_name = column_names[0][:-3]
 
             if 'use_inflect' in self.options:
                 if relationship.type in (RelationshipType.ONE_TO_MANY,
                                          RelationshipType.MANY_TO_MANY):
-                    name = self.inflect_engine.plural_noun(name)
+                    preferred_name = self.inflect_engine.plural_noun(preferred_name)
                 else:
-                    name = self.inflect_engine.singular_noun(name)
+                    preferred_name = self.inflect_engine.singular_noun(preferred_name)
 
-        return name
+        relationship.name = self.find_free_name(preferred_name, global_names, local_names)
 
     def render_module_variables(self, models: List[Model]) -> str:
         if not any(isinstance(model, ModelClass) for model in models):
