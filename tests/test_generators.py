@@ -9,6 +9,7 @@ from sqlalchemy.schema import (
     CheckConstraint, Column, ForeignKey, ForeignKeyConstraint, Index, MetaData, Table,
     UniqueConstraint)
 from sqlalchemy.sql.expression import text
+from sqlalchemy.sql.sqltypes import NullType
 from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
 
 from sqlacodegen.generators import (
@@ -624,6 +625,25 @@ t_simple_items = Table(
     'simple_items', metadata,
     Column('id', Integer, primary_key=True, server_default=\
 text('/*Comment*/\\n/*Next line*/\\nsomething()'))
+)
+"""
+
+    def test_null_type(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('problem', NullType),
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, MetaData, Table
+from sqlalchemy.sql.sqltypes import NullType
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('problem', NullType)
 )
 """
 

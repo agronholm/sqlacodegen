@@ -485,7 +485,10 @@ class TablesGenerator(CodeGenerator):
                             continue
 
         for column in table.c:
-            column.type = self.get_adapted_type(column.type)
+            try:
+                column.type = self.get_adapted_type(column.type)
+            except CompileError:
+                pass
 
     def get_adapted_type(self, coltype: Any) -> Any:
         compiled_type = coltype.compile(self.bind.dialect)
