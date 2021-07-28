@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**3.0.0b1**
 
 **NOTE**: Both the API and the command line interface have been refactored in a backwards
 incompatible fashion. Notably several command line options have been moved to specific generators
