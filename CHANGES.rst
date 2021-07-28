@@ -8,6 +8,7 @@ Version history
 - Added support for SQLAlchemy 1.4
 - Added support for bidirectional relationships (use ``--option nobidi``) to disable
 - Added support for multiple schemas via ``--schemas``
+- Added support for ``IDENTITY`` columns
 - Disabled inflection during table/relationship name generation by default
   (use ``--option use_inflect`` to re-enable)
 - Refactored the old ``CodeGenerator`` class into separate generator classes, selectable via

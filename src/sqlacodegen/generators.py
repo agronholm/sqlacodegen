@@ -39,6 +39,12 @@ try:
 except ImportError:
     Computed = None  # type: ignore
 
+# SQLAlchemy 1.4+
+try:
+    from sqlalchemy import Identity
+except ImportError:
+    Identity = None
+
 _sqla_version = tuple(int(x) for x in version('sqlalchemy').split('.')[:2])
 _re_boolean_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?).*\1\.)?(["`]?)(.*)\2')
@@ -160,10 +166,10 @@ class TablesGenerator(CodeGenerator):
                 self.add_import(column.type.astext_type)
 
         if column.server_default:
-            if Computed and isinstance(column.server_default, Computed):
-                self.add_literal_import('sqlalchemy', 'Computed')
-            else:
+            if isinstance(column.server_default, DefaultClause):
                 self.add_literal_import('sqlalchemy', 'text')
+            else:
+                self.add_import(column.server_default)
 
     def collect_imports_for_constraint(self, constraint: Constraint) -> None:
         if isinstance(constraint, PrimaryKeyConstraint):
@@ -326,17 +332,21 @@ class TablesGenerator(CodeGenerator):
             column.index = True
             kwarg.append('index')
 
-        if Computed and isinstance(column.server_default, Computed):
-            expression = get_compiled_expression(column.server_default.sqltext, self.bind)
+        if isinstance(column.server_default, DefaultClause):
+            server_default = f'server_default=text({column.server_default.arg.text!r})'
+        elif Computed and isinstance(column.server_default, Computed):
+            expression = column.server_default.sqltext.text
 
             persist_arg = ''
             if column.server_default.persisted is not None:
                 persist_arg = f', persisted={column.server_default.persisted}'
 
             server_default = f'Computed({expression!r}{persist_arg})'
-        elif isinstance(column.server_default, DefaultClause):
-            # The quote escaping does not cover pathological cases but should mostly work
-            server_default = f'server_default=text({column.server_default.arg.text!r})'
+        elif Identity and isinstance(column.server_default, Identity):
+            server_default = repr(column.server_default)
+            kwarg.remove('nullable')
+        elif column.server_default:
+            server_default = f'server_default={column.server_default!r}'
 
         comment = getattr(column, 'comment', None)
         return 'Column({0})'.format(', '.join(

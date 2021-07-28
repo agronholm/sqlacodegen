@@ -21,6 +21,12 @@ try:
 except ImportError:
     Computed = None
 
+# SQLAlchemy 1.4+
+try:
+    from sqlalchemy import Identity
+except ImportError:
+    Identity = None
+
 if sys.version_info < (3, 7):
     future_imports = ""
 else:
@@ -662,6 +668,25 @@ metadata = MetaData()
 t_simple_items = Table(
     'simple_items', metadata,
     Column('problem', NullType)
+)
+"""
+
+    @pytest.mark.skipif(Identity is None, reason='Requires SQLAlchemy 1.4+')
+    def test_identity_column(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('id', INTEGER, server_default=Identity(start=1, increment=2))
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, Identity, Integer, MetaData, Table
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('id', Integer, Identity(start=1, increment=2))
 )
 """
 
