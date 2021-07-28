@@ -18,7 +18,7 @@ def main() -> None:
     parser.add_argument('url', nargs='?', help='SQLAlchemy url to the database')
     parser.add_argument('--option', nargs='*', help="options passed to the generator class")
     parser.add_argument('--version', action='store_true', help="print the version number and exit")
-    parser.add_argument('--schema', help='load tables from an alternate schema')
+    parser.add_argument('--schemas', help='load tables from the given schemas (comma separated)')
     parser.add_argument('--generator', choices=generators, default='declarative',
                         help="generator class to use")
     parser.add_argument('--tables', help='tables to process (comma-separated, default: all)')
@@ -38,7 +38,9 @@ def main() -> None:
     engine = create_engine(args.url)
     metadata = MetaData()
     tables = args.tables.split(',') if args.tables else None
-    metadata.reflect(engine, args.schema, not args.noviews, tables)
+    schemas = args.schemas.split(',') if args.schemas else [None]
+    for schema in schemas:
+        metadata.reflect(engine, schema, not args.noviews, tables)
 
     # Instantiate the generator
     generator_class = generators[args.generator].load()
