@@ -22,6 +22,7 @@ Version history
     (``declarative`` and ``dataclass`` generators only)
 - Fixed missing import for ``JSONB`` ``astext_type`` argument
 - Fixed generated column or relationship names colliding with imports or each other
+- Fixed ``CompileError`` when encountering server defaults that contain colons (``:``)
 
 **2.3.0**
 

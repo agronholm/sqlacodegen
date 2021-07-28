@@ -336,8 +336,7 @@ class TablesGenerator(CodeGenerator):
             server_default = f'Computed({expression!r}{persist_arg})'
         elif isinstance(column.server_default, DefaultClause):
             # The quote escaping does not cover pathological cases but should mostly work
-            default_expr = get_compiled_expression(column.server_default.arg, self.bind)
-            server_default = f'server_default=text({default_expr!r})'
+            server_default = f'server_default=text({column.server_default.arg.text!r})'
 
         comment = getattr(column, 'comment', None)
         return 'Column({0})'.format(', '.join(

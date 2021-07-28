@@ -628,6 +628,24 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
 )
 """
 
+    def test_server_default_colon(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('problem', VARCHAR, server_default=text("':001'"))
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, MetaData, String, Table, text
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('problem', String, server_default=text("':001'"))
+)
+"""
+
     def test_null_type(self, generator: CodeGenerator) -> None:
         Table(
             'simple_items', generator.metadata,
