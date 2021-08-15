@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**3.0.0b2**
 
 - Fixed ``IDENTITY`` columns not rendering properly when they are part of the primary key
 
