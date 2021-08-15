@@ -302,6 +302,8 @@ class TablesGenerator(CodeGenerator):
         return f'Index({index.name!r}, {", ".join(extra_args)})'
 
     def render_column(self, column: Column, show_name: bool) -> str:
+        args = []
+        kwargs = OrderedDict()
         kwarg = []
         is_sole_pk = column.primary_key and len(column.table.primary_key) == 1
         dedicated_fks = [c for c in column.foreign_keys
@@ -311,28 +313,38 @@ class TablesGenerator(CodeGenerator):
         is_unique = is_unique or any(i.unique and set(i.columns) == {column}
                                      for i in column.table.indexes)
         has_index = any(set(i.columns) == {column} for i in column.table.indexes)
-        server_default = None
+
+        if show_name:
+            args.append(repr(column.name))
 
         # Render the column type if there are no foreign keys on it or any of them points back to
         # itself
-        render_coltype = not dedicated_fks or any(fk.column is column for fk in dedicated_fks)
+        if not dedicated_fks or any(fk.column is column for fk in dedicated_fks):
+            args.append(self.render_column_type(column.type))
+
+        for constraint in dedicated_fks:
+            args.append(self.render_constraint(constraint))
+
+        for constraint in column.constraints:
+            args.append(repr(constraint))
 
         if column.key != column.name:
-            kwarg.append('key')
+            kwargs['key'] = column.key
         if column.primary_key:
-            kwarg.append('primary_key')
+            kwargs['primary_key'] = True
         if not column.nullable and not is_sole_pk:
-            kwarg.append('nullable')
+            kwargs['nullable'] = False
 
         if is_unique:
             column.unique = True
-            kwarg.append('unique')
+            kwargs['unique'] = True
         elif has_index:
             column.index = True
             kwarg.append('index')
+            kwargs['index'] = True
 
         if isinstance(column.server_default, DefaultClause):
-            server_default = f'server_default=text({column.server_default.arg.text!r})'
+            kwargs['server_default'] = f'text({column.server_default.arg.text!r})'
         elif Computed and isinstance(column.server_default, Computed):
             expression = column.server_default.sqltext.text
 
@@ -340,23 +352,20 @@ class TablesGenerator(CodeGenerator):
             if column.server_default.persisted is not None:
                 persist_arg = f', persisted={column.server_default.persisted}'
 
-            server_default = f'Computed({expression!r}{persist_arg})'
+            args.append(f'Computed({expression!r}{persist_arg})')
         elif Identity and isinstance(column.server_default, Identity):
-            server_default = repr(column.server_default)
-            kwarg.remove('nullable')
+            args.append(repr(column.server_default))
         elif column.server_default:
-            server_default = f'server_default={column.server_default!r}'
+            kwargs['server_default'] = repr(column.server_default)
 
         comment = getattr(column, 'comment', None)
-        return 'Column({0})'.format(', '.join(
-            ([repr(column.name)] if show_name else []) +
-            ([self.render_column_type(column.type)] if render_coltype else []) +
-            [self.render_constraint(x) for x in dedicated_fks] +
-            [repr(x) for x in column.constraints] +
-            [f'{k}={getattr(column, k)!r}' for k in kwarg] +
-            ([server_default] if server_default else []) +
-            ([f'comment={comment!r}'] if comment else [])
-        ))
+        if comment:
+            kwargs['comment'] = repr(comment)
+
+        for key, value in kwargs.items():
+            args.append(f'{key}={value}')
+
+        return f'Column({", ".join(args)})'
 
     def render_column_type(self, coltype: Any) -> str:
         args = []

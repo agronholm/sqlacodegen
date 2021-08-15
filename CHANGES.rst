@@ -1,6 +1,10 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Fixed ``IDENTITY`` columns not rendering properly when they are part of the primary key
+
 **3.0.0b1**
 
 **NOTE**: Both the API and the command line interface have been refactored in a backwards

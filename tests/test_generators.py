@@ -675,7 +675,7 @@ t_simple_items = Table(
     def test_identity_column(self, generator: CodeGenerator) -> None:
         Table(
             'simple_items', generator.metadata,
-            Column('id', INTEGER, server_default=Identity(start=1, increment=2))
+            Column('id', INTEGER, primary_key=True, server_default=Identity(start=1, increment=2))
         )
 
         assert generator.generate() == """\
@@ -686,7 +686,7 @@ metadata = MetaData()
 
 t_simple_items = Table(
     'simple_items', metadata,
-    Column('id', Integer, Identity(start=1, increment=2))
+    Column('id', Integer, Identity(start=1, increment=2), primary_key=True)
 )
 """
 
