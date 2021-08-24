@@ -924,9 +924,9 @@ class SimpleContainers(Base):
 
     id = Column(Integer, primary_key=True)
 
-    simple_items = relationship('SimpleItems', foreign_keys=['SimpleItems.parent_container_id'], \
+    simple_items = relationship('SimpleItems', foreign_keys='[SimpleItems.parent_container_id]', \
 back_populates='parent_container')
-    simple_items_ = relationship('SimpleItems', foreign_keys=['SimpleItems.top_container_id'], \
+    simple_items_ = relationship('SimpleItems', foreign_keys='[SimpleItems.top_container_id]', \
 back_populates='top_container')
 
 

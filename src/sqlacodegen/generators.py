@@ -912,6 +912,22 @@ class DeclarativeGenerator(TablesGenerator):
 
             return '[' + ', '.join(rendered) + ']'
 
+        def render_foreign_keys(column_attrs: List[ColumnAttribute]) -> str:
+            rendered = []
+            render_as_string = False
+            # Assume that column_attrs are all in relationship.source or none
+            for attr in column_attrs:
+                if attr.model is relationship.source:
+                    rendered.append(attr.name)
+                else:
+                    rendered.append(f'{attr.model.name}.{attr.name}')
+                    render_as_string = True
+
+            if render_as_string:
+                return '\'[' + ', '.join(rendered) + ']\''
+            else:
+                return '[' + ', '.join(rendered) + ']'
+
         def render_join(terms: List[JoinType]) -> str:
             rendered_joins = []
             for source, source_col, target, target_col in terms:
@@ -946,7 +962,7 @@ class DeclarativeGenerator(TablesGenerator):
             kwargs['remote_side'] = render_column_attrs(relationship.remote_side)
 
         if relationship.foreign_keys:
-            kwargs['foreign_keys'] = render_column_attrs(relationship.foreign_keys)
+            kwargs['foreign_keys'] = render_foreign_keys(relationship.foreign_keys)
 
         if relationship.primaryjoin:
             kwargs['primaryjoin'] = render_join(relationship.primaryjoin)
