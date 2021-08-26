@@ -559,6 +559,13 @@ class DeclarativeGenerator(TablesGenerator):
         self.base_class_name = base_class_name
         self.inflect_engine = inflect.engine()
 
+    def collect_imports(self, models: Iterable[Model]) -> None:
+        self.collect_global_imports()
+        if not any(isinstance(model, ModelClass) for model in models):
+            super().collect_global_imports()
+        for model in models:
+            self.collect_imports_for_model(model)
+
     def collect_global_imports(self) -> None:
         if _sqla_version < (1, 4):
             self.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
