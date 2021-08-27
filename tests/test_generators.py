@@ -482,6 +482,24 @@ t_simple_items = Table(
 )
 """
 
+    def test_autoincrement(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('id', INTEGER, primary_key=True, autoincrement=True)
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, Integer, MetaData, Table
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True)
+)
+"""
+
     @pytest.mark.parametrize('engine', ['mysql'], indirect=['engine'])
     def test_mysql_timestamp(self, generator: CodeGenerator) -> None:
         Table(

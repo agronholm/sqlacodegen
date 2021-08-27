@@ -334,6 +334,8 @@ class TablesGenerator(CodeGenerator):
             kwargs['primary_key'] = True
         if not column.nullable and not is_sole_pk:
             kwargs['nullable'] = False
+        if column.autoincrement == True:
+            kwargs['autoincrement'] = True
 
         if is_unique:
             column.unique = True
