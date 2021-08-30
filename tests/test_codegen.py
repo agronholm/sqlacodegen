@@ -17,6 +17,13 @@ from sqlalchemy.types import INTEGER, SMALLINT, VARCHAR, NUMERIC
 
 from sqlacodegen.codegen import CodeGenerator
 
+# SQLAlchemy 1.3.11+
+try:
+    from sqlalchemy import Computed
+except ImportError:
+    Computed = None
+
+
 if sys.version_info < (3,):
     unicode_re = re.compile(r"u(['\"])(.*?)(?<!\\)\1")
 
@@ -187,12 +194,14 @@ def test_mysql_column_types(metadata):
     Table(
         'simple_items', metadata,
         Column('id', mysql.INTEGER),
-        Column('name', mysql.VARCHAR(255))
+        Column('name', mysql.VARCHAR(255)),
+        Column('set', mysql.SET('one', 'two'))
     )
 
     assert generate_code(metadata) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer, MetaData, String, Table
+from sqlalchemy.dialects.mysql import SET
 
 metadata = MetaData()
 
@@ -200,7 +209,8 @@ metadata = MetaData()
 t_simple_items = Table(
     'simple_items', metadata,
     Column('id', Integer),
-    Column('name', String(255))
+    Column('name', String(255)),
+    Column('set', SET('one', 'two'))
 )
 """
 
@@ -1263,13 +1273,15 @@ class Simple(Base):
 
 
 @pytest.mark.skipif(sqlalchemy.__version__ < '1.2', reason='Requires SQLAlchemy 1.2+')
-def test_column_comment(metadata):
+@pytest.mark.parametrize('nocomments', [False, True])
+def test_column_comment(metadata, nocomments):
     Table(
         'simple', metadata,
         Column('id', INTEGER, primary_key=True, comment="this is a 'comment'")
     )
 
-    assert generate_code(metadata) == """\
+    comment_part = '' if nocomments else ', comment="this is a \'comment\'"'
+    assert generate_code(metadata, nocomments=nocomments) == """\
 # coding: utf-8
 from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -1281,7 +1293,42 @@ metadata = Base.metadata
 class Simple(Base):
     __tablename__ = 'simple'
 
-    id = Column(Integer, primary_key=True, comment="this is a 'comment'")
+    id = Column(Integer, primary_key=True{comment_part})
+""".format(comment_part=comment_part)
+
+
+@pytest.mark.skipif(sqlalchemy.__version__ < '1.2', reason='Requires SQLAlchemy 1.2+')
+def test_table_comment(metadata):
+    Table(
+        'simple', metadata,
+        Column('id', INTEGER, primary_key=True),
+        comment="this is a 'comment'"
+    )
+
+    codegen = CodeGenerator(metadata, noclasses=True)
+    code = codegen.render_table(codegen.models[0])
+    assert code == """\
+t_simple = Table(
+    'simple', metadata,
+    Column('id', Integer, primary_key=True),
+    comment='this is a \\'comment\\''
+)
+"""
+    code = generate_code(metadata)
+    assert code == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+    __table_args__ = {'comment': "this is a 'comment'"}
+
+    id = Column(Integer, primary_key=True)
 """
 
 
@@ -1412,3 +1459,51 @@ class Simple(Base):
     id = Column(Integer, primary_key=True)
     my_longtext = Column(LONGTEXT)
 """
+
+
+def test_table_name_identifiers(metadata):
+    Table(
+        'simple-items table', metadata,
+        Column('id', INTEGER, primary_key=True)
+    )
+
+    assert generate_code(metadata, noclasses=True) == """\
+# coding: utf-8
+from sqlalchemy import Column, Integer, MetaData, Table
+
+metadata = MetaData()
+
+
+t_simple_items_table = Table(
+    'simple-items table', metadata,
+    Column('id', Integer, primary_key=True)
+)
+"""
+
+
+@pytest.mark.skipif(Computed is None, reason='requires SQLAlchemy 1.3.11+')
+@pytest.mark.parametrize('persisted, extra_args', [
+    (None, ''),
+    (False, ', persisted=False'),
+    (True, ', persisted=True')
+])
+def test_computed_column(metadata, persisted, extra_args):
+    Table(
+        'computed', metadata,
+        Column('id', INTEGER, primary_key=True),
+        Column('computed', INTEGER, Computed('1 + 2', persisted=persisted))
+    )
+
+    assert generate_code(metadata, noclasses=True) == """\
+# coding: utf-8
+from sqlalchemy import Column, Computed, Integer, MetaData, Table
+
+metadata = MetaData()
+
+
+t_computed = Table(
+    'computed', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('computed', Integer, Computed('1 + 2'{extra_args}))
+)
+""".format(extra_args=extra_args)
