@@ -1627,6 +1627,27 @@ class Simple(Base):
     id = Column(Integer, primary_key=True)
 """
 
+    def test_metadata_column(self, generator: CodeGenerator):
+        Table(
+            'simple', generator.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('metadata', VARCHAR)
+        )
+
+        assert generator.generate() == f"""\
+from sqlalchemy import Column, Integer, String
+from {declarative_package} import declarative_base
+
+Base = declarative_base()
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+
+    id = Column(Integer, primary_key=True)
+    metadata_ = Column('metadata', String)
+"""
+
 
 class TestDataclassGenerator:
     @pytest.fixture

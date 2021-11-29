@@ -1,6 +1,11 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Fixed ``sqlalchemy.exc.InvalidRequestError`` when encountering a column named "metadata"
+  (regression from 2.0)
+
 **3.0.0b2**
 
 - Fixed ``IDENTITY`` columns not rendering properly when they are part of the primary key
