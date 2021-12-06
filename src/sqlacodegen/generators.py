@@ -279,7 +279,7 @@ class TablesGenerator(CodeGenerator):
 
             args.append(self.render_constraint(constraint))
 
-        for index in table.indexes:
+        for index in sorted(table.indexes, key=lambda i:i.name):
             # One-column indexes should be rendered as index=True on columns
             if len(index.columns) > 1:
                 args.append(self.render_index(index))
