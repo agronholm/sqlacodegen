@@ -7,6 +7,11 @@ import pytest
 
 from sqlacodegen.generators import _sqla_version
 
+if sys.version_info < (3, 8):
+    from importlib_metadata import version
+else:
+    from importlib.metadata import version
+
 if sys.version_info < (3, 7):
     future_imports = ""
 else:
@@ -90,3 +95,10 @@ class Foo:
     id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
     name: str = field(metadata={{'sa': Column(Text, nullable=False)}})
 """
+
+
+def test_main():
+    expected_version = version('sqlacodegen')
+    completed = subprocess.run([sys.executable, '-m', 'sqlacodegen', '--version'],
+                               stdout=subprocess.PIPE, check=True)
+    assert completed.stdout.decode().strip() == expected_version

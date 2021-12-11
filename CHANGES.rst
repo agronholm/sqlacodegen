@@ -3,6 +3,7 @@ Version history
 
 **UNRELEASED**
 
+- Added a ``__main__`` module which can be used as an alternate entry point to the CLI
 - Fixed ``sqlalchemy.exc.InvalidRequestError`` when encountering a column named "metadata"
   (regression from 2.0)
 - Fixed missing ``MetaData`` import with ``DeclarativeGenerator`` when only plain tables are
