@@ -690,6 +690,24 @@ t_simple_items = Table(
 )
 """
 
+    def test_multiline_comment(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('id', INTEGER, comment='This\nis a multi-line\ncomment')
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, Integer, MetaData, Table
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('id', Integer, comment='This\\nis a multi-line\\ncomment')
+)
+"""
+
 
 class TestDeclarativeGenerator:
     @pytest.fixture
