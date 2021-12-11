@@ -5,6 +5,8 @@ Version history
 
 - Fixed ``sqlalchemy.exc.InvalidRequestError`` when encountering a column named "metadata"
   (regression from 2.0)
+- Fixed missing ``MetaData`` import with ``DeclarativeGenerator`` when only plain tables are
+  generated
 
 **3.0.0b2**
 

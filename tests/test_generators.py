@@ -1648,6 +1648,24 @@ class Simple(Base):
     metadata_ = Column('metadata', String)
 """
 
+    def test_only_tables(self, generator: CodeGenerator):
+        Table(
+            'simple', generator.metadata,
+            Column('id', INTEGER)
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, Integer, MetaData, Table
+
+metadata = MetaData()
+
+
+t_simple = Table(
+    'simple', metadata,
+    Column('id', Integer)
+)
+"""
+
 
 class TestDataclassGenerator:
     @pytest.fixture
@@ -1680,6 +1698,35 @@ class Simple:
     __sa_dataclass_metadata_key__ = 'sa'
 
     id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
+    name: Optional[str] = field(default=None, metadata={{'sa': Column(String(20))}})
+"""
+
+    def test_mandatory_field_last(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple', generator.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('name', VARCHAR(20), default='foo'),
+            Column('age', INTEGER, nullable=False)
+        )
+
+        assert generator.generate() == f"""\
+{future_imports}from dataclasses import dataclass, field
+from typing import Optional
+
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import registry
+
+mapper_registry = registry()
+
+
+@mapper_registry.mapped
+@dataclass
+class Simple:
+    __tablename__ = 'simple'
+    __sa_dataclass_metadata_key__ = 'sa'
+
+    id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
+    age: int = field(metadata={{'sa': Column(Integer, nullable=False)}})
     name: Optional[str] = field(default=None, metadata={{'sa': Column(String(20))}})
 """
 

@@ -133,12 +133,9 @@ class TablesGenerator(CodeGenerator):
         return '\n\n'.join(sections) + '\n'
 
     def collect_imports(self, models: Iterable[Model]) -> None:
-        self.collect_global_imports()
+        self.add_import(MetaData)
         for model in models:
             self.collect_imports_for_model(model)
-
-    def collect_global_imports(self) -> None:
-        self.add_import(MetaData)
 
     def collect_imports_for_model(self, model: Model) -> None:
         if model.__class__ is Model:
@@ -215,6 +212,10 @@ class TablesGenerator(CodeGenerator):
     def add_literal_import(self, pkgname: str, name: str) -> None:
         names = self.imports.setdefault(pkgname, set())
         names.add(name)
+
+    def remove_literal_import(self, pkgname: str, name: str) -> None:
+        names = self.imports.setdefault(pkgname, set())
+        names.remove(name)
 
     def group_imports(self) -> List[List[str]]:
         future_imports: List[str] = []
@@ -559,11 +560,14 @@ class DeclarativeGenerator(TablesGenerator):
         self.base_class_name = base_class_name
         self.inflect_engine = inflect.engine()
 
-    def collect_global_imports(self) -> None:
-        if _sqla_version < (1, 4):
-            self.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
-        else:
-            self.add_literal_import('sqlalchemy.orm', 'declarative_base')
+    def collect_imports(self, models: Iterable[Model]) -> None:
+        super().collect_imports(models)
+        if any(isinstance(model, ModelClass) for model in models):
+            self.remove_literal_import('sqlalchemy', 'MetaData')
+            if _sqla_version < (1, 4):
+                self.add_literal_import('sqlalchemy.ext.declarative', 'declarative_base')
+            else:
+                self.add_literal_import('sqlalchemy.orm', 'declarative_base')
 
     def collect_imports_for_model(self, model: Model) -> None:
         super().collect_imports_for_model(model)
@@ -976,13 +980,16 @@ class DataclassGenerator(DeclarativeGenerator):
         else:
             self.quote_annotations = sys.version_info < (3, 7)
 
-    def collect_global_imports(self) -> None:
+    def collect_imports(self, models: Iterable[Model]) -> None:
+        super().collect_imports(models)
         if not self.quote_annotations:
             self.add_literal_import('__future__', 'annotations')
 
-        self.add_literal_import('dataclasses', 'dataclass')
-        self.add_literal_import('dataclasses', 'field')
-        self.add_literal_import('sqlalchemy.orm', 'registry')
+        if any(isinstance(model, ModelClass) for model in models):
+            self.remove_literal_import('sqlalchemy.orm', 'declarative_base')
+            self.add_literal_import('dataclasses', 'dataclass')
+            self.add_literal_import('dataclasses', 'field')
+            self.add_literal_import('sqlalchemy.orm', 'registry')
 
     def collect_imports_for_model(self, model: Model) -> None:
         super().collect_imports_for_model(model)
