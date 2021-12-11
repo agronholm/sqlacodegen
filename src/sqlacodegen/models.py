@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import List, Optional, Tuple, Union
+from typing import Tuple, Union
 
 from sqlalchemy.sql.schema import Column, ForeignKeyConstraint, Table
 
@@ -17,12 +19,12 @@ class Model:
 
 @dataclass
 class ModelClass(Model):
-    columns: List['ColumnAttribute'] = field(default_factory=list)
-    relationships: List['RelationshipAttribute'] = field(default_factory=list)
-    parent_class: Optional['ModelClass'] = None
-    children: List['ModelClass'] = field(default_factory=list)
+    columns: list[ColumnAttribute] = field(default_factory=list)
+    relationships: list[RelationshipAttribute] = field(default_factory=list)
+    parent_class: ModelClass | None = None
+    children: list[ModelClass] = field(default_factory=list)
 
-    def get_column_attribute(self, column_name: str) -> 'ColumnAttribute':
+    def get_column_attribute(self, column_name: str) -> ColumnAttribute:
         for column in self.columns:
             if column.column.name == column_name:
                 return column
@@ -58,13 +60,13 @@ class RelationshipAttribute:
     type: RelationshipType
     source: ModelClass
     target: ModelClass
-    constraint: Optional[ForeignKeyConstraint] = None
-    association_table: Optional[Model] = None
-    backref: Optional['RelationshipAttribute'] = None
-    remote_side: List[ColumnAttribute] = field(default_factory=list)
-    foreign_keys: List[ColumnAttribute] = field(default_factory=list)
-    primaryjoin: List[JoinType] = field(default_factory=list)
-    secondaryjoin: List[JoinType] = field(default_factory=list)
+    constraint: ForeignKeyConstraint | None = None
+    association_table: Model | None = None
+    backref: RelationshipAttribute | None = None
+    remote_side: list[ColumnAttribute] = field(default_factory=list)
+    foreign_keys: list[ColumnAttribute] = field(default_factory=list)
+    primaryjoin: list[JoinType] = field(default_factory=list)
+    secondaryjoin: list[JoinType] = field(default_factory=list)
     name: str = field(init=False, default='')
 
     def __repr__(self) -> str:

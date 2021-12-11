@@ -1,4 +1,4 @@
-from typing import Optional
+from __future__ import annotations
 
 import pytest
 from _pytest.fixtures import FixtureRequest
@@ -369,7 +369,7 @@ t_simple = Table(
         (False, ', persisted=False'),
         (True, ', persisted=True')
     ])
-    def test_computed_column(self, generator: CodeGenerator, persisted: Optional[bool],
+    def test_computed_column(self, generator: CodeGenerator, persisted: bool | None,
                              extra_args: str):
         Table(
             'computed', generator.metadata,

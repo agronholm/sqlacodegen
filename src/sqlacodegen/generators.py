@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 import re
 import sys
@@ -10,7 +12,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar, Collection, DefaultDict, Dict, Iterable, List, Optional, Set
+from typing import Any, ClassVar, Collection, DefaultDict, Iterable
 
 import inflect
 import sqlalchemy
@@ -41,9 +43,9 @@ _re_invalid_identifier = re.compile(r'(?u)\W')
 
 
 class CodeGenerator(metaclass=ABCMeta):
-    valid_options: ClassVar[Set[str]] = set()
+    valid_options: ClassVar[set[str]] = set()
 
-    def __init__(self, metadata: MetaData, bind: Connectable, options: Set[str]):
+    def __init__(self, metadata: MetaData, bind: Connectable, options: set[str]):
         self.metadata = metadata
         self.bind = bind
         self.options = options
@@ -59,10 +61,10 @@ class CodeGenerator(metaclass=ABCMeta):
 
 @dataclass(eq=False)
 class TablesGenerator(CodeGenerator):
-    valid_options: ClassVar[Set[str]] = {'noindexes', 'noconstraints', 'nocomments'}
-    builtin_module_names: ClassVar[Set[str]] = set(sys.builtin_module_names) | {'dataclasses'}
+    valid_options: ClassVar[set[str]] = {'noindexes', 'noconstraints', 'nocomments'}
+    builtin_module_names: ClassVar[set[str]] = set(sys.builtin_module_names) | {'dataclasses'}
 
-    def __init__(self, metadata: MetaData, bind: Connectable, options: Set[str], *,
+    def __init__(self, metadata: MetaData, bind: Connectable, options: set[str], *,
                  indentation: str = '    '):
         # Validate options
         invalid_options = {opt for opt in options if opt not in self.valid_options}
@@ -71,10 +73,10 @@ class TablesGenerator(CodeGenerator):
 
         super().__init__(metadata, bind, options)
         self.indentation = indentation
-        self.imports: Dict[str, Set] = defaultdict(set)
+        self.imports: dict[str, set[str]] = defaultdict(set)
 
     def generate(self) -> str:
-        sections: List[str] = []
+        sections: list[str] = []
 
         # Remove unwanted elements from the metadata
         for table in list(self.metadata.tables.values()):
@@ -100,7 +102,7 @@ class TablesGenerator(CodeGenerator):
             self.fix_column_types(table)
 
         # Generate the models
-        models: List[Model] = self.generate_models()
+        models: list[Model] = self.generate_models()
 
         # Render collected imports
         groups = self.group_imports()
@@ -190,7 +192,7 @@ class TablesGenerator(CodeGenerator):
 
             if type_.__name__ in dialect_pkg.__all__:  # type: ignore[attr-defined]
                 pkgname = dialect_pkgname
-        elif type_.__name__ in sqlalchemy.__all__:  # type: ignore[attr-defined]
+        elif type_.__name__ in sqlalchemy.__all__:
             pkgname = 'sqlalchemy'
         else:
             pkgname = type_.__module__
@@ -205,10 +207,10 @@ class TablesGenerator(CodeGenerator):
         names = self.imports.setdefault(pkgname, set())
         names.remove(name)
 
-    def group_imports(self) -> List[List[str]]:
-        future_imports: List[str] = []
-        stdlib_imports: List[str] = []
-        thirdparty_imports: List[str] = []
+    def group_imports(self) -> list[list[str]]:
+        future_imports: list[str] = []
+        stdlib_imports: list[str] = []
+        thirdparty_imports: list[str] = []
 
         for package in sorted(self.imports):
             imports = ', '.join(sorted(self.imports[package]))
@@ -224,28 +226,28 @@ class TablesGenerator(CodeGenerator):
 
         return [group for group in (future_imports, stdlib_imports, thirdparty_imports) if group]
 
-    def generate_models(self) -> List[Model]:
+    def generate_models(self) -> list[Model]:
         models = [Model(table) for table in self.metadata.sorted_tables]
 
         # Collect the imports
         self.collect_imports(models)
 
         # Generate names for models
-        global_names = set(name for namespace in self.imports.values() for name in namespace)
+        global_names = {name for namespace in self.imports.values() for name in namespace}
         for model in models:
             self.generate_model_name(model, global_names)
             global_names.add(model.name)
 
         return models
 
-    def generate_model_name(self, model: Model, global_names: Set[str]) -> None:
+    def generate_model_name(self, model: Model, global_names: set[str]) -> None:
         preferred_name = f't_{model.table.name}'
         model.name = self.find_free_name(preferred_name, global_names)
 
-    def render_module_variables(self, models: List[Model]) -> str:
+    def render_module_variables(self, models: list[Model]) -> str:
         return 'metadata = MetaData()'
 
-    def render_models(self, models: List[Model]) -> str:
+    def render_models(self, models: list[Model]) -> str:
         rendered = []
         for model in models:
             rendered_table = self.render_table(model.table)
@@ -254,7 +256,7 @@ class TablesGenerator(CodeGenerator):
         return '\n\n'.join(rendered)
 
     def render_table(self, table: Table) -> str:
-        args: List[str] = [f'{table.name!r}, metadata']
+        args: list[str] = [f'{table.name!r}, metadata']
         for column in table.columns:
             # Cast is required because of a bug in the SQLAlchemy stubs regarding Table.columns
             args.append(self.render_column(column, True))
@@ -358,7 +360,7 @@ class TablesGenerator(CodeGenerator):
 
     def render_column_type(self, coltype: Any) -> str:
         args = []
-        kwargs: Dict[str, Any] = OrderedDict()
+        kwargs: dict[str, Any] = OrderedDict()
         sig = inspect.signature(coltype.__class__.__init__)
         defaults = {param.name: param.default for param in sig.parameters.values()}
         missing = object()
@@ -435,7 +437,7 @@ class TablesGenerator(CodeGenerator):
         # Support for Alembic and sqlalchemy-migrate -- never expose the schema version tables
         return table.name in ('alembic_version', 'migrate_version')
 
-    def find_free_name(self, name: str, global_names: Set[str],
+    def find_free_name(self, name: str, global_names: set[str],
                        local_names: Collection[str] = ()) -> str:
         """Generate an attribute name that does not clash with other local or global names."""
         assert name, 'Identifier cannot be empty'
@@ -539,10 +541,10 @@ class TablesGenerator(CodeGenerator):
 
 
 class DeclarativeGenerator(TablesGenerator):
-    valid_options: ClassVar[Set[str]] = TablesGenerator.valid_options | {'use_inflect', 'nojoined',
+    valid_options: ClassVar[set[str]] = TablesGenerator.valid_options | {'use_inflect', 'nojoined',
                                                                          'nobidi'}
 
-    def __init__(self, metadata: MetaData, bind: Connectable, options: Set[str], *,
+    def __init__(self, metadata: MetaData, bind: Connectable, options: set[str], *,
                  indentation: str = '    ', base_class_name: str = 'Base'):
         super().__init__(metadata, bind, options, indentation=indentation)
         self.base_class_name = base_class_name
@@ -563,11 +565,11 @@ class DeclarativeGenerator(TablesGenerator):
             if model.relationships:
                 self.add_literal_import('sqlalchemy.orm', 'relationship')
 
-    def generate_models(self) -> List[Model]:
-        models_by_table_name: Dict[str, Model] = OrderedDict()
+    def generate_models(self) -> list[Model]:
+        models_by_table_name: dict[str, Model] = OrderedDict()
 
         # Pick association tables from the metadata into their own set, don't process them normally
-        links: DefaultDict[str, List[Model]] = defaultdict(lambda: [])
+        links: DefaultDict[str, list[Model]] = defaultdict(lambda: [])
         for table in self.metadata.sorted_tables:
             # Link tables have exactly two foreign key constraints and all columns are involved in
             # them
@@ -602,7 +604,7 @@ class DeclarativeGenerator(TablesGenerator):
                 if not isinstance(model, ModelClass):
                     continue
 
-                pk_column_names = set(col.name for col in model.table.primary_key.columns)
+                pk_column_names = {col.name for col in model.table.primary_key.columns}
                 for constraint in model.table.foreign_key_constraints:
                     if set(get_column_names(constraint)) == pk_column_names:
                         target = models_by_table_name[constraint.elements[0].column.table.name]
@@ -614,20 +616,20 @@ class DeclarativeGenerator(TablesGenerator):
         self.collect_imports(models_by_table_name.values())
 
         # Rename models and their attributes that conflict with imports or other attributes
-        global_names = set(name for namespace in self.imports.values() for name in namespace)
+        global_names = {name for namespace in self.imports.values() for name in namespace}
         for model in models_by_table_name.values():
             self.generate_model_name(model, global_names)
 
         return list(models_by_table_name.values())
 
     def generate_relationships(self, source: ModelClass,
-                               models_by_table_name: Dict[str, Model],
-                               association_tables: List[Model]) -> List[RelationshipAttribute]:
-        relationships: List[RelationshipAttribute] = []
-        reverse_relationship: Optional[RelationshipAttribute]
+                               models_by_table_name: dict[str, Model],
+                               association_tables: list[Model]) -> list[RelationshipAttribute]:
+        relationships: list[RelationshipAttribute] = []
+        reverse_relationship: RelationshipAttribute | None
 
         # Add many-to-one (and one-to-many) relationships
-        pk_column_names = set(col.name for col in source.table.primary_key.columns)
+        pk_column_names = {col.name for col in source.table.primary_key.columns}
         for constraint in sorted(source.table.foreign_key_constraints,
                                  key=get_constraint_sort_key):
             target = models_by_table_name[constraint.elements[0].column.table.name]
@@ -643,7 +645,7 @@ class DeclarativeGenerator(TablesGenerator):
                 # Add uselist=False to One-to-One relationships
                 column_names = get_column_names(constraint)
                 if any(isinstance(c, (PrimaryKeyConstraint, UniqueConstraint)) and
-                       set(col.name for col in c.columns) == set(column_names)
+                       {col.name for col in c.columns} == set(column_names)
                        for c in constraint.table.constraints):
                     r_type = RelationshipType.ONE_TO_ONE
                 else:
@@ -728,7 +730,7 @@ class DeclarativeGenerator(TablesGenerator):
 
         return relationships
 
-    def generate_model_name(self, model: Model, global_names: Set[str]) -> None:
+    def generate_model_name(self, model: Model, global_names: set[str]) -> None:
         if isinstance(model, ModelClass):
             preferred_name = _re_invalid_identifier.sub('_', model.table.name)
             preferred_name = ''.join(part[:1].upper() + part[1:]
@@ -739,7 +741,7 @@ class DeclarativeGenerator(TablesGenerator):
             model.name = self.find_free_name(preferred_name, global_names)
 
             # Fill in the names for column attributes
-            local_names: Set[str] = set()
+            local_names: set[str] = set()
             for column_attr in model.columns:
                 self.generate_column_attr_name(column_attr, global_names, local_names)
                 local_names.add(column_attr.name)
@@ -752,11 +754,11 @@ class DeclarativeGenerator(TablesGenerator):
             super().generate_model_name(model, global_names)
 
     def generate_column_attr_name(self, column_attr: ColumnAttribute,
-                                  global_names: Set[str], local_names: Set[str]) -> None:
+                                  global_names: set[str], local_names: set[str]) -> None:
         column_attr.name = self.find_free_name(column_attr.column.name, global_names, local_names)
 
     def generate_relationship_name(self, relationship: RelationshipAttribute,
-                                   global_names: Set[str], local_names: Set[str]) -> None:
+                                   global_names: set[str], local_names: set[str]) -> None:
         # Self referential reverse relationships
         if (relationship.type in (RelationshipType.ONE_TO_MANY, RelationshipType.ONE_TO_ONE)
                 and relationship.source is relationship.target
@@ -784,7 +786,7 @@ class DeclarativeGenerator(TablesGenerator):
 
         relationship.name = self.find_free_name(preferred_name, global_names, local_names)
 
-    def render_module_variables(self, models: List[Model]) -> str:
+    def render_module_variables(self, models: list[Model]) -> str:
         if not any(isinstance(model, ModelClass) for model in models):
             return super().render_module_variables(models)
 
@@ -794,7 +796,7 @@ class DeclarativeGenerator(TablesGenerator):
 
         return '\n'.join(declarations)
 
-    def render_models(self, models: List[Model]) -> str:
+    def render_models(self, models: list[Model]) -> str:
         rendered = []
         for model in models:
             if isinstance(model, ModelClass):
@@ -805,7 +807,7 @@ class DeclarativeGenerator(TablesGenerator):
         return '\n\n\n'.join(rendered)
 
     def render_class(self, model: ModelClass) -> str:
-        sections: List[str] = []
+        sections: list[str] = []
 
         # Render class variables / special declarations
         class_vars: str = self.render_class_variables(model)
@@ -813,7 +815,7 @@ class DeclarativeGenerator(TablesGenerator):
             sections.append(class_vars)
 
         # Render column attributes
-        rendered_column_attributes: List[str] = []
+        rendered_column_attributes: list[str] = []
         for nullable in (False, True):
             for column_attr in model.columns:
                 if column_attr.column.nullable is nullable:
@@ -823,7 +825,7 @@ class DeclarativeGenerator(TablesGenerator):
             sections.append('\n'.join(rendered_column_attributes))
 
         # Render relationship attributes
-        rendered_relationship_attributes: List[str] = [
+        rendered_relationship_attributes: list[str] = [
             self.render_relationship(relationship) for relationship in model.relationships]
 
         if rendered_relationship_attributes:
@@ -848,8 +850,8 @@ class DeclarativeGenerator(TablesGenerator):
         return '\n'.join(variables)
 
     def render_table_args(self, table: Table) -> str:
-        args: List[str] = []
-        kwargs: Dict[str, str] = {}
+        args: list[str] = []
+        kwargs: dict[str, str] = {}
 
         # Render constraints
         for constraint in sorted(table.constraints, key=get_constraint_sort_key):
@@ -894,7 +896,7 @@ class DeclarativeGenerator(TablesGenerator):
         return f'{column_attr.name} = {rendered_column}'
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
-        def render_column_attrs(column_attrs: List[ColumnAttribute]) -> str:
+        def render_column_attrs(column_attrs: list[ColumnAttribute]) -> str:
             rendered = []
             for attr in column_attrs:
                 if attr.model is relationship.source:
@@ -904,7 +906,7 @@ class DeclarativeGenerator(TablesGenerator):
 
             return '[' + ', '.join(rendered) + ']'
 
-        def render_join(terms: List[JoinType]) -> str:
+        def render_join(terms: list[JoinType]) -> str:
             rendered_joins = []
             for source, source_col, target, target_col in terms:
                 rendered = f'{source.name}.{source_col} == {target.name}.'
@@ -921,7 +923,7 @@ class DeclarativeGenerator(TablesGenerator):
                 return repr(rendered_joins[0])
 
         # Render keyword arguments
-        kwargs: Dict[str, Any] = OrderedDict()
+        kwargs: dict[str, Any] = OrderedDict()
         if relationship.type is RelationshipType.ONE_TO_ONE and relationship.constraint:
             if relationship.constraint.referred_table is relationship.source.table:
                 kwargs['uselist'] = False
@@ -957,7 +959,7 @@ class DeclarativeGenerator(TablesGenerator):
 
 
 class DataclassGenerator(DeclarativeGenerator):
-    def __init__(self, metadata: MetaData, bind: Connectable, options: Set[str], *,
+    def __init__(self, metadata: MetaData, bind: Connectable, options: set[str], *,
                  indentation: str = '    ', base_class_name: str = 'Base',
                  quote_annotations: bool = False, metadata_key: str = 'sa'):
         super().__init__(metadata, bind, options, indentation=indentation,
@@ -998,11 +1000,11 @@ class DataclassGenerator(DeclarativeGenerator):
         else:
             self.add_import(python_type)
 
-    def render_module_variables(self, models: List[Model]) -> str:
+    def render_module_variables(self, models: list[Model]) -> str:
         if not any(isinstance(model, ModelClass) for model in models):
             return super().render_module_variables(models)
 
-        declarations: List[str] = ['mapper_registry = registry()']
+        declarations: list[str] = ['mapper_registry = registry()']
         if any(not isinstance(model, ModelClass) for model in models):
             declarations.append('metadata = mapper_registry.metadata')
 
@@ -1029,7 +1031,7 @@ class DataclassGenerator(DeclarativeGenerator):
         else:
             python_type_name = python_type.__name__
 
-        kwargs: Dict[str, Any] = OrderedDict()
+        kwargs: dict[str, Any] = OrderedDict()
         if column.autoincrement and column.name in column.table.primary_key:
             kwargs['init'] = False
         elif column.nullable:
@@ -1044,7 +1046,7 @@ class DataclassGenerator(DeclarativeGenerator):
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
         rendered = super().render_relationship(relationship).partition(' = ')[2]
-        kwargs: Dict[str, Any] = OrderedDict()
+        kwargs: dict[str, Any] = OrderedDict()
 
         annotation = relationship.target.name
         if self.quote_annotations:

@@ -1,4 +1,4 @@
-from typing import List, Set
+from __future__ import annotations
 
 from sqlalchemy import CheckConstraint
 from sqlalchemy.engine import Connectable
@@ -7,7 +7,7 @@ from sqlalchemy.sql.schema import (
     ColumnCollectionConstraint, Constraint, ForeignKeyConstraint, Table)
 
 
-def get_column_names(constraint: ColumnCollectionConstraint) -> List[str]:
+def get_column_names(constraint: ColumnCollectionConstraint) -> list[str]:
     return list(constraint.columns.keys())
 
 
@@ -25,10 +25,10 @@ def get_compiled_expression(statement: ClauseElement, bind: Connectable) -> str:
     return str(statement.compile(bind, compile_kwargs={"literal_binds": True}))
 
 
-def get_common_fk_constraints(table1: Table, table2: Table) -> Set[ForeignKeyConstraint]:
+def get_common_fk_constraints(table1: Table, table2: Table) -> set[ForeignKeyConstraint]:
     """Return a set of foreign key constraints the two tables have against each other."""
-    c1 = set(c for c in table1.constraints if isinstance(c, ForeignKeyConstraint) and
-             c.elements[0].column.table == table2)
-    c2 = set(c for c in table2.constraints if isinstance(c, ForeignKeyConstraint) and
-             c.elements[0].column.table == table1)
+    c1 = {c for c in table1.constraints if isinstance(c, ForeignKeyConstraint) and
+          c.elements[0].column.table == table2}
+    c2 = {c for c in table2.constraints if isinstance(c, ForeignKeyConstraint) and
+          c.elements[0].column.table == table1}
     return c1.union(c2)

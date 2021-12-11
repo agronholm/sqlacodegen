@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sqlite3
 import subprocess
 import sys
@@ -12,10 +14,7 @@ if sys.version_info < (3, 8):
 else:
     from importlib.metadata import version
 
-if sys.version_info < (3, 7):
-    future_imports = ""
-else:
-    future_imports = "from __future__ import annotations\n\n"
+future_imports = "from __future__ import annotations\n\n"
 
 if _sqla_version < (1, 4):
     declarative_package = 'sqlalchemy.ext.declarative'
