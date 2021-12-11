@@ -58,7 +58,7 @@ jobs:
 
   coveralls:
     name: Finish Coveralls
-    needs: [test, test-sqla13]
+    needs: [test]
     runs-on: ubuntu-latest
     container: python:3-slim
     steps:
