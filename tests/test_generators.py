@@ -370,7 +370,7 @@ t_simple = Table(
         (True, ', persisted=True')
     ])
     def test_computed_column(self, generator: CodeGenerator, persisted: bool | None,
-                             extra_args: str):
+                             extra_args: str) -> None:
         Table(
             'computed', generator.metadata,
             Column('id', INTEGER, primary_key=True),
@@ -1612,7 +1612,7 @@ class Simple(Base):
     id = Column(Integer, primary_key=True)
 """
 
-    def test_metadata_column(self, generator: CodeGenerator):
+    def test_metadata_column(self, generator: CodeGenerator) -> None:
         Table(
             'simple', generator.metadata,
             Column('id', INTEGER, primary_key=True),
@@ -1633,7 +1633,7 @@ class Simple(Base):
     metadata_ = Column('metadata', String)
 """
 
-    def test_only_tables(self, generator: CodeGenerator):
+    def test_only_tables(self, generator: CodeGenerator) -> None:
         Table(
             'simple', generator.metadata,
             Column('id', INTEGER)

@@ -32,7 +32,7 @@ def db_path(tmp_path: Path) -> Path:
     return path
 
 
-def test_cli_tables(db_path: Path, tmp_path: Path):
+def test_cli_tables(db_path: Path, tmp_path: Path) -> None:
     output_path = tmp_path / 'outfile'
     subprocess.run(['sqlacodegen', f'sqlite:///{db_path}', '--generator', 'tables',
                     '--outfile', str(output_path)], check=True)
@@ -51,7 +51,7 @@ t_foo = Table(
 """
 
 
-def test_cli_declarative(db_path: Path, tmp_path: Path):
+def test_cli_declarative(db_path: Path, tmp_path: Path) -> None:
     output_path = tmp_path / 'outfile'
     subprocess.run(['sqlacodegen', f'sqlite:///{db_path}', '--generator', 'declarative',
                     '--outfile', str(output_path)], check=True)
@@ -71,7 +71,7 @@ class Foo(Base):
 """
 
 
-def test_cli_dataclass(db_path: Path, tmp_path: Path):
+def test_cli_dataclass(db_path: Path, tmp_path: Path) -> None:
     output_path = tmp_path / 'outfile'
     subprocess.run(['sqlacodegen', f'sqlite:///{db_path}', '--generator', 'dataclasses',
                     '--outfile', str(output_path)], check=True)
@@ -96,7 +96,7 @@ class Foo:
 """
 
 
-def test_main():
+def test_main() -> None:
     expected_version = version('sqlacodegen')
     completed = subprocess.run([sys.executable, '-m', 'sqlacodegen', '--version'],
                                stdout=subprocess.PIPE, check=True)

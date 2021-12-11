@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Tuple, Union
+from typing import Any, Tuple, Union
 
 from sqlalchemy.sql.schema import Column, ForeignKeyConstraint, Table
 
@@ -13,7 +13,7 @@ class Model:
     name: str = field(init=False, default='')
 
     @property
-    def schema(self) -> str:
+    def schema(self) -> str | None:
         return self.table.schema
 
 
@@ -42,7 +42,7 @@ class RelationshipType(Enum):
 @dataclass
 class ColumnAttribute:
     model: ModelClass
-    column: Column
+    column: Column[Any]
     name: str = field(init=False, default='')
 
     def __repr__(self) -> str:
