@@ -15,9 +15,9 @@ from typing import Any, ClassVar, Collection, DefaultDict, Dict, Iterable, List,
 import inflect
 import sqlalchemy
 from sqlalchemy import (
-    ARRAY, Boolean, CheckConstraint, Column, Constraint, DefaultClause, Enum, Float, ForeignKey,
-    ForeignKeyConstraint, Index, MetaData, PrimaryKeyConstraint, String, Table, Text,
-    UniqueConstraint)
+    ARRAY, Boolean, CheckConstraint, Column, Computed, Constraint, DefaultClause, Enum, Float,
+    ForeignKey, ForeignKeyConstraint, Identity, Index, MetaData, PrimaryKeyConstraint, String,
+    Table, Text, UniqueConstraint)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connectable
 from sqlalchemy.exc import CompileError
@@ -31,18 +31,6 @@ if sys.version_info < (3, 8):
     from importlib_metadata import version
 else:
     from importlib.metadata import version
-
-# SQLAlchemy 1.3.11+
-try:
-    from sqlalchemy import Computed
-except ImportError:
-    Computed = None  # type: ignore
-
-# SQLAlchemy 1.4+
-try:
-    from sqlalchemy import Identity
-except ImportError:
-    Identity = None
 
 _sqla_version = tuple(int(x) for x in version('sqlalchemy').split('.')[:2])
 _re_boolean_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \(0, 1\)")
@@ -346,7 +334,7 @@ class TablesGenerator(CodeGenerator):
 
         if isinstance(column.server_default, DefaultClause):
             kwargs['server_default'] = f'text({column.server_default.arg.text!r})'
-        elif Computed and isinstance(column.server_default, Computed):
+        elif isinstance(column.server_default, Computed):
             expression = column.server_default.sqltext.text
 
             persist_arg = ''
@@ -354,7 +342,7 @@ class TablesGenerator(CodeGenerator):
                 persist_arg = f', persisted={column.server_default.persisted}'
 
             args.append(f'Computed({expression!r}{persist_arg})')
-        elif Identity and isinstance(column.server_default, Identity):
+        elif isinstance(column.server_default, Identity):
             args.append(repr(column.server_default))
         elif column.server_default:
             kwargs['server_default'] = repr(column.server_default)
@@ -971,14 +959,11 @@ class DeclarativeGenerator(TablesGenerator):
 class DataclassGenerator(DeclarativeGenerator):
     def __init__(self, metadata: MetaData, bind: Connectable, options: Set[str], *,
                  indentation: str = '    ', base_class_name: str = 'Base',
-                 quote_annotations: Optional[bool] = None, metadata_key: str = 'sa'):
+                 quote_annotations: bool = False, metadata_key: str = 'sa'):
         super().__init__(metadata, bind, options, indentation=indentation,
                          base_class_name=base_class_name)
         self.metadata_key = metadata_key
-        if quote_annotations is not None:
-            self.quote_annotations = quote_annotations
-        else:
-            self.quote_annotations = sys.version_info < (3, 7)
+        self.quote_annotations = quote_annotations
 
     def collect_imports(self, models: Iterable[Model]) -> None:
         super().collect_imports(models)

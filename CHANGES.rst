@@ -3,6 +3,8 @@ Version history
 
 **UNRELEASED**
 
+- Dropped support for Python < 3.7
+- Dropped support for SQLAlchemy 1.3
 - Added a ``__main__`` module which can be used as an alternate entry point to the CLI
 - Fixed ``sqlalchemy.exc.InvalidRequestError`` when encountering a column named "metadata"
   (regression from 2.0)
