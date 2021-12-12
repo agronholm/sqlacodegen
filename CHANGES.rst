@@ -10,6 +10,8 @@ Version history
   (regression from 2.0)
 - Fixed missing ``MetaData`` import with ``DeclarativeGenerator`` when only plain tables are
   generated
+- Improved translation of column names into column attributes where the column name has whitespace
+  at the beginning or end
 
 **3.0.0b2**
 

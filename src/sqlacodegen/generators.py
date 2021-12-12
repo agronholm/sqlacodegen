@@ -440,6 +440,7 @@ class TablesGenerator(CodeGenerator):
     def find_free_name(self, name: str, global_names: set[str],
                        local_names: Collection[str] = ()) -> str:
         """Generate an attribute name that does not clash with other local or global names."""
+        name = name.strip()
         assert name, 'Identifier cannot be empty'
         name = _re_invalid_identifier.sub('_', name)
         if name[0].isdigit():

@@ -1653,6 +1653,25 @@ class Simple(Base):
     metadata_ = Column('metadata', String)
 """
 
+    def test_invalid_variable_name_from_column(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple', generator.metadata,
+            Column(' id ', INTEGER, primary_key=True),
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, Integer
+from sqlalchemy.orm import declarative_base
+
+Base = declarative_base()
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+
+    id = Column(' id ', Integer, primary_key=True)
+"""
+
     def test_only_tables(self, generator: CodeGenerator) -> None:
         Table(
             'simple', generator.metadata,
