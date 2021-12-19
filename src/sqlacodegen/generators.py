@@ -12,7 +12,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar, Collection, DefaultDict, Iterable
+from typing import Any, ClassVar, Collection, DefaultDict, Iterable, Sequence
 
 import inflect
 import sqlalchemy
@@ -45,10 +45,15 @@ _re_invalid_identifier = re.compile(r'(?u)\W')
 class CodeGenerator(metaclass=ABCMeta):
     valid_options: ClassVar[set[str]] = set()
 
-    def __init__(self, metadata: MetaData, bind: Connection | Engine, options: set[str]):
+    def __init__(self, metadata: MetaData, bind: Connection | Engine, options: Sequence[str]):
         self.metadata: MetaData = metadata
         self.bind: Connection | Engine = bind
-        self.options: set[str] = options
+        self.options: set[str] = set(options)
+
+        # Validate options
+        invalid_options = {opt for opt in options if opt not in self.valid_options}
+        if invalid_options:
+            raise ValueError('Unrecognized options: ' + ', '.join(invalid_options))
 
     @abstractmethod
     def generate(self) -> str:
@@ -64,13 +69,8 @@ class TablesGenerator(CodeGenerator):
     valid_options: ClassVar[set[str]] = {'noindexes', 'noconstraints', 'nocomments'}
     builtin_module_names: ClassVar[set[str]] = set(sys.builtin_module_names) | {'dataclasses'}
 
-    def __init__(self, metadata: MetaData, bind: Connection | Engine, options: set[str], *,
+    def __init__(self, metadata: MetaData, bind: Connection | Engine, options: Sequence[str], *,
                  indentation: str = '    '):
-        # Validate options
-        invalid_options = {opt for opt in options if opt not in self.valid_options}
-        if invalid_options:
-            raise ValueError('Unrecognized options: ' + ', '.join(invalid_options))
-
         super().__init__(metadata, bind, options)
         self.indentation: str = indentation
         self.imports: dict[str, set[str]] = defaultdict(set)
@@ -545,7 +545,7 @@ class DeclarativeGenerator(TablesGenerator):
     valid_options: ClassVar[set[str]] = TablesGenerator.valid_options | {'use_inflect', 'nojoined',
                                                                          'nobidi'}
 
-    def __init__(self, metadata: MetaData, bind: Connection | Engine, options: set[str], *,
+    def __init__(self, metadata: MetaData, bind: Connection | Engine, options: Sequence[str], *,
                  indentation: str = '    ', base_class_name: str = 'Base'):
         super().__init__(metadata, bind, options, indentation=indentation)
         self.base_class_name: str = base_class_name
@@ -960,7 +960,7 @@ class DeclarativeGenerator(TablesGenerator):
 
 
 class DataclassGenerator(DeclarativeGenerator):
-    def __init__(self, metadata: MetaData, bind: Connection | Engine, options: set[str], *,
+    def __init__(self, metadata: MetaData, bind: Connection | Engine, options: Sequence[str], *,
                  indentation: str = '    ', base_class_name: str = 'Base',
                  quote_annotations: bool = False, metadata_key: str = 'sa'):
         super().__init__(metadata, bind, options, indentation=indentation,

@@ -44,6 +44,7 @@ class TestTablesGenerator:
             'simple_items', generator.metadata,
             Column('enum', postgresql.ENUM('A', 'B', name='blah')),
             Column('bool', postgresql.BOOLEAN),
+            Column('bool', postgresql.BOOLEAN),
             Column('number', NUMERIC(10, asdecimal=False)),
         )
 
