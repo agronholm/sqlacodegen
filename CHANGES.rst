@@ -15,7 +15,7 @@ Version history
 - Modified constraint and index rendering to add them explicitly instead of using shortcuts like
   ``unique=True``, ``index=True`` or ``primary=True`` when the constraint or index has a name that
   does not match the default naming convention
-- Added detection for sequence use in primary
+- Added detection for sequence use in column defaults on PostgreSQL
 
 **3.0.0b2**
 
