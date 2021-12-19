@@ -18,6 +18,12 @@ from sqlacodegen.generators import (
     CodeGenerator, DataclassGenerator, DeclarativeGenerator, TablesGenerator)
 
 
+def validate_code(generated_code: str, expected_code: str) -> None:
+    expected_code = dedent(expected_code)
+    assert generated_code == expected_code
+    exec(generated_code, {})
+
+
 @pytest.fixture
 def engine(request: FixtureRequest) -> Engine:
     dialect = getattr(request, 'param', None)
@@ -50,7 +56,7 @@ class TestTablesGenerator:
             Column('number', NUMERIC(10, asdecimal=False)),
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Boolean, Column, Enum, MetaData, Numeric, Table
 
             metadata = MetaData()
@@ -75,7 +81,7 @@ class TestTablesGenerator:
             CheckConstraint('simple_items.bool3 IN (0, 1)')
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Boolean, Column, MetaData, Table
 
             metadata = MetaData()
@@ -97,7 +103,7 @@ class TestTablesGenerator:
             Column('int_array', postgresql.ARRAY(INTEGER))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import ARRAY, Column, Float, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -117,7 +123,7 @@ class TestTablesGenerator:
             Column('jsonb', postgresql.JSONB(astext_type=Text(50)))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, MetaData, Table, Text
             from sqlalchemy.dialects.postgresql import JSONB
 
@@ -137,7 +143,7 @@ class TestTablesGenerator:
             Column('jsonb', postgresql.JSONB)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, MetaData, Table
             from sqlalchemy.dialects.postgresql import JSONB
 
@@ -157,7 +163,7 @@ class TestTablesGenerator:
             CheckConstraint(r"simple_items.enum IN ('A', '\'B', 'C')")
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Enum, MetaData, Table
 
             metadata = MetaData()
@@ -177,7 +183,7 @@ class TestTablesGenerator:
             Column('length', postgresql.DOUBLE_PRECISION)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import BigInteger, Column, Float, MetaData, Table
 
             metadata = MetaData()
@@ -199,7 +205,7 @@ class TestTablesGenerator:
             Column('set', mysql.SET('one', 'two'))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, String, Table
             from sqlalchemy.dialects.mysql import SET
 
@@ -223,7 +229,7 @@ class TestTablesGenerator:
             UniqueConstraint('id', 'number')
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table, \
 UniqueConstraint
 
@@ -251,7 +257,7 @@ UniqueConstraint
                                        simple_items.c.number, unique=True))
         simple_items.indexes.add(Index('ix_text', simple_items.c.text, unique=True))
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Index, Integer, MetaData, String, Table
 
             metadata = MetaData()
@@ -273,7 +279,7 @@ UniqueConstraint
             comment="this is a 'comment'"
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -292,7 +298,7 @@ UniqueConstraint
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -313,7 +319,7 @@ UniqueConstraint
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -335,7 +341,7 @@ UniqueConstraint
         )
         simple_items.indexes.add(Index('ix_number', simple_items.c.number))
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -355,7 +361,7 @@ UniqueConstraint
             comment="this is a 'comment'"
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -381,7 +387,7 @@ UniqueConstraint
             Column('computed', INTEGER, Computed('1 + 2', persisted=persisted))
         )
 
-        assert generator.generate() == dedent(f"""\
+        validate_code(generator.generate(), f"""\
             from sqlalchemy import Column, Computed, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -401,7 +407,7 @@ UniqueConstraint
             schema='testschema'
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, MetaData, String, Table
 
             metadata = MetaData()
@@ -422,7 +428,7 @@ UniqueConstraint
                 initially='DEFERRED'))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, ForeignKey, MetaData, String, Table
 
             metadata = MetaData()
@@ -441,7 +447,7 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
             Column('id', INTEGER, primary_key=True, server_default=text('uuid_generate_v4()'))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table, text
 
             metadata = MetaData()
@@ -461,7 +467,7 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
             Column('timestamp', mysql.TIMESTAMP)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, TIMESTAMP, Table
 
             metadata = MetaData()
@@ -482,7 +488,7 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
             Column('number', mysql.INTEGER(11))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
             from sqlalchemy.dialects.mysql import INTEGER
 
@@ -504,7 +510,7 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
             Column('my_tinytext', mysql.TINYTEXT)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
             from sqlalchemy.dialects.mysql import TINYTEXT
 
@@ -526,7 +532,7 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
             Column('my_mediumtext', mysql.MEDIUMTEXT)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
             from sqlalchemy.dialects.mysql import MEDIUMTEXT
 
@@ -548,7 +554,7 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
             Column('my_longtext', mysql.LONGTEXT)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
             from sqlalchemy.dialects.mysql import LONGTEXT
 
@@ -570,7 +576,7 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
             schema='testschema'
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Boolean, Column, MetaData, Table
 
             metadata = MetaData()
@@ -592,7 +598,7 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
                 something()""")))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table, text
 
             metadata = MetaData()
@@ -611,7 +617,7 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
             Column('problem', VARCHAR, server_default=text("':001'"))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, MetaData, String, Table, text
 
             metadata = MetaData()
@@ -629,7 +635,7 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
             Column('problem', NullType),
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, MetaData, Table
             from sqlalchemy.sql.sqltypes import NullType
 
@@ -649,7 +655,7 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
             Column('id', INTEGER, primary_key=True, server_default=Identity(start=1, increment=2))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Identity, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -667,7 +673,7 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
             Column('id', INTEGER, comment='This\nis a multi-line\ncomment')
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -686,7 +692,7 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
             comment='This\nis a multi-line\ncomment'
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -707,7 +713,7 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
                    server_default=text("nextval('simple_items_id_seq'::regclass)"))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -727,7 +733,7 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
                    server_default=text("nextval('test_seq'::regclass)"))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Sequence, Table
 
             metadata = MetaData()
@@ -759,7 +765,7 @@ class TestDeclarativeGenerator:
                                        simple_items.c.number))
         simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Index, Integer, String
             from sqlalchemy.orm import declarative_base
 
@@ -786,7 +792,7 @@ class TestDeclarativeGenerator:
             UniqueConstraint('id', 'number')
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
             from sqlalchemy.orm import declarative_base
 
@@ -816,7 +822,7 @@ class TestDeclarativeGenerator:
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, ForeignKey, Integer
             from sqlalchemy.orm import declarative_base, relationship
 
@@ -848,7 +854,7 @@ class TestDeclarativeGenerator:
             ForeignKeyConstraint(['parent_item_id'], ['simple_items.id'])
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, ForeignKey, Integer
             from sqlalchemy.orm import declarative_base, relationship
 
@@ -877,7 +883,7 @@ back_populates='parent_item')
             ForeignKeyConstraint(['top_item_id'], ['simple_items.id'])
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, ForeignKey, Integer
             from sqlalchemy.orm import declarative_base, relationship
 
@@ -917,7 +923,7 @@ foreign_keys=[top_item_id], back_populates='top_item')
             Column('id2', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKeyConstraint, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -961,7 +967,7 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1005,7 +1011,7 @@ back_populates='simple_items_')
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1041,7 +1047,7 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1078,7 +1084,7 @@ class Oglkrogk(Base):
             Column('relationship', Text)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer, Text
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1115,7 +1121,7 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1152,7 +1158,7 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1191,7 +1197,7 @@ class SimpleItems(Base):
             ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1242,7 +1248,7 @@ t_container_items = Table(
             ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1285,7 +1291,7 @@ t_container_items = Table(
             schema='otherschema'
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1337,7 +1343,7 @@ t_child_items = Table(
                                  ['simple_containers.id1', 'simple_containers.id2'])
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKeyConstraint, Integer, Table
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1396,7 +1402,7 @@ t_container_items = Table(
             ForeignKeyConstraint(['super_item_id'], ['simple_super_items.id'])
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1431,7 +1437,7 @@ class SimpleSubItems(SimpleItems):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1451,7 +1457,7 @@ class SimpleItem(Base):
             schema='testschema'
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1474,7 +1480,7 @@ class SimpleItems(Base):
         )
         simple_items.indexes.add(Index('testidx', simple_items.c.id, simple_items.c.name))
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, Index, Integer, String
 from sqlalchemy.orm import declarative_base
 
@@ -1505,7 +1511,7 @@ class SimpleItems(Base):
             schema='otherschema'
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1539,7 +1545,7 @@ class SimpleItems(Base):
             Column('def', INTEGER)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1561,7 +1567,7 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1580,7 +1586,7 @@ class CustomerAPIPreference(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1599,7 +1605,7 @@ class CustomerApiPreference(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1618,7 +1624,7 @@ class CustomerAPIPreference(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1642,7 +1648,7 @@ class CustomerAPIPreference(Base):
         )
 
         comment_part = '' if nocomments else ', comment="this is a \'comment\'"'
-        assert generator.generate() == dedent(f"""\
+        validate_code(generator.generate(), f"""\
             from sqlalchemy import Column, Integer
             from sqlalchemy.orm import declarative_base
 
@@ -1662,7 +1668,7 @@ class CustomerAPIPreference(Base):
             comment="this is a 'comment'"
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer
             from sqlalchemy.orm import declarative_base
 
@@ -1683,7 +1689,7 @@ class CustomerAPIPreference(Base):
             Column('metadata', VARCHAR)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, String
             from sqlalchemy.orm import declarative_base
 
@@ -1703,7 +1709,7 @@ class CustomerAPIPreference(Base):
             Column(' id ', INTEGER, primary_key=True),
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer
             from sqlalchemy.orm import declarative_base
 
@@ -1722,7 +1728,7 @@ class CustomerAPIPreference(Base):
             Column('id', INTEGER)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from sqlalchemy import Column, Integer, MetaData, Table
 
             metadata = MetaData()
@@ -1744,9 +1750,9 @@ class CustomerAPIPreference(Base):
             UniqueConstraint('text', name='uniquetest')
         )
 
-        assert generator.generate() == dedent("""\
-            from sqlalchemy import CheckConstraint, Column, Integer, PrimaryKeyConstraint, String, \
-UniqueConstraint
+        validate_code(generator.generate(), """\
+            from sqlalchemy import CheckConstraint, Column, Integer, PrimaryKeyConstraint, \
+String, UniqueConstraint
             from sqlalchemy.orm import declarative_base
 
             Base = declarative_base()
@@ -1779,7 +1785,7 @@ class TestDataclassGenerator:
             Column('name', VARCHAR(20))
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from __future__ import annotations
 
             from dataclasses import dataclass, field
@@ -1809,7 +1815,7 @@ class TestDataclassGenerator:
             Column('age', INTEGER, nullable=False)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from __future__ import annotations
 
             from dataclasses import dataclass, field
@@ -1844,7 +1850,7 @@ class TestDataclassGenerator:
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from __future__ import annotations
 
             from dataclasses import dataclass, field
@@ -1894,7 +1900,7 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from __future__ import annotations
 
             from dataclasses import dataclass, field
@@ -1949,7 +1955,7 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
             ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
         )
 
-        assert generator.generate() == dedent("""\
+        validate_code(generator.generate(), """\
             from __future__ import annotations
 
             from dataclasses import dataclass, field
