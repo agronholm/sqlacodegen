@@ -12,6 +12,9 @@ Version history
   generated
 - Improved translation of column names into column attributes where the column name has whitespace
   at the beginning or end
+- Modified constraint and index rendering to add them explicitly instead of using shortcuts like
+  ``unique=True``, ``index=True`` or ``primary=True`` when the constraint or index has a name that
+  does not match the default naming convention
 
 **3.0.0b2**
 

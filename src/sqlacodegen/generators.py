@@ -27,7 +27,8 @@ from sqlalchemy.exc import CompileError
 from .models import (
     ColumnAttribute, JoinType, Model, ModelClass, RelationshipAttribute, RelationshipType)
 from .utils import (
-    get_column_names, get_common_fk_constraints, get_compiled_expression, get_constraint_sort_key)
+    get_column_names, get_common_fk_constraints, get_compiled_expression, get_constraint_sort_key,
+    uses_default_name)
 
 if sys.version_info < (3, 8):
     from importlib_metadata import version
@@ -138,7 +139,7 @@ class TablesGenerator(CodeGenerator):
             self.collect_imports_for_constraint(constraint)
 
         for index in model.table.indexes:
-            self.collect_imports_for_index(index)
+            self.collect_imports_for_constraint(index)
 
     def collect_imports_for_column(self, column: Column[Any]) -> None:
         self.add_import(Column)
@@ -157,23 +158,23 @@ class TablesGenerator(CodeGenerator):
             else:
                 self.add_import(column.server_default)
 
-    def collect_imports_for_constraint(self, constraint: Constraint) -> None:
-        if isinstance(constraint, PrimaryKeyConstraint):
-            pass
+    def collect_imports_for_constraint(self, constraint: Constraint | Index) -> None:
+        if isinstance(constraint, Index):
+            if len(constraint.columns) > 1 or not uses_default_name(constraint):
+                self.add_literal_import('sqlalchemy', 'Index')
+        elif isinstance(constraint, PrimaryKeyConstraint):
+            if not uses_default_name(constraint):
+                self.add_literal_import('sqlalchemy', 'PrimaryKeyConstraint')
         elif isinstance(constraint, UniqueConstraint):
-            if len(constraint.columns) > 1:
+            if len(constraint.columns) > 1 or not uses_default_name(constraint):
                 self.add_literal_import('sqlalchemy', 'UniqueConstraint')
         elif isinstance(constraint, ForeignKeyConstraint):
-            if len(constraint.columns) > 1:
+            if len(constraint.columns) > 1 or not uses_default_name(constraint):
                 self.add_literal_import('sqlalchemy', 'ForeignKeyConstraint')
             else:
                 self.add_import(ForeignKey)
         else:
             self.add_import(constraint)
-
-    def collect_imports_for_index(self, index: Index) -> None:
-        if len(index.columns) > 1:
-            self.add_import(Index)
 
     def add_import(self, obj: Any) -> None:
         # Don't store builtin imports
@@ -262,17 +263,18 @@ class TablesGenerator(CodeGenerator):
             args.append(self.render_column(column, True))
 
         for constraint in sorted(table.constraints, key=get_constraint_sort_key):
-            if isinstance(constraint, PrimaryKeyConstraint):
-                continue
-            if (isinstance(constraint, (ForeignKeyConstraint, UniqueConstraint)) and
-                    len(constraint.columns) == 1):
-                continue
+            if uses_default_name(constraint):
+                if isinstance(constraint, PrimaryKeyConstraint):
+                    continue
+                elif isinstance(constraint, (ForeignKeyConstraint, UniqueConstraint)):
+                    if len(constraint.columns) == 1:
+                        continue
 
             args.append(self.render_constraint(constraint))
 
         for index in sorted(table.indexes, key=lambda i: i.name):
             # One-column indexes should be rendered as index=True on columns
-            if len(index.columns) > 1:
+            if len(index.columns) > 1 or not uses_default_name(index):
                 args.append(self.render_index(index))
 
         if table.schema:
@@ -300,9 +302,11 @@ class TablesGenerator(CodeGenerator):
         dedicated_fks = [c for c in column.foreign_keys
                          if c.constraint and len(c.constraint.columns) == 1]
         is_unique = any(isinstance(c, UniqueConstraint) and set(c.columns) == {column}
-                        for c in column.table.constraints)
+                        and uses_default_name(c) for c in column.table.constraints)
         is_unique = is_unique or any(i.unique and set(i.columns) == {column}
                                      for i in column.table.indexes)
+        is_primary = any(isinstance(c, PrimaryKeyConstraint) and column.name in c.columns
+                         and uses_default_name(c) for c in column.table.constraints)
         has_index = any(set(i.columns) == {column} for i in column.table.indexes)
 
         if show_name:
@@ -316,12 +320,9 @@ class TablesGenerator(CodeGenerator):
         for fk in dedicated_fks:
             args.append(self.render_constraint(fk))
 
-        for constraint in column.constraints:
-            args.append(repr(constraint))
-
         if column.key != column.name:
             kwargs['key'] = column.key
-        if column.primary_key:
+        if is_primary:
             kwargs['primary_key'] = True
         if not column.nullable and not is_sole_pk:
             kwargs['nullable'] = False
@@ -404,34 +405,37 @@ class TablesGenerator(CodeGenerator):
 
         return rendered
 
-    def render_constraint(self, constraint: Any) -> str:
-        def render_fk_options(*opts: Any) -> str:
-            options = [repr(opt) for opt in opts]
+    def render_constraint(self, constraint: Constraint | ForeignKey) -> str:
+        def add_fk_options(*opts: Any) -> None:
+            args.extend(repr(opt) for opt in opts)
             for attr in 'ondelete', 'onupdate', 'deferrable', 'initially', 'match':
                 value = getattr(constraint, attr, None)
                 if value:
-                    options.append(f'{attr}={value!r}')
+                    kwargs[attr] = repr(value)
 
-            return ', '.join(options)
-
+        args: list[str] = []
+        kwargs: dict[str, Any] = {}
         if isinstance(constraint, ForeignKey):
             remote_column = f'{constraint.column.table.fullname}.{constraint.column.name}'
-            options = render_fk_options(remote_column)
-            return f'ForeignKey({options})'
+            add_fk_options(remote_column)
         elif isinstance(constraint, ForeignKeyConstraint):
             local_columns = get_column_names(constraint)
             remote_columns = [f'{fk.column.table.fullname}.{fk.column.name}'
                               for fk in constraint.elements]
-            options = render_fk_options(local_columns, remote_columns)
-            return f'ForeignKeyConstraint({options})'
+            add_fk_options(local_columns, remote_columns)
         elif isinstance(constraint, CheckConstraint):
-            expression = get_compiled_expression(constraint.sqltext, self.bind)
-            return f'CheckConstraint({expression!r})'
-        elif isinstance(constraint, UniqueConstraint):
-            columns = ', '.join(repr(col.name) for col in constraint.columns)
-            return f'UniqueConstraint({columns})'
+            args.append(repr(get_compiled_expression(constraint.sqltext, self.bind)))
+        elif isinstance(constraint, (UniqueConstraint, PrimaryKeyConstraint)):
+            args.extend(repr(col.name) for col in constraint.columns)
         else:
             raise TypeError(f'Cannot render constraint of type {constraint.__class__.__name__}')
+
+        if isinstance(constraint, Constraint) and not uses_default_name(constraint):
+            kwargs['name'] = repr(constraint.name)
+
+        args.extend(f'{key}={value}' for key, value in kwargs.items())
+        rendered_args = ', '.join(args)
+        return f'{constraint.__class__.__name__}({rendered_args})'
 
     def should_ignore_table(self, table: Table) -> bool:
         # Support for Alembic and sqlalchemy-migrate -- never expose the schema version tables
@@ -856,11 +860,12 @@ class DeclarativeGenerator(TablesGenerator):
 
         # Render constraints
         for constraint in sorted(table.constraints, key=get_constraint_sort_key):
-            if isinstance(constraint, PrimaryKeyConstraint):
-                continue
-            if (isinstance(constraint, (ForeignKeyConstraint, UniqueConstraint)) and
-                    len(constraint.columns) == 1):
-                continue
+            if uses_default_name(constraint):
+                if isinstance(constraint, PrimaryKeyConstraint):
+                    continue
+                if (isinstance(constraint, (ForeignKeyConstraint, UniqueConstraint)) and
+                        len(constraint.columns) == 1):
+                    continue
 
             args.append(self.render_constraint(constraint))
 

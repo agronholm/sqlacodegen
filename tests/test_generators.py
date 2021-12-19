@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from sqlalchemy import PrimaryKeyConstraint
 from sqlalchemy.dialects import mysql, postgresql
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.schema import (
@@ -43,7 +44,6 @@ class TestTablesGenerator:
         Table(
             'simple_items', generator.metadata,
             Column('enum', postgresql.ENUM('A', 'B', name='blah')),
-            Column('bool', postgresql.BOOLEAN),
             Column('bool', postgresql.BOOLEAN),
             Column('number', NUMERIC(10, asdecimal=False)),
         )
@@ -243,10 +243,10 @@ t_simple_items = Table(
             Column('number', INTEGER),
             Column('text', VARCHAR)
         )
-        simple_items.indexes.add(Index('idx_number', simple_items.c.number))
-        simple_items.indexes.add(Index('idx_text_number', simple_items.c.text,
+        simple_items.indexes.add(Index('ix_number', simple_items.c.number))
+        simple_items.indexes.add(Index('ix_text_number', simple_items.c.text,
                                        simple_items.c.number, unique=True))
-        simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
+        simple_items.indexes.add(Index('ix_text', simple_items.c.text, unique=True))
 
         assert generator.generate() == """\
 from sqlalchemy import Column, Index, Integer, MetaData, String, Table
@@ -259,7 +259,7 @@ t_simple_items = Table(
     Column('id', Integer),
     Column('number', Integer, index=True),
     Column('text', String, unique=True),
-    Index('idx_text_number', 'text', 'number', unique=True)
+    Index('ix_text_number', 'text', 'number', unique=True)
 )
 """
 
@@ -330,7 +330,7 @@ t_simple_items = Table(
             Column('number', INTEGER),
             CheckConstraint('number > 2')
         )
-        simple_items.indexes.add(Index('idx_number', simple_items.c.number))
+        simple_items.indexes.add(Index('ix_number', simple_items.c.number))
 
         assert generator.generate() == """\
 from sqlalchemy import Column, Integer, MetaData, Table
@@ -1689,6 +1689,36 @@ t_simple = Table(
     'simple', metadata,
     Column('id', Integer)
 )
+"""
+
+    def test_named_constraints(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple', generator.metadata,
+            Column('id', INTEGER),
+            Column('text', VARCHAR),
+            CheckConstraint('id > 0', name='checktest'),
+            PrimaryKeyConstraint('id', name='primarytest'),
+            UniqueConstraint('text', name='uniquetest')
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import CheckConstraint, Column, Integer, PrimaryKeyConstraint, String, \
+UniqueConstraint
+from sqlalchemy.orm import declarative_base
+
+Base = declarative_base()
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+    __table_args__ = (
+        CheckConstraint('id > 0', name='checktest'),
+        PrimaryKeyConstraint('id', name='primarytest'),
+        UniqueConstraint('text', name='uniquetest')
+    )
+
+    id = Column(Integer)
+    text = Column(String)
 """
 
 
