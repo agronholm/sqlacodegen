@@ -23,6 +23,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
+from sqlalchemy.sql.elements import TextClause
 
 from .models import (
     ColumnAttribute, JoinType, Model, ModelClass, RelationshipAttribute, RelationshipType)
@@ -41,6 +42,7 @@ _re_column_name = re.compile(r'(?:(["`]?).*\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 _re_invalid_identifier = re.compile(r'(?u)\W')
+_re_postgresql_nextval_sequence = re.compile(r"nextval\('(.+)'::regclass\)")
 
 
 class CodeGenerator(metaclass=ABCMeta):
@@ -105,12 +107,6 @@ class TablesGenerator(CodeGenerator):
         # Generate the models
         models: list[Model] = self.generate_models()
 
-        # Render collected imports
-        groups = self.group_imports()
-        imports = '\n\n'.join('\n'.join(line for line in group) for group in groups)
-        if imports:
-            sections.append(imports)
-
         # Render module level variables
         variables = self.render_module_variables(models)
         if variables:
@@ -120,6 +116,12 @@ class TablesGenerator(CodeGenerator):
         rendered_models = self.render_models(models)
         if rendered_models:
             sections.append(rendered_models)
+
+        # Render collected imports
+        groups = self.group_imports()
+        imports = '\n\n'.join('\n'.join(line for line in group) for group in groups)
+        if imports:
+            sections.insert(0, imports)
 
         return '\n\n'.join(sections) + '\n'
 
@@ -151,12 +153,6 @@ class TablesGenerator(CodeGenerator):
             if (not isinstance(column.type.astext_type, Text)
                     or column.type.astext_type.length is not None):
                 self.add_import(column.type.astext_type)
-
-        if column.server_default:
-            if isinstance(column.server_default, DefaultClause):
-                self.add_literal_import('sqlalchemy', 'text')
-            else:
-                self.add_import(column.server_default)
 
     def collect_imports_for_constraint(self, constraint: Constraint | Index) -> None:
         if isinstance(constraint, Index):
@@ -337,6 +333,19 @@ class TablesGenerator(CodeGenerator):
 
         if isinstance(column.server_default, DefaultClause):
             kwargs['server_default'] = f'text({column.server_default.arg.text!r})'
+            if isinstance(column.server_default.arg, TextClause):
+                if self.bind.dialect.name == 'postgresql':
+                    match = _re_postgresql_nextval_sequence.match(column.server_default.arg.text)
+                    if match:
+                        # Add an explicit sequence
+                        if match.group(1) != f'{column.table.name}_{column.name}_seq':
+                            args.append(f'Sequence({match.group(1)!r})')
+                            self.add_literal_import('sqlalchemy', 'Sequence')
+
+                        del kwargs['server_default']
+
+            if 'server_default' in kwargs:
+                self.add_literal_import('sqlalchemy', 'text')
         elif isinstance(column.server_default, Computed):
             expression = str(column.server_default.sqltext)
 
@@ -345,8 +354,10 @@ class TablesGenerator(CodeGenerator):
                 persist_arg = f', persisted={column.server_default.persisted}'
 
             args.append(f'Computed({expression!r}{persist_arg})')
+            self.add_import(Computed)
         elif isinstance(column.server_default, Identity):
             args.append(repr(column.server_default))
+            self.add_import(Identity)
         elif column.server_default:
             kwargs['server_default'] = repr(column.server_default)
 

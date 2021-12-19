@@ -696,6 +696,46 @@ t_simple_items = Table(
 )
 """
 
+    @pytest.mark.parametrize('engine', ['postgresql'], indirect=['engine'])
+    def test_postgresql_sequence_standard_name(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('id', INTEGER, primary_key=True,
+                   server_default=text("nextval('simple_items_id_seq'::regclass)"))
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, Integer, MetaData, Table
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('id', Integer, primary_key=True)
+)
+"""
+
+    @pytest.mark.parametrize('engine', ['postgresql'], indirect=['engine'])
+    def test_postgresql_sequence_nonstandard_name(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('id', INTEGER, primary_key=True,
+                   server_default=text("nextval('test_seq'::regclass)"))
+        )
+
+        assert generator.generate() == """\
+from sqlalchemy import Column, Integer, MetaData, Sequence, Table
+
+metadata = MetaData()
+
+
+t_simple_items = Table(
+    'simple_items', metadata,
+    Column('id', Integer, Sequence('test_seq'), primary_key=True)
+)
+"""
+
 
 class TestDeclarativeGenerator:
     @pytest.fixture
