@@ -19,11 +19,11 @@ jobs:
         path: ~/.cache/pip
         key: pip-lint
     - name: Install dependencies
-      run: pip install pyproject-flake8 isort mypy
+      run: pip install pyproject-flake8 isort mypy pytest sqlalchemy2-stubs
     - name: Run flake8
       run: pflake8 src tests
     - name: Check types with Mypy
-      run: mypy src
+      run: mypy src tests
     - name: Run isort
       run: isort -c --diff src tests
 
@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.6", "3.10"]
+        python-version: ["3.7", "3.10"]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -56,33 +56,9 @@ jobs:
         COVERALLS_PARALLEL: true
         SQLALCHEMY_WARN_20: "yes"
 
-  test-sqla13:
-    needs: [lint]
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.6
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.6
-    - uses: actions/cache@v2
-      with:
-        path: ~/.cache/pip
-        key: pip-test-sqla13
-    - name: Install dependencies
-      run: pip install .[test] coveralls "SQLAlchemy<1.4"
-    - name: Test with pytest
-      run: coverage run -m pytest
-    - name: Upload Coverage
-      run: coveralls --service=github
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        COVERALLS_FLAG_NAME: ${{ matrix.test-name }}
-        COVERALLS_PARALLEL: true
-
   coveralls:
     name: Finish Coveralls
-    needs: [test, test-sqla13]
+    needs: [test]
     runs-on: ubuntu-latest
     container: python:3-slim
     steps:
