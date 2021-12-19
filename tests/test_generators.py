@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from textwrap import dedent
+
 import pytest
 from _pytest.fixtures import FixtureRequest
 from sqlalchemy import PrimaryKeyConstraint
@@ -48,19 +50,19 @@ class TestTablesGenerator:
             Column('number', NUMERIC(10, asdecimal=False)),
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Boolean, Column, Enum, MetaData, Numeric, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Boolean, Column, Enum, MetaData, Numeric, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('enum', Enum('A', 'B', name='blah')),
-    Column('bool', Boolean),
-    Column('number', Numeric(10, asdecimal=False))
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('enum', Enum('A', 'B', name='blah')),
+                Column('bool', Boolean),
+                Column('number', Numeric(10, asdecimal=False))
+            )
+            """)
 
     def test_boolean_detection(self, generator: CodeGenerator) -> None:
         Table(
@@ -73,19 +75,19 @@ t_simple_items = Table(
             CheckConstraint('simple_items.bool3 IN (0, 1)')
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Boolean, Column, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Boolean, Column, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('bool1', Boolean),
-    Column('bool2', Boolean),
-    Column('bool3', Boolean)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('bool1', Boolean),
+                Column('bool2', Boolean),
+                Column('bool3', Boolean)
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['postgresql'], indirect=['engine'])
     def test_arrays(self, generator: CodeGenerator) -> None:
@@ -95,18 +97,18 @@ t_simple_items = Table(
             Column('int_array', postgresql.ARRAY(INTEGER))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import ARRAY, Column, Float, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import ARRAY, Column, Float, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('dp_array', ARRAY(Float(precision=53))),
-    Column('int_array', ARRAY(Integer()))
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('dp_array', ARRAY(Float(precision=53))),
+                Column('int_array', ARRAY(Integer()))
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['postgresql'], indirect=['engine'])
     def test_jsonb(self, generator: CodeGenerator) -> None:
@@ -115,18 +117,18 @@ t_simple_items = Table(
             Column('jsonb', postgresql.JSONB(astext_type=Text(50)))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, MetaData, Table, Text
-from sqlalchemy.dialects.postgresql import JSONB
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, MetaData, Table, Text
+            from sqlalchemy.dialects.postgresql import JSONB
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('jsonb', JSONB(astext_type=Text(length=50)))
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('jsonb', JSONB(astext_type=Text(length=50)))
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['postgresql'], indirect=['engine'])
     def test_jsonb_default(self, generator: CodeGenerator) -> None:
@@ -135,18 +137,18 @@ t_simple_items = Table(
             Column('jsonb', postgresql.JSONB)
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, MetaData, Table
-from sqlalchemy.dialects.postgresql import JSONB
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, MetaData, Table
+            from sqlalchemy.dialects.postgresql import JSONB
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('jsonb', JSONB)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('jsonb', JSONB)
+            )
+            """)
 
     def test_enum_detection(self, generator: CodeGenerator) -> None:
         Table(
@@ -155,17 +157,17 @@ t_simple_items = Table(
             CheckConstraint(r"simple_items.enum IN ('A', '\'B', 'C')")
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Enum, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Enum, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('enum', Enum('A', "\\\\'B", 'C'))
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('enum', Enum('A', "\\\\'B", 'C'))
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['postgresql'], indirect=['engine'])
     def test_column_adaptation(self, generator: CodeGenerator) -> None:
@@ -175,18 +177,18 @@ t_simple_items = Table(
             Column('length', postgresql.DOUBLE_PRECISION)
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import BigInteger, Column, Float, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import BigInteger, Column, Float, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', BigInteger),
-    Column('length', Float)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', BigInteger),
+                Column('length', Float)
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['mysql'], indirect=['engine'])
     def test_mysql_column_types(self, generator: CodeGenerator) -> None:
@@ -197,20 +199,20 @@ t_simple_items = Table(
             Column('set', mysql.SET('one', 'two'))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, String, Table
-from sqlalchemy.dialects.mysql import SET
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, String, Table
+            from sqlalchemy.dialects.mysql import SET
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer),
-    Column('name', String(255)),
-    Column('set', SET('one', 'two'))
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer),
+                Column('name', String(255)),
+                Column('set', SET('one', 'two'))
+            )
+            """)
 
     def test_constraints(self, generator: CodeGenerator) -> None:
         Table(
@@ -221,20 +223,21 @@ t_simple_items = Table(
             UniqueConstraint('id', 'number')
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table, UniqueConstraint
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table, \
+UniqueConstraint
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer),
-    Column('number', Integer),
-    CheckConstraint('number > 0'),
-    UniqueConstraint('id', 'number')
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer),
+                Column('number', Integer),
+                CheckConstraint('number > 0'),
+                UniqueConstraint('id', 'number')
+            )
+            """)
 
     def test_indexes(self, generator: CodeGenerator) -> None:
         simple_items = Table(
@@ -248,20 +251,20 @@ t_simple_items = Table(
                                        simple_items.c.number, unique=True))
         simple_items.indexes.add(Index('ix_text', simple_items.c.text, unique=True))
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Index, Integer, MetaData, String, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Index, Integer, MetaData, String, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer),
-    Column('number', Integer, index=True),
-    Column('text', String, unique=True),
-    Index('ix_text_number', 'text', 'number', unique=True)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer),
+                Column('number', Integer, index=True),
+                Column('text', String, unique=True),
+                Index('ix_text_number', 'text', 'number', unique=True)
+            )
+            """)
 
     def test_table_comment(self, generator: CodeGenerator) -> None:
         Table(
@@ -270,18 +273,18 @@ t_simple_items = Table(
             comment="this is a 'comment'"
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple = Table(
-    'simple', metadata,
-    Column('id', Integer, primary_key=True),
-    comment="this is a 'comment'"
-)
-"""
+            t_simple = Table(
+                'simple', metadata,
+                Column('id', Integer, primary_key=True),
+                comment="this is a 'comment'"
+            )
+            """)
 
     def test_table_name_identifiers(self, generator: CodeGenerator) -> None:
         Table(
@@ -289,17 +292,17 @@ t_simple = Table(
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items_table = Table(
-    'simple-items table', metadata,
-    Column('id', Integer, primary_key=True)
-)
-"""
+            t_simple_items_table = Table(
+                'simple-items table', metadata,
+                Column('id', Integer, primary_key=True)
+            )
+            """)
 
     @pytest.mark.parametrize('generator', [['noindexes']], indirect=True)
     def test_option_noindexes(self, generator: CodeGenerator) -> None:
@@ -310,18 +313,18 @@ t_simple_items_table = Table(
         )
         simple_items.indexes.add(Index('idx_number', simple_items.c.number))
 
-        assert generator.generate() == """\
-from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import CheckConstraint, Column, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('number', Integer),
-    CheckConstraint('number > 2')
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('number', Integer),
+                CheckConstraint('number > 2')
+            )
+            """)
 
     @pytest.mark.parametrize('generator', [['noconstraints']], indirect=True)
     def test_option_noconstraints(self, generator: CodeGenerator) -> None:
@@ -332,17 +335,17 @@ t_simple_items = Table(
         )
         simple_items.indexes.add(Index('ix_number', simple_items.c.number))
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('number', Integer, index=True)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('number', Integer, index=True)
+            )
+            """)
 
     @pytest.mark.parametrize('generator', [['nocomments']], indirect=True)
     def test_option_nocomments(self, generator: CodeGenerator) -> None:
@@ -352,17 +355,17 @@ t_simple_items = Table(
             comment="this is a 'comment'"
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple = Table(
-    'simple', metadata,
-    Column('id', Integer, primary_key=True)
-)
-"""
+            t_simple = Table(
+                'simple', metadata,
+                Column('id', Integer, primary_key=True)
+            )
+            """)
 
     @pytest.mark.skipif(Computed is None, reason='requires SQLAlchemy 1.3.11+')
     @pytest.mark.parametrize('persisted, extra_args', [
@@ -378,18 +381,18 @@ t_simple = Table(
             Column('computed', INTEGER, Computed('1 + 2', persisted=persisted))
         )
 
-        assert generator.generate() == f"""\
-from sqlalchemy import Column, Computed, Integer, MetaData, Table
+        assert generator.generate() == dedent(f"""\
+            from sqlalchemy import Column, Computed, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_computed = Table(
-    'computed', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('computed', Integer, Computed('1 + 2'{extra_args}))
-)
-"""
+            t_computed = Table(
+                'computed', metadata,
+                Column('id', Integer, primary_key=True),
+                Column('computed', Integer, Computed('1 + 2'{extra_args}))
+            )
+            """)
 
     def test_schema(self, generator: CodeGenerator) -> None:
         Table(
@@ -398,18 +401,18 @@ t_computed = Table(
             schema='testschema'
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, MetaData, String, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, MetaData, String, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('name', String),
-    schema='testschema'
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('name', String),
+                schema='testschema'
+            )
+            """)
 
     def test_foreign_key_options(self, generator: CodeGenerator) -> None:
         Table(
@@ -419,18 +422,18 @@ t_simple_items = Table(
                 initially='DEFERRED'))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, ForeignKey, MetaData, String, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, ForeignKey, MetaData, String, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('name', String, ForeignKey('simple_items.name', ondelete='CASCADE', \
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('name', String, ForeignKey('simple_items.name', ondelete='CASCADE', \
 onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
-)
-"""
+            )
+            """)
 
     def test_pk_default(self, generator: CodeGenerator) -> None:
         Table(
@@ -438,17 +441,17 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
             Column('id', INTEGER, primary_key=True, server_default=text('uuid_generate_v4()'))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table, text
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table, text
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer, primary_key=True, server_default=text('uuid_generate_v4()'))
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, primary_key=True, server_default=text('uuid_generate_v4()'))
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['mysql'], indirect=['engine'])
     def test_mysql_timestamp(self, generator: CodeGenerator) -> None:
@@ -458,18 +461,18 @@ t_simple_items = Table(
             Column('timestamp', mysql.TIMESTAMP)
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, TIMESTAMP, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, TIMESTAMP, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple = Table(
-    'simple', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('timestamp', TIMESTAMP)
-)
-"""
+            t_simple = Table(
+                'simple', metadata,
+                Column('id', Integer, primary_key=True),
+                Column('timestamp', TIMESTAMP)
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['mysql'], indirect=['engine'])
     def test_mysql_integer_display_width(self, generator: CodeGenerator) -> None:
@@ -479,19 +482,19 @@ t_simple = Table(
             Column('number', mysql.INTEGER(11))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
-from sqlalchemy.dialects.mysql import INTEGER
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
+            from sqlalchemy.dialects.mysql import INTEGER
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('number', INTEGER(11))
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, primary_key=True),
+                Column('number', INTEGER(11))
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['mysql'], indirect=['engine'])
     def test_mysql_tinytext(self, generator: CodeGenerator) -> None:
@@ -501,19 +504,19 @@ t_simple_items = Table(
             Column('my_tinytext', mysql.TINYTEXT)
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
-from sqlalchemy.dialects.mysql import TINYTEXT
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
+            from sqlalchemy.dialects.mysql import TINYTEXT
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('my_tinytext', TINYTEXT)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, primary_key=True),
+                Column('my_tinytext', TINYTEXT)
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['mysql'], indirect=['engine'])
     def test_mysql_mediumtext(self, generator: CodeGenerator) -> None:
@@ -523,19 +526,19 @@ t_simple_items = Table(
             Column('my_mediumtext', mysql.MEDIUMTEXT)
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
-from sqlalchemy.dialects.mysql import MEDIUMTEXT
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
+            from sqlalchemy.dialects.mysql import MEDIUMTEXT
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('my_mediumtext', MEDIUMTEXT)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, primary_key=True),
+                Column('my_mediumtext', MEDIUMTEXT)
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['mysql'], indirect=['engine'])
     def test_mysql_longtext(self, generator: CodeGenerator) -> None:
@@ -545,19 +548,19 @@ t_simple_items = Table(
             Column('my_longtext', mysql.LONGTEXT)
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
-from sqlalchemy.dialects.mysql import LONGTEXT
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
+            from sqlalchemy.dialects.mysql import LONGTEXT
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('my_longtext', LONGTEXT)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, primary_key=True),
+                Column('my_longtext', LONGTEXT)
+            )
+            """)
 
     def test_schema_boolean(self, generator: CodeGenerator) -> None:
         Table(
@@ -567,40 +570,40 @@ t_simple_items = Table(
             schema='testschema'
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Boolean, Column, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Boolean, Column, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('bool1', Boolean),
-    schema='testschema'
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('bool1', Boolean),
+                schema='testschema'
+            )
+            """)
 
     def test_server_default_multiline(self, generator: CodeGenerator) -> None:
         Table(
             'simple_items', generator.metadata,
-            Column('id', INTEGER, primary_key=True, server_default=text("""\
-/*Comment*/
-/*Next line*/
-something()"""))
+            Column('id', INTEGER, primary_key=True, server_default=text(dedent("""\
+                /*Comment*/
+                /*Next line*/
+                something()""")))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table, text
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table, text
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer, primary_key=True, server_default=\
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, primary_key=True, server_default=\
 text('/*Comment*/\\n/*Next line*/\\nsomething()'))
-)
-"""
+            )
+            """)
 
     def test_server_default_colon(self, generator: CodeGenerator) -> None:
         Table(
@@ -608,17 +611,17 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
             Column('problem', VARCHAR, server_default=text("':001'"))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, MetaData, String, Table, text
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, MetaData, String, Table, text
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('problem', String, server_default=text("':001'"))
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('problem', String, server_default=text("':001'"))
+            )
+            """)
 
     def test_null_type(self, generator: CodeGenerator) -> None:
         Table(
@@ -626,18 +629,18 @@ t_simple_items = Table(
             Column('problem', NullType),
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, MetaData, Table
-from sqlalchemy.sql.sqltypes import NullType
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, MetaData, Table
+            from sqlalchemy.sql.sqltypes import NullType
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('problem', NullType)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('problem', NullType)
+            )
+            """)
 
     @pytest.mark.skipif(Identity is None, reason='Requires SQLAlchemy 1.4+')
     def test_identity_column(self, generator: CodeGenerator) -> None:
@@ -646,17 +649,17 @@ t_simple_items = Table(
             Column('id', INTEGER, primary_key=True, server_default=Identity(start=1, increment=2))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Identity, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Identity, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer, Identity(start=1, increment=2), primary_key=True)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, Identity(start=1, increment=2), primary_key=True)
+            )
+            """)
 
     def test_multiline_column_comment(self, generator: CodeGenerator) -> None:
         Table(
@@ -664,17 +667,17 @@ t_simple_items = Table(
             Column('id', INTEGER, comment='This\nis a multi-line\ncomment')
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer, comment='This\\nis a multi-line\\ncomment')
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, comment='This\\nis a multi-line\\ncomment')
+            )
+            """)
 
     def test_multiline_table_comment(self, generator: CodeGenerator) -> None:
         Table(
@@ -683,18 +686,18 @@ t_simple_items = Table(
             comment='This\nis a multi-line\ncomment'
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer),
-    comment='This\\nis a multi-line\\ncomment'
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer),
+                comment='This\\nis a multi-line\\ncomment'
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['postgresql'], indirect=['engine'])
     def test_postgresql_sequence_standard_name(self, generator: CodeGenerator) -> None:
@@ -704,17 +707,17 @@ t_simple_items = Table(
                    server_default=text("nextval('simple_items_id_seq'::regclass)"))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer, primary_key=True)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, primary_key=True)
+            )
+            """)
 
     @pytest.mark.parametrize('engine', ['postgresql'], indirect=['engine'])
     def test_postgresql_sequence_nonstandard_name(self, generator: CodeGenerator) -> None:
@@ -724,17 +727,17 @@ t_simple_items = Table(
                    server_default=text("nextval('test_seq'::regclass)"))
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Sequence, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Sequence, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple_items = Table(
-    'simple_items', metadata,
-    Column('id', Integer, Sequence('test_seq'), primary_key=True)
-)
-"""
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, Sequence('test_seq'), primary_key=True)
+            )
+            """)
 
 
 class TestDeclarativeGenerator:
@@ -756,23 +759,23 @@ class TestDeclarativeGenerator:
                                        simple_items.c.number))
         simple_items.indexes.add(Index('idx_text', simple_items.c.text, unique=True))
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Index, Integer, String
-from sqlalchemy.orm import declarative_base
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Index, Integer, String
+            from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+            Base = declarative_base()
 
 
-class SimpleItems(Base):
-    __tablename__ = 'simple_items'
-    __table_args__ = (
-        Index('idx_text_number', 'text', 'number'),
-    )
+            class SimpleItems(Base):
+                __tablename__ = 'simple_items'
+                __table_args__ = (
+                    Index('idx_text_number', 'text', 'number'),
+                )
 
-    id = Column(Integer, primary_key=True)
-    number = Column(Integer, index=True)
-    text = Column(String, unique=True)
-"""
+                id = Column(Integer, primary_key=True)
+                number = Column(Integer, index=True)
+                text = Column(String, unique=True)
+            """)
 
     def test_constraints(self, generator: CodeGenerator) -> None:
         Table(
@@ -783,23 +786,23 @@ class SimpleItems(Base):
             UniqueConstraint('id', 'number')
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
-from sqlalchemy.orm import declarative_base
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
+            from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+            Base = declarative_base()
 
 
-class SimpleItems(Base):
-    __tablename__ = 'simple_items'
-    __table_args__ = (
-        CheckConstraint('number > 0'),
-        UniqueConstraint('id', 'number')
-    )
+            class SimpleItems(Base):
+                __tablename__ = 'simple_items'
+                __table_args__ = (
+                    CheckConstraint('number > 0'),
+                    UniqueConstraint('id', 'number')
+                )
 
-    id = Column(Integer, primary_key=True)
-    number = Column(Integer)
-"""
+                id = Column(Integer, primary_key=True)
+                number = Column(Integer)
+            """)
 
     def test_onetomany(self, generator: CodeGenerator) -> None:
         Table(
@@ -813,29 +816,29 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import declarative_base, relationship
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlalchemy.orm import declarative_base, relationship
 
-Base = declarative_base()
-
-
-class SimpleContainers(Base):
-    __tablename__ = 'simple_containers'
-
-    id = Column(Integer, primary_key=True)
-
-    simple_items = relationship('SimpleItems', back_populates='container')
+            Base = declarative_base()
 
 
-class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+            class SimpleContainers(Base):
+                __tablename__ = 'simple_containers'
 
-    id = Column(Integer, primary_key=True)
-    container_id = Column(ForeignKey('simple_containers.id'))
+                id = Column(Integer, primary_key=True)
 
-    container = relationship('SimpleContainers', back_populates='simple_items')
-"""
+                simple_items = relationship('SimpleItems', back_populates='container')
+
+
+            class SimpleItems(Base):
+                __tablename__ = 'simple_items'
+
+                id = Column(Integer, primary_key=True)
+                container_id = Column(ForeignKey('simple_containers.id'))
+
+                container = relationship('SimpleContainers', back_populates='simple_items')
+            """)
 
     def test_onetomany_selfref(self, generator: CodeGenerator) -> None:
         Table(
@@ -845,24 +848,24 @@ class SimpleItems(Base):
             ForeignKeyConstraint(['parent_item_id'], ['simple_items.id'])
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import declarative_base, relationship
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlalchemy.orm import declarative_base, relationship
 
-Base = declarative_base()
+            Base = declarative_base()
 
 
-class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+            class SimpleItems(Base):
+                __tablename__ = 'simple_items'
 
-    id = Column(Integer, primary_key=True)
-    parent_item_id = Column(ForeignKey('simple_items.id'))
+                id = Column(Integer, primary_key=True)
+                parent_item_id = Column(ForeignKey('simple_items.id'))
 
-    parent_item = relationship('SimpleItems', remote_side=[id], \
+                parent_item = relationship('SimpleItems', remote_side=[id], \
 back_populates='parent_item_reverse')
-    parent_item_reverse = relationship('SimpleItems', remote_side=[parent_item_id], \
+                parent_item_reverse = relationship('SimpleItems', remote_side=[parent_item_id], \
 back_populates='parent_item')
-"""
+            """)
 
     def test_onetomany_selfref_multi(self, generator: CodeGenerator) -> None:
         Table(
@@ -874,29 +877,29 @@ back_populates='parent_item')
             ForeignKeyConstraint(['top_item_id'], ['simple_items.id'])
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import declarative_base, relationship
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlalchemy.orm import declarative_base, relationship
 
-Base = declarative_base()
+            Base = declarative_base()
 
 
-class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+            class SimpleItems(Base):
+                __tablename__ = 'simple_items'
 
-    id = Column(Integer, primary_key=True)
-    parent_item_id = Column(ForeignKey('simple_items.id'))
-    top_item_id = Column(ForeignKey('simple_items.id'))
+                id = Column(Integer, primary_key=True)
+                parent_item_id = Column(ForeignKey('simple_items.id'))
+                top_item_id = Column(ForeignKey('simple_items.id'))
 
-    parent_item = relationship('SimpleItems', remote_side=[id], foreign_keys=[parent_item_id], \
-back_populates='parent_item_reverse')
-    parent_item_reverse = relationship('SimpleItems', remote_side=[parent_item_id], \
+                parent_item = relationship('SimpleItems', remote_side=[id], \
+foreign_keys=[parent_item_id], back_populates='parent_item_reverse')
+                parent_item_reverse = relationship('SimpleItems', remote_side=[parent_item_id], \
 foreign_keys=[parent_item_id], back_populates='parent_item')
-    top_item = relationship('SimpleItems', remote_side=[id], foreign_keys=[top_item_id], \
-back_populates='top_item_reverse')
-    top_item_reverse = relationship('SimpleItems', remote_side=[top_item_id], \
+                top_item = relationship('SimpleItems', remote_side=[id], \
+foreign_keys=[top_item_id], back_populates='top_item_reverse')
+                top_item_reverse = relationship('SimpleItems', remote_side=[top_item_id], \
 foreign_keys=[top_item_id], back_populates='top_item')
-"""
+            """)
 
     def test_onetomany_composite(self, generator: CodeGenerator) -> None:
         Table(
@@ -914,7 +917,7 @@ foreign_keys=[top_item_id], back_populates='top_item')
             Column('id2', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKeyConstraint, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -942,7 +945,7 @@ class SimpleItems(Base):
     container_id2 = Column(Integer)
 
     simple_containers = relationship('SimpleContainers', back_populates='simple_items')
-"""
+            """)
 
     def test_onetomany_multiref(self, generator: CodeGenerator) -> None:
         Table(
@@ -958,7 +961,7 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -987,7 +990,7 @@ class SimpleItems(Base):
 back_populates='simple_items')
     top_container = relationship('SimpleContainers', foreign_keys=[top_container_id], \
 back_populates='simple_items_')
-"""
+            """)
 
     def test_onetoone(self, generator: CodeGenerator) -> None:
         Table(
@@ -1002,7 +1005,7 @@ back_populates='simple_items_')
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1024,7 +1027,7 @@ class SimpleItems(Base):
     other_item_id = Column(ForeignKey('other_items.id'), unique=True)
 
     other_item = relationship('OtherItems', back_populates='simple_items')
-"""
+            """)
 
     def test_onetomany_noinflect(self, generator: CodeGenerator) -> None:
         Table(
@@ -1038,7 +1041,7 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1060,7 +1063,7 @@ class Oglkrogk(Base):
     fehwiuhfiwID = Column(ForeignKey('fehwiuhfiw.id'))
 
     fehwiuhfiw = relationship('Fehwiuhfiw', back_populates='oglkrogk')
-"""
+            """)
 
     def test_onetomany_conflicting_column(self, generator: CodeGenerator) -> None:
         Table(
@@ -1075,7 +1078,7 @@ class Oglkrogk(Base):
             Column('relationship', Text)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer, Text
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1098,7 +1101,7 @@ class SimpleItems(Base):
     container_id = Column(ForeignKey('simple_containers.id'))
 
     container = relationship('SimpleContainers', back_populates='simple_items')
-"""
+            """)
 
     def test_onetomany_conflicting_relationship(self, generator: CodeGenerator) -> None:
         Table(
@@ -1112,7 +1115,7 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1134,7 +1137,7 @@ class SimpleItems(Base):
     relationship_id = Column(ForeignKey('relationship.id'))
 
     relationship_ = relationship('Relationship', back_populates='simple_items')
-"""
+            """)
 
     @pytest.mark.parametrize('generator', [['nobidi']], indirect=True)
     def test_manytoone_nobidi(self, generator: CodeGenerator) -> None:
@@ -1149,7 +1152,7 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1169,7 +1172,7 @@ class SimpleItems(Base):
     container_id = Column(ForeignKey('simple_containers.id'))
 
     container = relationship('SimpleContainers')
-"""
+            """)
 
     def test_manytomany(self, generator: CodeGenerator) -> None:
         Table(
@@ -1188,7 +1191,7 @@ class SimpleItems(Base):
             ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1219,7 +1222,7 @@ t_container_items = Table(
     Column('item_id', ForeignKey('simple_items.id')),
     Column('container_id', ForeignKey('simple_containers.id'))
 )
-"""
+            """)
 
     @pytest.mark.parametrize('generator', [['nobidi']], indirect=True)
     def test_manytomany_nobidi(self, generator: CodeGenerator) -> None:
@@ -1239,7 +1242,7 @@ t_container_items = Table(
             ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1266,7 +1269,7 @@ t_container_items = Table(
     Column('item_id', ForeignKey('simple_items.id')),
     Column('container_id', ForeignKey('simple_containers.id'))
 )
-"""
+            """)
 
     def test_manytomany_selfref(self, generator: CodeGenerator) -> None:
         Table(
@@ -1282,7 +1285,7 @@ t_container_items = Table(
             schema='otherschema'
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1309,7 +1312,7 @@ t_child_items = Table(
     Column('child_id', ForeignKey('simple_items.id')),
     schema='otherschema'
 )
-"""
+            """)
 
     def test_manytomany_composite(self, generator: CodeGenerator) -> None:
         Table(
@@ -1334,7 +1337,7 @@ t_child_items = Table(
                                  ['simple_containers.id1', 'simple_containers.id2'])
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKeyConstraint, Integer, Table
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1372,7 +1375,7 @@ t_container_items = Table(
 ['simple_containers.id1', 'simple_containers.id2']),
     ForeignKeyConstraint(['item_id1', 'item_id2'], ['simple_items.id1', 'simple_items.id2'])
 )
-"""
+            """)
 
     def test_joined_inheritance(self, generator: CodeGenerator) -> None:
         Table(
@@ -1393,7 +1396,7 @@ t_container_items = Table(
             ForeignKeyConstraint(['super_item_id'], ['simple_super_items.id'])
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1419,7 +1422,7 @@ class SimpleSubItems(SimpleItems):
 
     simple_items_id = Column(ForeignKey('simple_items.super_item_id'), primary_key=True)
     data3 = Column(Integer)
-"""
+            """)
 
     @pytest.mark.parametrize('generator', [['use_inflect']], indirect=True)
     def test_use_inflect(self, generator: CodeGenerator) -> None:
@@ -1428,7 +1431,7 @@ class SimpleSubItems(SimpleItems):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1439,7 +1442,7 @@ class SimpleItem(Base):
     __tablename__ = 'simple_items'
 
     id = Column(Integer, primary_key=True)
-"""
+            """)
 
     def test_table_kwargs(self, generator: CodeGenerator) -> None:
         Table(
@@ -1448,7 +1451,7 @@ class SimpleItem(Base):
             schema='testschema'
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1460,7 +1463,7 @@ class SimpleItems(Base):
     __table_args__ = {'schema': 'testschema'}
 
     id = Column(Integer, primary_key=True)
-"""
+            """)
 
     def test_table_args_kwargs(self, generator: CodeGenerator) -> None:
         simple_items = Table(
@@ -1471,7 +1474,7 @@ class SimpleItems(Base):
         )
         simple_items.indexes.add(Index('testidx', simple_items.c.id, simple_items.c.name))
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, Index, Integer, String
 from sqlalchemy.orm import declarative_base
 
@@ -1487,7 +1490,7 @@ class SimpleItems(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-"""
+            """)
 
     def test_foreign_key_schema(self, generator: CodeGenerator) -> None:
         Table(
@@ -1502,7 +1505,7 @@ class SimpleItems(Base):
             schema='otherschema'
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1525,7 +1528,7 @@ class SimpleItems(Base):
     other_item_id = Column(ForeignKey('otherschema.other_items.id'))
 
     other_item = relationship('OtherItems', back_populates='simple_items')
-"""
+            """)
 
     def test_invalid_attribute_names(self, generator: CodeGenerator) -> None:
         Table(
@@ -1536,7 +1539,7 @@ class SimpleItems(Base):
             Column('def', INTEGER)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1550,7 +1553,7 @@ class SimpleItems(Base):
     _4test = Column('4test', Integer)
     _4test_ = Column('_4test', Integer)
     def_ = Column('def', Integer)
-"""
+            """)
 
     def test_pascal(self, generator: CodeGenerator) -> None:
         Table(
@@ -1558,7 +1561,7 @@ class SimpleItems(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1569,7 +1572,7 @@ class CustomerAPIPreference(Base):
     __tablename__ = 'CustomerAPIPreference'
 
     id = Column(Integer, primary_key=True)
-"""
+            """)
 
     def test_underscore(self, generator: CodeGenerator) -> None:
         Table(
@@ -1577,7 +1580,7 @@ class CustomerAPIPreference(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1588,7 +1591,7 @@ class CustomerApiPreference(Base):
     __tablename__ = 'customer_api_preference'
 
     id = Column(Integer, primary_key=True)
-"""
+            """)
 
     def test_pascal_underscore(self, generator: CodeGenerator) -> None:
         Table(
@@ -1596,7 +1599,7 @@ class CustomerApiPreference(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1607,7 +1610,7 @@ class CustomerAPIPreference(Base):
     __tablename__ = 'customer_API_Preference'
 
     id = Column(Integer, primary_key=True)
-"""
+            """)
 
     def test_pascal_multiple_underscore(self, generator: CodeGenerator) -> None:
         Table(
@@ -1615,7 +1618,7 @@ class CustomerAPIPreference(Base):
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
+        assert generator.generate() == dedent("""\
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import declarative_base
 
@@ -1626,7 +1629,7 @@ class CustomerAPIPreference(Base):
     __tablename__ = 'customer_API__Preference'
 
     id = Column(Integer, primary_key=True)
-"""
+            """)
 
     @pytest.mark.parametrize('generator, nocomments', [
         ([], False),
@@ -1639,18 +1642,18 @@ class CustomerAPIPreference(Base):
         )
 
         comment_part = '' if nocomments else ', comment="this is a \'comment\'"'
-        assert generator.generate() == f"""\
-from sqlalchemy import Column, Integer
-from sqlalchemy.orm import declarative_base
+        assert generator.generate() == dedent(f"""\
+            from sqlalchemy import Column, Integer
+            from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+            Base = declarative_base()
 
 
-class Simple(Base):
-    __tablename__ = 'simple'
+            class Simple(Base):
+                __tablename__ = 'simple'
 
-    id = Column(Integer, primary_key=True{comment_part})
-"""
+                id = Column(Integer, primary_key=True{comment_part})
+            """)
 
     def test_table_comment(self, generator: CodeGenerator) -> None:
         Table(
@@ -1659,19 +1662,19 @@ class Simple(Base):
             comment="this is a 'comment'"
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer
-from sqlalchemy.orm import declarative_base
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer
+            from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+            Base = declarative_base()
 
 
-class Simple(Base):
-    __tablename__ = 'simple'
-    __table_args__ = {'comment': "this is a 'comment'"}
+            class Simple(Base):
+                __tablename__ = 'simple'
+                __table_args__ = {'comment': "this is a 'comment'"}
 
-    id = Column(Integer, primary_key=True)
-"""
+                id = Column(Integer, primary_key=True)
+            """)
 
     def test_metadata_column(self, generator: CodeGenerator) -> None:
         Table(
@@ -1680,19 +1683,19 @@ class Simple(Base):
             Column('metadata', VARCHAR)
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import declarative_base
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, String
+            from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+            Base = declarative_base()
 
 
-class Simple(Base):
-    __tablename__ = 'simple'
+            class Simple(Base):
+                __tablename__ = 'simple'
 
-    id = Column(Integer, primary_key=True)
-    metadata_ = Column('metadata', String)
-"""
+                id = Column(Integer, primary_key=True)
+                metadata_ = Column('metadata', String)
+            """)
 
     def test_invalid_variable_name_from_column(self, generator: CodeGenerator) -> None:
         Table(
@@ -1700,18 +1703,18 @@ class Simple(Base):
             Column(' id ', INTEGER, primary_key=True),
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer
-from sqlalchemy.orm import declarative_base
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer
+            from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+            Base = declarative_base()
 
 
-class Simple(Base):
-    __tablename__ = 'simple'
+            class Simple(Base):
+                __tablename__ = 'simple'
 
-    id = Column(' id ', Integer, primary_key=True)
-"""
+                id = Column(' id ', Integer, primary_key=True)
+            """)
 
     def test_only_tables(self, generator: CodeGenerator) -> None:
         Table(
@@ -1719,17 +1722,17 @@ class Simple(Base):
             Column('id', INTEGER)
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import Column, Integer, MetaData, Table
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import Column, Integer, MetaData, Table
 
-metadata = MetaData()
+            metadata = MetaData()
 
 
-t_simple = Table(
-    'simple', metadata,
-    Column('id', Integer)
-)
-"""
+            t_simple = Table(
+                'simple', metadata,
+                Column('id', Integer)
+            )
+            """)
 
     def test_named_constraints(self, generator: CodeGenerator) -> None:
         Table(
@@ -1741,25 +1744,25 @@ t_simple = Table(
             UniqueConstraint('text', name='uniquetest')
         )
 
-        assert generator.generate() == """\
-from sqlalchemy import CheckConstraint, Column, Integer, PrimaryKeyConstraint, String, \
+        assert generator.generate() == dedent("""\
+            from sqlalchemy import CheckConstraint, Column, Integer, PrimaryKeyConstraint, String, \
 UniqueConstraint
-from sqlalchemy.orm import declarative_base
+            from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+            Base = declarative_base()
 
 
-class Simple(Base):
-    __tablename__ = 'simple'
-    __table_args__ = (
-        CheckConstraint('id > 0', name='checktest'),
-        PrimaryKeyConstraint('id', name='primarytest'),
-        UniqueConstraint('text', name='uniquetest')
-    )
+            class Simple(Base):
+                __tablename__ = 'simple'
+                __table_args__ = (
+                    CheckConstraint('id > 0', name='checktest'),
+                    PrimaryKeyConstraint('id', name='primarytest'),
+                    UniqueConstraint('text', name='uniquetest')
+                )
 
-    id = Column(Integer)
-    text = Column(String)
-"""
+                id = Column(Integer)
+                text = Column(String)
+            """)
 
 
 class TestDataclassGenerator:
@@ -1776,27 +1779,27 @@ class TestDataclassGenerator:
             Column('name', VARCHAR(20))
         )
 
-        assert generator.generate() == """\
-from __future__ import annotations
+        assert generator.generate() == dedent("""\
+            from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional
+            from dataclasses import dataclass, field
+            from typing import Optional
 
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import registry
+            from sqlalchemy import Column, Integer, String
+            from sqlalchemy.orm import registry
 
-mapper_registry = registry()
+            mapper_registry = registry()
 
 
-@mapper_registry.mapped
-@dataclass
-class Simple:
-    __tablename__ = 'simple'
-    __sa_dataclass_metadata_key__ = 'sa'
+            @mapper_registry.mapped
+            @dataclass
+            class Simple:
+                __tablename__ = 'simple'
+                __sa_dataclass_metadata_key__ = 'sa'
 
-    id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
-    name: Optional[str] = field(default=None, metadata={'sa': Column(String(20))})
-"""
+                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                name: Optional[str] = field(default=None, metadata={'sa': Column(String(20))})
+            """)
 
     def test_mandatory_field_last(self, generator: CodeGenerator) -> None:
         Table(
@@ -1806,28 +1809,28 @@ class Simple:
             Column('age', INTEGER, nullable=False)
         )
 
-        assert generator.generate() == """\
-from __future__ import annotations
+        assert generator.generate() == dedent("""\
+            from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional
+            from dataclasses import dataclass, field
+            from typing import Optional
 
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import registry
+            from sqlalchemy import Column, Integer, String
+            from sqlalchemy.orm import registry
 
-mapper_registry = registry()
+            mapper_registry = registry()
 
 
-@mapper_registry.mapped
-@dataclass
-class Simple:
-    __tablename__ = 'simple'
-    __sa_dataclass_metadata_key__ = 'sa'
+            @mapper_registry.mapped
+            @dataclass
+            class Simple:
+                __tablename__ = 'simple'
+                __sa_dataclass_metadata_key__ = 'sa'
 
-    id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
-    age: int = field(metadata={'sa': Column(Integer, nullable=False)})
-    name: Optional[str] = field(default=None, metadata={'sa': Column(String(20))})
-"""
+                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                age: int = field(metadata={'sa': Column(Integer, nullable=False)})
+                name: Optional[str] = field(default=None, metadata={'sa': Column(String(20))})
+            """)
 
     def test_onetomany_optional(self, generator: CodeGenerator) -> None:
         Table(
@@ -1841,43 +1844,43 @@ class Simple:
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
-from __future__ import annotations
+        assert generator.generate() == dedent("""\
+            from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List, Optional
+            from dataclasses import dataclass, field
+            from typing import List, Optional
 
-from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import registry, relationship
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlalchemy.orm import registry, relationship
 
-mapper_registry = registry()
+            mapper_registry = registry()
 
 
-@mapper_registry.mapped
-@dataclass
-class SimpleContainers:
-    __tablename__ = 'simple_containers'
-    __sa_dataclass_metadata_key__ = 'sa'
+            @mapper_registry.mapped
+            @dataclass
+            class SimpleContainers:
+                __tablename__ = 'simple_containers'
+                __sa_dataclass_metadata_key__ = 'sa'
 
-    id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
 
-    simple_items: List[SimpleItems] = field(default_factory=list, \
+                simple_items: List[SimpleItems] = field(default_factory=list, \
 metadata={'sa': relationship('SimpleItems', back_populates='container')})
 
 
-@mapper_registry.mapped
-@dataclass
-class SimpleItems:
-    __tablename__ = 'simple_items'
-    __sa_dataclass_metadata_key__ = 'sa'
+            @mapper_registry.mapped
+            @dataclass
+            class SimpleItems:
+                __tablename__ = 'simple_items'
+                __sa_dataclass_metadata_key__ = 'sa'
 
-    id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
-    container_id: Optional[int] = field(default=None, \
+                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                container_id: Optional[int] = field(default=None, \
 metadata={'sa': Column(ForeignKey('simple_containers.id'))})
 
-    container: Optional[SimpleContainers] = field(default=None, \
+                container: Optional[SimpleContainers] = field(default=None, \
 metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')})
-"""
+            """)
 
     def test_onetomany_mandatory(self, generator: CodeGenerator) -> None:
         Table(
@@ -1891,43 +1894,43 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
             Column('id', INTEGER, primary_key=True)
         )
 
-        assert generator.generate() == """\
-from __future__ import annotations
+        assert generator.generate() == dedent("""\
+            from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List
+            from dataclasses import dataclass, field
+            from typing import List
 
-from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import registry, relationship
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlalchemy.orm import registry, relationship
 
-mapper_registry = registry()
+            mapper_registry = registry()
 
 
-@mapper_registry.mapped
-@dataclass
-class SimpleContainers:
-    __tablename__ = 'simple_containers'
-    __sa_dataclass_metadata_key__ = 'sa'
+            @mapper_registry.mapped
+            @dataclass
+            class SimpleContainers:
+                __tablename__ = 'simple_containers'
+                __sa_dataclass_metadata_key__ = 'sa'
 
-    id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
 
-    simple_items: List[SimpleItems] = field(default_factory=list, \
+                simple_items: List[SimpleItems] = field(default_factory=list, \
 metadata={'sa': relationship('SimpleItems', back_populates='container')})
 
 
-@mapper_registry.mapped
-@dataclass
-class SimpleItems:
-    __tablename__ = 'simple_items'
-    __sa_dataclass_metadata_key__ = 'sa'
+            @mapper_registry.mapped
+            @dataclass
+            class SimpleItems:
+                __tablename__ = 'simple_items'
+                __sa_dataclass_metadata_key__ = 'sa'
 
-    id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
-    container_id: int = field(\
+                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                container_id: int = field(\
 metadata={'sa': Column(ForeignKey('simple_containers.id'), nullable=False)})
 
-    container: SimpleContainers = field(\
+                container: SimpleContainers = field(\
 metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')})
-"""
+            """)
 
     def test_manytomany(self, generator: CodeGenerator) -> None:
         Table(
@@ -1946,46 +1949,46 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
             ForeignKeyConstraint(['container_id'], ['simple_containers.id'])
         )
 
-        assert generator.generate() == """\
-from __future__ import annotations
+        assert generator.generate() == dedent("""\
+            from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List
+            from dataclasses import dataclass, field
+            from typing import List
 
-from sqlalchemy import Column, ForeignKey, Integer, Table
-from sqlalchemy.orm import registry, relationship
+            from sqlalchemy import Column, ForeignKey, Integer, Table
+            from sqlalchemy.orm import registry, relationship
 
-mapper_registry = registry()
-metadata = mapper_registry.metadata
+            mapper_registry = registry()
+            metadata = mapper_registry.metadata
 
 
-@mapper_registry.mapped
-@dataclass
-class SimpleContainers:
-    __tablename__ = 'simple_containers'
-    __sa_dataclass_metadata_key__ = 'sa'
+            @mapper_registry.mapped
+            @dataclass
+            class SimpleContainers:
+                __tablename__ = 'simple_containers'
+                __sa_dataclass_metadata_key__ = 'sa'
 
-    id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
 
-    item: List[SimpleItems] = field(default_factory=list, metadata=\
+                item: List[SimpleItems] = field(default_factory=list, metadata=\
 {'sa': relationship('SimpleItems', secondary='container_items', back_populates='container')})
 
 
-@mapper_registry.mapped
-@dataclass
-class SimpleItems:
-    __tablename__ = 'simple_items'
-    __sa_dataclass_metadata_key__ = 'sa'
+            @mapper_registry.mapped
+            @dataclass
+            class SimpleItems:
+                __tablename__ = 'simple_items'
+                __sa_dataclass_metadata_key__ = 'sa'
 
-    id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
 
-    container: List[SimpleContainers] = field(default_factory=list, metadata=\
+                container: List[SimpleContainers] = field(default_factory=list, metadata=\
 {'sa': relationship('SimpleContainers', secondary='container_items', back_populates='item')})
 
 
-t_container_items = Table(
-    'container_items', metadata,
-    Column('item_id', ForeignKey('simple_items.id')),
-    Column('container_id', ForeignKey('simple_containers.id'))
-)
-"""
+            t_container_items = Table(
+                'container_items', metadata,
+                Column('item_id', ForeignKey('simple_items.id')),
+                Column('container_id', ForeignKey('simple_containers.id'))
+            )
+            """)
