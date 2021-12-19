@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sqlite3
 import subprocess
 import sys
@@ -7,10 +9,12 @@ import pytest
 
 from sqlacodegen.generators import _sqla_version
 
-if sys.version_info < (3, 7):
-    future_imports = ""
+if sys.version_info < (3, 8):
+    from importlib_metadata import version
 else:
-    future_imports = "from __future__ import annotations\n\n"
+    from importlib.metadata import version
+
+future_imports = "from __future__ import annotations\n\n"
 
 if _sqla_version < (1, 4):
     declarative_package = 'sqlalchemy.ext.declarative'
@@ -28,7 +32,7 @@ def db_path(tmp_path: Path) -> Path:
     return path
 
 
-def test_cli_tables(db_path: Path, tmp_path: Path):
+def test_cli_tables(db_path: Path, tmp_path: Path) -> None:
     output_path = tmp_path / 'outfile'
     subprocess.run(['sqlacodegen', f'sqlite:///{db_path}', '--generator', 'tables',
                     '--outfile', str(output_path)], check=True)
@@ -47,7 +51,7 @@ t_foo = Table(
 """
 
 
-def test_cli_declarative(db_path: Path, tmp_path: Path):
+def test_cli_declarative(db_path: Path, tmp_path: Path) -> None:
     output_path = tmp_path / 'outfile'
     subprocess.run(['sqlacodegen', f'sqlite:///{db_path}', '--generator', 'declarative',
                     '--outfile', str(output_path)], check=True)
@@ -67,7 +71,7 @@ class Foo(Base):
 """
 
 
-def test_cli_dataclass(db_path: Path, tmp_path: Path):
+def test_cli_dataclass(db_path: Path, tmp_path: Path) -> None:
     output_path = tmp_path / 'outfile'
     subprocess.run(['sqlacodegen', f'sqlite:///{db_path}', '--generator', 'dataclasses',
                     '--outfile', str(output_path)], check=True)
@@ -90,3 +94,10 @@ class Foo:
     id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
     name: str = field(metadata={{'sa': Column(Text, nullable=False)}})
 """
+
+
+def test_main() -> None:
+    expected_version = version('sqlacodegen')
+    completed = subprocess.run([sys.executable, '-m', 'sqlacodegen', '--version'],
+                               stdout=subprocess.PIPE, check=True)
+    assert completed.stdout.decode().strip() == expected_version
