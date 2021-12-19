@@ -7,14 +7,14 @@ from contextlib import ExitStack
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
-if sys.version_info < (3, 8):
+if sys.version_info < (3, 10):
     from importlib_metadata import entry_points, version
 else:
     from importlib.metadata import entry_points, version
 
 
 def main() -> None:
-    generators = {ep.name: ep for ep in entry_points()['sqlacodegen.generators']}
+    generators = {ep.name: ep for ep in entry_points(group='sqlacodegen.generators')}
     parser = argparse.ArgumentParser(
         description='Generates SQLAlchemy model code from an existing database.')
     parser.add_argument('url', nargs='?', help='SQLAlchemy url to the database')
