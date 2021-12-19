@@ -907,7 +907,7 @@ class DeclarativeGenerator(TablesGenerator):
 
             return '[' + ', '.join(rendered) + ']'
 
-        def render_foreign_keys(column_attrs: List[ColumnAttribute]) -> str:
+        def render_foreign_keys(column_attrs: list[ColumnAttribute]) -> str:
             rendered = []
             render_as_string = False
             # Assume that column_attrs are all in relationship.source or none
