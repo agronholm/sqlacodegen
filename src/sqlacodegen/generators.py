@@ -29,7 +29,7 @@ from .models import (
     ColumnAttribute, JoinType, Model, ModelClass, RelationshipAttribute, RelationshipType)
 from .utils import (
     get_column_names, get_common_fk_constraints, get_compiled_expression, get_constraint_sort_key,
-    uses_default_name)
+    render_callable, uses_default_name)
 
 if sys.version_info < (3, 8):
     from importlib_metadata import version
@@ -255,6 +255,7 @@ class TablesGenerator(CodeGenerator):
 
     def render_table(self, table: Table) -> str:
         args: list[str] = [f'{table.name!r}, metadata']
+        kwargs: dict[str, object] = {}
         for column in table.columns:
             # Cast is required because of a bug in the SQLAlchemy stubs regarding Table.columns
             args.append(self.render_column(column, True))
@@ -275,21 +276,21 @@ class TablesGenerator(CodeGenerator):
                 args.append(self.render_index(index))
 
         if table.schema:
-            args.append(f'schema={table.schema!r}')
+            kwargs['schema'] = repr(table.schema)
 
         table_comment = getattr(table, 'comment', None)
         if table_comment:
-            args.append(f'comment={table_comment!r}')
+            kwargs['comment'] = repr(table.comment)
 
-        rendered_args = f',\n{self.indentation}'.join(args)
-        return f'Table(\n{self.indentation}{rendered_args}\n)'
+        return render_callable('Table', *args, kwargs=kwargs, indentation='    ')
 
     def render_index(self, index: Index) -> str:
         extra_args = [repr(col.name) for col in index.columns]
+        kwargs = {}
         if index.unique:
-            extra_args.append('unique=True')
+            kwargs['unique'] = True
 
-        return f'Index({index.name!r}, {", ".join(extra_args)})'
+        return render_callable('Index', repr(index.name), *extra_args, kwargs=kwargs)
 
     def render_column(self, column: Column[Any], show_name: bool) -> str:
         args = []
@@ -333,14 +334,15 @@ class TablesGenerator(CodeGenerator):
             kwargs['index'] = True
 
         if isinstance(column.server_default, DefaultClause):
-            kwargs['server_default'] = f'text({column.server_default.arg.text!r})'
+            kwargs['server_default'] = render_callable(
+                'text', repr(column.server_default.arg.text))
             if isinstance(column.server_default.arg, TextClause):
                 if self.bind.dialect.name == 'postgresql':
                     match = _re_postgresql_nextval_sequence.match(column.server_default.arg.text)
                     if match:
                         # Add an explicit sequence
                         if match.group(1) != f'{column.table.name}_{column.name}_seq':
-                            args.append(f'Sequence({match.group(1)!r})')
+                            args.append(render_callable('Sequence', repr(match.group(1))))
                             self.add_literal_import('sqlalchemy', 'Sequence')
 
                         del kwargs['server_default']
@@ -350,11 +352,11 @@ class TablesGenerator(CodeGenerator):
         elif isinstance(column.server_default, Computed):
             expression = str(column.server_default.sqltext)
 
-            persist_arg = ''
+            computed_kwargs = {}
             if column.server_default.persisted is not None:
-                persist_arg = f', persisted={column.server_default.persisted}'
+                computed_kwargs['persisted'] = column.server_default.persisted
 
-            args.append(f'Computed({expression!r}{persist_arg})')
+            args.append(render_callable('Computed', repr(expression), kwargs=computed_kwargs))
             self.add_import(Computed)
         elif isinstance(column.server_default, Identity):
             args.append(repr(column.server_default))
@@ -366,10 +368,7 @@ class TablesGenerator(CodeGenerator):
         if comment:
             kwargs['comment'] = repr(comment)
 
-        for key, value in kwargs.items():
-            args.append(f'{key}={value}')
-
-        return f'Column({", ".join(args)})'
+        return render_callable('Column', *args, kwargs=kwargs)
 
     def render_column_type(self, coltype: object) -> str:
         args = []
@@ -408,14 +407,10 @@ class TablesGenerator(CodeGenerator):
             if isinstance(coltype.astext_type, Text) and coltype.astext_type.length is None:
                 del kwargs['astext_type']
 
-        for key, value in kwargs.items():
-            args.append(f'{key}={value}')
-
-        rendered = coltype.__class__.__name__
-        if args:
-            rendered += f"({', '.join(args)})"
-
-        return rendered
+        if args or kwargs:
+            return render_callable(coltype.__class__.__name__, *args, kwargs=kwargs)
+        else:
+            return coltype.__class__.__name__
 
     def render_constraint(self, constraint: Constraint | ForeignKey) -> str:
         def add_fk_options(*opts: Any) -> None:
@@ -445,9 +440,7 @@ class TablesGenerator(CodeGenerator):
         if isinstance(constraint, Constraint) and not uses_default_name(constraint):
             kwargs['name'] = repr(constraint.name)
 
-        args.extend(f'{key}={value}' for key, value in kwargs.items())
-        rendered_args = ', '.join(args)
-        return f'{constraint.__class__.__name__}({rendered_args})'
+        return render_callable(constraint.__class__.__name__, *args, kwargs=kwargs)
 
     def should_ignore_table(self, table: Table) -> bool:
         # Support for Alembic and sqlalchemy-migrate -- never expose the schema version tables
@@ -985,11 +978,9 @@ class DeclarativeGenerator(TablesGenerator):
         if relationship.backref:
             kwargs['back_populates'] = repr(relationship.backref.name)
 
-        rendered_kwargs = ''
-        if kwargs:
-            rendered_kwargs = ', ' + ', '.join(f'{key}={value}' for key, value in kwargs.items())
-
-        return f'{relationship.name} = relationship({relationship.target.name!r}{rendered_kwargs})'
+        rendered_relationship = render_callable('relationship', repr(relationship.target.name),
+                                                kwargs=kwargs)
+        return f'{relationship.name} = {rendered_relationship}'
 
 
 class DataclassGenerator(DeclarativeGenerator):
@@ -1075,8 +1066,8 @@ class DataclassGenerator(DeclarativeGenerator):
 
         rendered_column = self.render_column(column, column_attr.name != column.name)
         kwargs['metadata'] = f'{{{self.metadata_key!r}: {rendered_column}}}'
-        rendered_kwargs = ', '.join(f'{key}={value}' for key, value in kwargs.items())
-        return f'{column_attr.name}: {python_type_name} = field({rendered_kwargs})'
+        rendered_field = render_callable('field', kwargs=kwargs)
+        return f'{column_attr.name}: {python_type_name} = {rendered_field}'
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
         rendered = super().render_relationship(relationship).partition(' = ')[2]
@@ -1098,5 +1089,5 @@ class DataclassGenerator(DeclarativeGenerator):
                     annotation = f'Optional[{annotation}]'
 
         kwargs['metadata'] = f'{{{self.metadata_key!r}: {rendered}}}'
-        rendered_kwargs = ', '.join(f'{key}={value}' for key, value in kwargs.items())
-        return f'{relationship.name}: {annotation} = field({rendered_kwargs})'
+        rendered_field = render_callable('field', kwargs=kwargs)
+        return f'{relationship.name}: {annotation} = {rendered_field}'

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
 from sqlalchemy.engine import Connectable
 from sqlalchemy.sql import ClauseElement
@@ -97,3 +99,30 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
         return False
 
     return constraint.name == (convention % values)
+
+
+def render_callable(name: str, *args: object, kwargs: Mapping[str, object] | None = None,
+                    indentation: str = '') -> str:
+    """
+    Render a function call.
+
+    :param name: name of the callable
+    :param args: positional arguments
+    :param kwargs: keyword arguments
+    :param indentation: if given, each argument will be rendered on its own line with this value
+        used as the indentation
+
+    """
+    if kwargs:
+        args += tuple(f'{key}={value}' for key, value in kwargs.items())
+
+    if indentation:
+        prefix = f'\n{indentation}'
+        suffix = '\n'
+        delimiter = f',\n{indentation}'
+    else:
+        prefix = suffix = ''
+        delimiter = ', '
+
+    rendered_args = delimiter.join(str(arg) for arg in args)
+    return f'{name}({prefix}{rendered_args}{suffix})'
