@@ -187,7 +187,7 @@ class TablesGenerator(CodeGenerator):
             dialect_pkgname = '.'.join(pkgname.split('.')[0:3])
             dialect_pkg = import_module(dialect_pkgname)
 
-            if type_.__name__ in dialect_pkg.__all__:  # type: ignore[attr-defined]
+            if type_.__name__ in dialect_pkg.__all__:
                 pkgname = dialect_pkgname
         elif type_.__name__ in sqlalchemy.__all__:  # type: ignore[attr-defined]
             pkgname = 'sqlalchemy'
@@ -216,8 +216,9 @@ class TablesGenerator(CodeGenerator):
                 collection = future_imports
             elif package in self.builtin_module_names:
                 collection = stdlib_imports
-            elif package in sys.modules and 'site-packages' not in sys.modules[package].__file__:
-                collection = stdlib_imports
+            elif package in sys.modules:
+                if 'site-packages' not in (sys.modules[package].__file__ or ''):
+                    collection = stdlib_imports
 
             collection.append(f'from {package} import {imports}')
 

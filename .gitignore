@@ -10,7 +10,6 @@
 .cache
 .pytest_cache
 .mypy_cache
-.pre-commit-config.yaml
 dist
 build
 venv*

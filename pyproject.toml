@@ -23,7 +23,7 @@ max-line-length = 99
 max_line_length = 99
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.7"
 strict = true
 ignore_missing_imports = true
 
