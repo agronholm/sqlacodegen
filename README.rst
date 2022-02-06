@@ -1,3 +1,10 @@
+.. image:: https://github.com/agronholm/sqlacodegen/actions/workflows/test.yml/badge.svg
+  :target: https://github.com/agronholm/sqlacodegen/actions/workflows/test.yml
+  :alt: Build Status
+.. image:: https://coveralls.io/repos/github/agronholm/sqlacodegen/badge.svg?branch=master
+  :target: https://coveralls.io/github/agronholm/sqlacodegen?branch=master
+  :alt: Code Coverage
+
 This is a tool that reads the structure of an existing database and generates the appropriate
 SQLAlchemy model code, using the declarative style if possible.
 
