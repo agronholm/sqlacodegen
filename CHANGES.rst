@@ -6,16 +6,18 @@ Version history
 - Dropped support for Python < 3.7
 - Dropped support for SQLAlchemy 1.3
 - Added a ``__main__`` module which can be used as an alternate entry point to the CLI
+- Added detection for sequence use in column defaults on PostgreSQL
 - Fixed ``sqlalchemy.exc.InvalidRequestError`` when encountering a column named "metadata"
   (regression from 2.0)
 - Fixed missing ``MetaData`` import with ``DeclarativeGenerator`` when only plain tables are
   generated
+- Fixed invalid data classes being generated due to some relationships having been rendered without
+  a default value
 - Improved translation of column names into column attributes where the column name has whitespace
   at the beginning or end
 - Modified constraint and index rendering to add them explicitly instead of using shortcuts like
   ``unique=True``, ``index=True`` or ``primary=True`` when the constraint or index has a name that
   does not match the default naming convention
-- Added detection for sequence use in column defaults on PostgreSQL
 
 **3.0.0b2**
 

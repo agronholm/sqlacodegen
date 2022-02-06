@@ -1082,11 +1082,9 @@ class DataclassGenerator(DeclarativeGenerator):
             annotation = f'List[{annotation}]'
             kwargs['default_factory'] = 'list'
         else:
-            if relationship.constraint:
-                if all(column.nullable for column in relationship.constraint.columns):
-                    self.add_literal_import('typing', 'Optional')
-                    kwargs['default'] = 'None'
-                    annotation = f'Optional[{annotation}]'
+            self.add_literal_import('typing', 'Optional')
+            kwargs['default'] = 'None'
+            annotation = f'Optional[{annotation}]'
 
         kwargs['metadata'] = f'{{{self.metadata_key!r}: {rendered}}}'
         rendered_field = render_callable('field', kwargs=kwargs)
