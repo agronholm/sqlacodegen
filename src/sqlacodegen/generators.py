@@ -31,7 +31,7 @@ from .utils import (
     get_column_names, get_common_fk_constraints, get_compiled_expression, get_constraint_sort_key,
     render_callable, uses_default_name)
 
-if sys.version_info < (3, 8):
+if sys.version_info < (3, 10):
     from importlib_metadata import version
 else:
     from importlib.metadata import version
