@@ -5,6 +5,7 @@ import re
 import sys
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass
 from importlib import import_module
 from inspect import Parameter
@@ -12,7 +13,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar, Collection, DefaultDict, Iterable, Sequence
+from typing import Any, ClassVar
 
 import inflect
 import sqlalchemy
@@ -579,7 +580,7 @@ class DeclarativeGenerator(TablesGenerator):
         models_by_table_name: dict[str, Model] = {}
 
         # Pick association tables from the metadata into their own set, don't process them normally
-        links: DefaultDict[str, list[Model]] = defaultdict(lambda: [])
+        links: defaultdict[str, list[Model]] = defaultdict(lambda: [])
         for table in self.metadata.sorted_tables:
             # Link tables have exactly two foreign key constraints and all columns are involved in
             # them
