@@ -38,3 +38,13 @@ repos:
           - pytest
           - sqlalchemy
           - sqlalchemy2-stubs
+
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.9.0
+    hooks:
+      - id: python-check-blanket-noqa
+      - id: python-check-blanket-type-ignore
+      - id: python-no-eval
+      - id: rst-backticks
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
