@@ -8,6 +8,7 @@ repos:
     rev: v4.1.0
     hooks:
       - id: check-toml
+      - id: check-yaml
       - id: debug-statements
       - id: end-of-file-fixer
       - id: mixed-line-ending
