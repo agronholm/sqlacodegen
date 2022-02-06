@@ -37,3 +37,24 @@ relative_files = true
 
 [coverage.report]
 show_missing = true
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = pre-commit, py37, py38, py39, py310
+skip_missing_interpreters = true
+isolated_build = true
+
+[testenv]
+depends = pre-commit
+extras = test
+setenv =
+    SQLALCHEMY_WARN_20 = true
+commands = python -m pytest {posargs}
+
+[testenv:pre-commit]
+depends =
+deps = pre-commit
+commands = pre-commit run --all-files
+skip_install = true
+"""
