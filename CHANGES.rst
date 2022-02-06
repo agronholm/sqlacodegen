@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**3.0.0b3**
 
 - Dropped support for Python < 3.7
 - Dropped support for SQLAlchemy 1.3
