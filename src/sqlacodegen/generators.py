@@ -591,18 +591,32 @@ class DeclarativeGenerator(TablesGenerator):
                 links[tablename].append(model)
                 continue
 
-            # Only form model classes for tables that have a primary key and are not association
+            # Form model classes for tables that have a primary key and are not association
             # tables
             if not table.primary_key:
-                models_by_table_name[table.name] = Model(table)
-            else:
-                model = ModelClass(table)
-                models_by_table_name[table.name] = model
+                first_col_name = table.c.values()[0].name
+                pk = PrimaryKeyConstraint('forced_pk', first_col_name)
+                table.append_constraint(pk)
+            model = ModelClass(table)
+            models_by_table_name[table.name] = model
 
-                # Fill in the columns
-                for column in table.c:
-                    column_attr = ColumnAttribute(model, column)
-                    model.columns.append(column_attr)
+            # Fill in the columns
+            for column in table.c:
+                column_attr = ColumnAttribute(model, column)
+                model.columns.append(column_attr)
+
+            # Only form model classes for tables that have a primary key and are not association
+            # tables
+            # if not table.primary_key:
+            #     models_by_table_name[table.name] = Model(table)
+            # else:
+            #     model = ModelClass(table)
+            #     models_by_table_name[table.name] = model
+            #
+            #     # Fill in the columns
+            #     for column in table.c:
+            #         column_attr = ColumnAttribute(model, column)
+            #         model.columns.append(column_attr)
 
         # Add relationships
         for model in models_by_table_name.values():
