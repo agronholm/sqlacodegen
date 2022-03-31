@@ -595,7 +595,7 @@ class DeclarativeGenerator(TablesGenerator):
             # tables
             if not table.primary_key:
                 first_col_name = table.c.values()[0].name
-                pk = PrimaryKeyConstraint('forced_pk', first_col_name)
+                pk = PrimaryKeyConstraint(first_col_name)
                 table.append_constraint(pk)
             model = ModelClass(table)
             models_by_table_name[table.name] = model
