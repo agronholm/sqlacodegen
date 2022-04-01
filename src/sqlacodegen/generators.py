@@ -553,7 +553,7 @@ class TablesGenerator(CodeGenerator):
 
 class DeclarativeGenerator(TablesGenerator):
     valid_options: ClassVar[set[str]] = TablesGenerator.valid_options | {'use_inflect', 'nojoined',
-                                                                         'nobidi'}
+                                                                         'nobidi', 'forcepk'}
 
     def __init__(self, metadata: MetaData, bind: Connection | Engine, options: Sequence[str], *,
                  indentation: str = '    ', base_class_name: str = 'Base'):
@@ -591,32 +591,34 @@ class DeclarativeGenerator(TablesGenerator):
                 links[tablename].append(model)
                 continue
 
-            # Form model classes for tables that have a primary key and are not association
-            # tables
-            if not table.primary_key:
-                first_col_name = table.c.values()[0].name
-                pk = PrimaryKeyConstraint(first_col_name)
-                table.append_constraint(pk)
-            model = ModelClass(table)
-            models_by_table_name[table.name] = model
+            # Form model classes for tables that have a primary key
+            # and forces primary key on first column for those who don't
+            # and are not association tables
+            if 'forcepk' in self.options:
+                if not table.primary_key:
+                    first_col_name = table.c.values()[0].name
+                    pk = PrimaryKeyConstraint(first_col_name)
+                    table.append_constraint(pk)
+                model = ModelClass(table)
+                models_by_table_name[table.name] = model
 
-            # Fill in the columns
-            for column in table.c:
-                column_attr = ColumnAttribute(model, column)
-                model.columns.append(column_attr)
-
+                # Fill in the columns
+                for column in table.c:
+                    column_attr = ColumnAttribute(model, column)
+                    model.columns.append(column_attr)
             # Only form model classes for tables that have a primary key and are not association
             # tables
-            # if not table.primary_key:
-            #     models_by_table_name[table.name] = Model(table)
-            # else:
-            #     model = ModelClass(table)
-            #     models_by_table_name[table.name] = model
-            #
-            #     # Fill in the columns
-            #     for column in table.c:
-            #         column_attr = ColumnAttribute(model, column)
-            #         model.columns.append(column_attr)
+            else:
+                if not table.primary_key:
+                    models_by_table_name[table.name] = Model(table)
+                else:
+                    model = ModelClass(table)
+                    models_by_table_name[table.name] = model
+
+                    # Fill in the columns
+                    for column in table.c:
+                        column_attr = ColumnAttribute(model, column)
+                        model.columns.append(column_attr)
 
         # Add relationships
         for model in models_by_table_name.values():
