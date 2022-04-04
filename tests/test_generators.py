@@ -2094,6 +2094,45 @@ String, UniqueConstraint
             """,
         )
 
+    def test_named_foreign_key_constraints(self, generator: CodeGenerator) -> None:
+        Table(
+            'simple_items', generator.metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('container_id', INTEGER),
+            ForeignKeyConstraint(['container_id'], ['simple_containers.id'], name='foreignkeytest')
+        )
+        Table(
+            'simple_containers', generator.metadata,
+            Column('id', INTEGER, primary_key=True)
+        )
+        print(generator.generate())
+        validate_code(generator.generate(), """\
+            from sqlalchemy import Column, ForeignKeyConstraint, Integer
+            from sqlalchemy.orm import declarative_base, relationship
+
+            Base = declarative_base()
+
+
+            class SimpleContainers(Base):
+                __tablename__ = 'simple_containers'
+
+                id = Column(Integer, primary_key=True)
+
+                simple_items = relationship('SimpleItems', back_populates='container')
+
+
+            class SimpleItems(Base):
+                __tablename__ = 'simple_items'
+                __table_args__ = (
+                    ForeignKeyConstraint(['container_id'], ['simple_containers.id'], name='foreignkeytest'),
+                )
+
+                id = Column(Integer, primary_key=True)
+                container_id = Column(Integer)
+
+                container = relationship('SimpleContainers', back_populates='simple_items')
+            """)
+
 
 class TestDataclassGenerator:
     @pytest.fixture
