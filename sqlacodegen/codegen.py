@@ -431,7 +431,7 @@ class CodeGenerator(object):
 
             # Only form model classes for tables that have a primary key and are not association
             # tables
-            if not forceclasses or (noclasses or not table.primary_key or table.name in association_tables):
+            if not forceclasses and (noclasses or not table.primary_key or table.name in association_tables):
                 model = self.table_model(table)
             else:
                 model = self.class_model(table, links[table.name], self.inflect_engine,
