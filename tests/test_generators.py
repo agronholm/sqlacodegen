@@ -1728,6 +1728,42 @@ class SimpleSubItems(SimpleItems):
             """,
         )
 
+    def test_joined_inheritance_same_table_name(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+        )
+        Table(
+            "simple",
+            generator.metadata,
+            Column("id", INTEGER, ForeignKey("simple.id"), primary_key=True),
+            schema="altschema",
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+    from sqlalchemy import Column, ForeignKey, Integer
+    from sqlalchemy.orm import declarative_base
+
+    Base = declarative_base()
+
+
+    class Simple(Base):
+        __tablename__ = 'simple'
+
+        id = Column(Integer, primary_key=True)
+
+
+    class Simple_(Simple):
+        __tablename__ = 'simple'
+        __table_args__ = {'schema': 'altschema'}
+
+        id = Column(ForeignKey('simple.id'), primary_key=True)
+            """,
+        )
+
     @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
     def test_use_inflect(self, generator: CodeGenerator) -> None:
         Table(

@@ -8,6 +8,8 @@ Version history
   named, single column foreign key constraints (PR by Leonardus Chen)
 . Fixed ``KeyError`` when rendering an index without any columns
 - Fixed improper handling of schema prefixes in sequence names in server defaults
+- Fixed identically named tables from different schemas resulting in invalid generated
+  code
 - Worked around PostgreSQL UUID columns getting ``Any`` as the type annotation
 
 **3.0.0b3**

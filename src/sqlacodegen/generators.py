@@ -56,6 +56,7 @@ from .utils import (
     get_common_fk_constraints,
     get_compiled_expression,
     get_constraint_sort_key,
+    qualified_table_name,
     render_callable,
     uses_default_name,
 )
@@ -692,6 +693,8 @@ class DeclarativeGenerator(TablesGenerator):
         # Pick association tables from the metadata into their own set, don't process them normally
         links: defaultdict[str, list[Model]] = defaultdict(lambda: [])
         for table in self.metadata.sorted_tables:
+            qualified_name = qualified_table_name(table)
+
             # Link tables have exactly two foreign key constraints and all columns are involved in
             # them
             fk_constraints = sorted(
@@ -700,7 +703,7 @@ class DeclarativeGenerator(TablesGenerator):
             if len(fk_constraints) == 2 and all(
                 col.foreign_keys for col in table.columns
             ):
-                model = models_by_table_name[table.name] = Model(table)
+                model = models_by_table_name[qualified_name] = Model(table)
                 tablename = fk_constraints[0].elements[0].column.table.name
                 links[tablename].append(model)
                 continue
@@ -708,10 +711,10 @@ class DeclarativeGenerator(TablesGenerator):
             # Only form model classes for tables that have a primary key and are not association
             # tables
             if not table.primary_key:
-                models_by_table_name[table.name] = Model(table)
+                models_by_table_name[qualified_name] = Model(table)
             else:
                 model = ModelClass(table)
-                models_by_table_name[table.name] = model
+                models_by_table_name[qualified_name] = model
 
                 # Fill in the columns
                 for column in table.c:
@@ -735,7 +738,7 @@ class DeclarativeGenerator(TablesGenerator):
                 for constraint in model.table.foreign_key_constraints:
                     if set(get_column_names(constraint)) == pk_column_names:
                         target = models_by_table_name[
-                            constraint.elements[0].column.table.name
+                            qualified_table_name(constraint.elements[0].column.table)
                         ]
                         if isinstance(target, ModelClass):
                             model.parent_class = target
@@ -750,6 +753,7 @@ class DeclarativeGenerator(TablesGenerator):
         }
         for model in models_by_table_name.values():
             self.generate_model_name(model, global_names)
+            global_names.add(model.name)
 
         return list(models_by_table_name.values())
 
@@ -767,12 +771,14 @@ class DeclarativeGenerator(TablesGenerator):
         for constraint in sorted(
             source.table.foreign_key_constraints, key=get_constraint_sort_key
         ):
-            target = models_by_table_name[constraint.elements[0].column.table.name]
+            target = models_by_table_name[
+                qualified_table_name(constraint.elements[0].column.table)
+            ]
             if isinstance(target, ModelClass):
                 if "nojoined" not in self.options:
                     if set(get_column_names(constraint)) == pk_column_names:
                         parent = models_by_table_name[
-                            constraint.elements[0].column.table.name
+                            qualified_table_name(constraint.elements[0].column.table)
                         ]
                         if isinstance(parent, ModelClass):
                             source.parent_class = parent
@@ -841,7 +847,7 @@ class DeclarativeGenerator(TablesGenerator):
                 key=get_constraint_sort_key,
             )
             target = models_by_table_name[
-                fk_constraints[1].elements[0].column.table.name
+                qualified_table_name(fk_constraints[1].elements[0].column.table)
             ]
             if isinstance(target, ModelClass):
                 relationship = RelationshipAttribute(

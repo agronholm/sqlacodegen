@@ -161,3 +161,10 @@ def render_callable(
 
     rendered_args = delimiter.join(str(arg) for arg in args)
     return f"{name}({prefix}{rendered_args}{suffix})"
+
+
+def qualified_table_name(table: Table) -> str:
+    if table.schema:
+        return f"{table.schema}.{table.name}"
+    else:
+        return str(table.name)
