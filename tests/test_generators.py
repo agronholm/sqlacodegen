@@ -451,7 +451,6 @@ UniqueConstraint
             """,
         )
 
-    @pytest.mark.skipif(Computed is None, reason="requires SQLAlchemy 1.3.11+")
     @pytest.mark.parametrize(
         "persisted, extra_args",
         [(None, ""), (False, ", persisted=False"), (True, ", persisted=True")],
@@ -800,7 +799,6 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
             """,
         )
 
-    @pytest.mark.skipif(Identity is None, reason="Requires SQLAlchemy 1.4+")
     def test_identity_column(self, generator: CodeGenerator) -> None:
         Table(
             "simple_items",
