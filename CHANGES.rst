@@ -1,6 +1,10 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Migrated all packaging/testing configuration to ``pyproject.toml``
+
 **3.0.0b3**
 
 - Dropped support for Python < 3.7

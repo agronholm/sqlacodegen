@@ -1,10 +1,59 @@
 [build-system]
 requires = [
-    "setuptools >= 42",
-    "wheel >= 0.29.0",
-    "setuptools_scm[toml] >= 3.4"
+    "setuptools >= 61",
+    "setuptools_scm[toml] >= 6.4"
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlacodegen"
+description = "Automatic model code generator for SQLAlchemy"
+readme = "README.rst"
+authors = [{name = "Alex Grönholm", email = "alex.gronholm@nextday.fi"}]
+keywords = ["sqlalchemy"]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Environment :: Console",
+    "Topic :: Database",
+    "Topic :: Software Development :: Code Generators",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+requires-python = ">=3.7"
+dependencies = [
+    "SQLAlchemy >= 1.4.0",
+    "inflect >= 4.0.0",
+    "importlib_metadata; python_version < '3.10'",
+]
+dynamic = ["version"]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/agronholm/sqlacodegen/issues"
+"Source Code" = "https://github.com/agronholm/sqlacodegen"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "psycopg2-binary",
+    "mysql-connector-python",
+]
+citext = ["sqlalchemy-citext >= 1.7.0"]
+
+[project.entry-points."sqlacodegen.generators"]
+tables = "sqlacodegen.generators:TablesGenerator"
+declarative = "sqlacodegen.generators:DeclarativeGenerator"
+dataclasses = "sqlacodegen.generators:DataclassGenerator"
+
+[project.scripts]
+sqlacodegen = "sqlacodegen.cli:main"
 
 [tool.setuptools_scm]
 version_scheme = "post-release"
