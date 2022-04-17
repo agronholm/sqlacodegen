@@ -36,7 +36,10 @@ def get_compiled_expression(statement: ClauseElement, bind: Connectable) -> str:
 def get_common_fk_constraints(
     table1: Table, table2: Table
 ) -> set[ForeignKeyConstraint]:
-    """Return a set of foreign key constraints the two tables have against each other."""
+    """
+    Return a set of foreign key constraints the two tables have against each other.
+
+    """
     c1 = {
         c
         for c in table1.constraints
@@ -67,7 +70,9 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
                 "column_0_N_label": "_".join(
                     col.label(col.name).name for col in constraint.columns
                 ),
-                "column_0N_key": "".join(col.key for col in constraint.columns),  # type: ignore[misc]
+                "column_0N_key": "".join(
+                    col.key for col in constraint.columns  # type: ignore[misc]
+                ),
                 "column_0_N_key": "_".join(
                     col.key for col in constraint.columns  # type: ignore[misc]
                 ),
@@ -144,8 +149,8 @@ def render_callable(
     :param name: name of the callable
     :param args: positional arguments
     :param kwargs: keyword arguments
-    :param indentation: if given, each argument will be rendered on its own line with this value
-        used as the indentation
+    :param indentation: if given, each argument will be rendered on its own line with
+        this value used as the indentation
 
     """
     if kwargs:

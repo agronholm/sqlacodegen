@@ -4,7 +4,7 @@ from textwrap import dedent
 
 import pytest
 from _pytest.fixtures import FixtureRequest
-from sqlalchemy import PrimaryKeyConstraint, Sequence
+from sqlalchemy import PrimaryKeyConstraint
 from sqlalchemy.dialects import mysql, postgresql
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Engine, create_engine
@@ -535,8 +535,8 @@ UniqueConstraint
 
             t_simple_items = Table(
                 'simple_items', metadata,
-                Column('name', String, ForeignKey('simple_items.name', ondelete='CASCADE', \
-onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
+                Column('name', String, ForeignKey('simple_items.name', \
+ondelete='CASCADE', onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
             )
             """,
         )
@@ -563,7 +563,8 @@ onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
 
             t_simple_items = Table(
                 'simple_items', metadata,
-                Column('id', Integer, primary_key=True, server_default=text('uuid_generate_v4()'))
+                Column('id', Integer, primary_key=True, \
+server_default=text('uuid_generate_v4()'))
             )
             """,
         )
@@ -1076,7 +1077,8 @@ class TestDeclarativeGenerator:
                 id = Column(Integer, primary_key=True)
                 container_id = Column(ForeignKey('simple_containers.id'))
 
-                container = relationship('SimpleContainers', back_populates='simple_items')
+                container = relationship('SimpleContainers', \
+back_populates='simple_items')
             """,
         )
 
@@ -1106,8 +1108,8 @@ class TestDeclarativeGenerator:
 
                 parent_item = relationship('SimpleItems', remote_side=[id], \
 back_populates='parent_item_reverse')
-                parent_item_reverse = relationship('SimpleItems', remote_side=[parent_item_id], \
-back_populates='parent_item')
+                parent_item_reverse = relationship('SimpleItems', \
+remote_side=[parent_item_id], back_populates='parent_item')
             """,
         )
 
@@ -1140,12 +1142,13 @@ back_populates='parent_item')
 
                 parent_item = relationship('SimpleItems', remote_side=[id], \
 foreign_keys=[parent_item_id], back_populates='parent_item_reverse')
-                parent_item_reverse = relationship('SimpleItems', remote_side=[parent_item_id], \
-foreign_keys=[parent_item_id], back_populates='parent_item')
+                parent_item_reverse = relationship('SimpleItems', \
+remote_side=[parent_item_id], foreign_keys=[parent_item_id], \
+back_populates='parent_item')
                 top_item = relationship('SimpleItems', remote_side=[id], \
 foreign_keys=[top_item_id], back_populates='top_item_reverse')
-                top_item_reverse = relationship('SimpleItems', remote_side=[top_item_id], \
-foreign_keys=[top_item_id], back_populates='top_item')
+                top_item_reverse = relationship('SimpleItems', \
+remote_side=[top_item_id], foreign_keys=[top_item_id], back_populates='top_item')
             """,
         )
 
@@ -1191,8 +1194,9 @@ class SimpleContainers(Base):
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
     __table_args__ = (
-        ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', \
-'simple_containers.id2'], ondelete='CASCADE', onupdate='CASCADE'),
+        ForeignKeyConstraint(['container_id1', 'container_id2'], \
+['simple_containers.id1', 'simple_containers.id2'], ondelete='CASCADE', \
+onupdate='CASCADE'),
     )
 
     id = Column(Integer, primary_key=True)
@@ -1233,10 +1237,10 @@ class SimpleContainers(Base):
 
     id = Column(Integer, primary_key=True)
 
-    simple_items = relationship('SimpleItems', foreign_keys='[SimpleItems.parent_container_id]', \
-back_populates='parent_container')
-    simple_items_ = relationship('SimpleItems', foreign_keys='[SimpleItems.top_container_id]', \
-back_populates='top_container')
+    simple_items = relationship('SimpleItems', \
+foreign_keys='[SimpleItems.parent_container_id]', back_populates='parent_container')
+    simple_items_ = relationship('SimpleItems', \
+foreign_keys='[SimpleItems.top_container_id]', back_populates='top_container')
 
 
 class SimpleItems(Base):
@@ -1246,10 +1250,10 @@ class SimpleItems(Base):
     parent_container_id = Column(ForeignKey('simple_containers.id'))
     top_container_id = Column(ForeignKey('simple_containers.id'))
 
-    parent_container = relationship('SimpleContainers', foreign_keys=[parent_container_id], \
-back_populates='simple_items')
-    top_container = relationship('SimpleContainers', foreign_keys=[top_container_id], \
-back_populates='simple_items_')
+    parent_container = relationship('SimpleContainers', \
+foreign_keys=[parent_container_id], back_populates='simple_items')
+    top_container = relationship('SimpleContainers', \
+foreign_keys=[top_container_id], back_populates='simple_items_')
             """,
         )
 
@@ -1280,7 +1284,8 @@ class OtherItems(Base):
 
     id = Column(Integer, primary_key=True)
 
-    simple_items = relationship('SimpleItems', uselist=False, back_populates='other_item')
+    simple_items = relationship('SimpleItems', uselist=False, \
+back_populates='other_item')
 
 
 class SimpleItems(Base):
@@ -1670,7 +1675,8 @@ t_container_items = Table(
     Column('container_id2', Integer),
     ForeignKeyConstraint(['container_id1', 'container_id2'], \
 ['simple_containers.id1', 'simple_containers.id2']),
-    ForeignKeyConstraint(['item_id1', 'item_id2'], ['simple_items.id1', 'simple_items.id2'])
+    ForeignKeyConstraint(['item_id1', 'item_id2'], ['simple_items.id1', \
+'simple_items.id2'])
 )
             """,
         )
@@ -2142,8 +2148,8 @@ class CustomerAPIPreference(Base):
         validate_code(
             generator.generate(),
             """\
-            from sqlalchemy import CheckConstraint, Column, Integer, PrimaryKeyConstraint, \
-String, UniqueConstraint
+            from sqlalchemy import CheckConstraint, Column, Integer, \
+PrimaryKeyConstraint, String, UniqueConstraint
             from sqlalchemy.orm import declarative_base
 
             Base = declarative_base()
@@ -2198,13 +2204,15 @@ String, UniqueConstraint
             class SimpleItems(Base):
                 __tablename__ = 'simple_items'
                 __table_args__ = (
-                    ForeignKeyConstraint(['container_id'], ['simple_containers.id'], name='foreignkeytest'),
+                    ForeignKeyConstraint(['container_id'], ['simple_containers.id'], \
+name='foreignkeytest'),
                 )
 
                 id = Column(Integer, primary_key=True)
                 container_id = Column(Integer)
 
-                container = relationship('SimpleContainers', back_populates='simple_items')
+                container = relationship('SimpleContainers', \
+back_populates='simple_items')
             """,
         )
 
@@ -2273,8 +2281,10 @@ class TestDataclassGenerator:
                 __tablename__ = 'simple'
                 __sa_dataclass_metadata_key__ = 'sa'
 
-                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
-                name: Optional[str] = field(default=None, metadata={'sa': Column(String(20))})
+                id: int = field(init=False, metadata={'sa': Column(Integer, \
+primary_key=True)})
+                name: Optional[str] = field(default=None, metadata={'sa': \
+Column(String(20))})
             """,
         )
 
@@ -2307,9 +2317,11 @@ class TestDataclassGenerator:
                 __tablename__ = 'simple'
                 __sa_dataclass_metadata_key__ = 'sa'
 
-                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, \
+primary_key=True)})
                 age: int = field(metadata={'sa': Column(Integer, nullable=False)})
-                name: Optional[str] = field(default=None, metadata={'sa': Column(String(20), server_default=text('foo'))})
+                name: Optional[str] = field(default=None, metadata={'sa': \
+Column(String(20), server_default=text('foo'))})
             """,
         )
 
@@ -2347,7 +2359,8 @@ class TestDataclassGenerator:
                 __tablename__ = 'simple_containers'
                 __sa_dataclass_metadata_key__ = 'sa'
 
-                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, \
+primary_key=True)})
 
                 simple_items: List[SimpleItems] = field(default_factory=list, \
 metadata={'sa': relationship('SimpleItems', back_populates='container')})
@@ -2359,7 +2372,8 @@ metadata={'sa': relationship('SimpleItems', back_populates='container')})
                 __tablename__ = 'simple_items'
                 __sa_dataclass_metadata_key__ = 'sa'
 
-                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, \
+primary_key=True)})
                 container_id: Optional[int] = field(default=None, \
 metadata={'sa': Column(ForeignKey('simple_containers.id'))})
 
@@ -2407,10 +2421,12 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
                 __tablename__ = 'simple_containers'
                 __sa_dataclass_metadata_key__ = 'sa'
 
-                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, \
+primary_key=True)})
 
                 item: List[SimpleItems] = field(default_factory=list, metadata=\
-{'sa': relationship('SimpleItems', secondary='container_items', back_populates='container')})
+{'sa': relationship('SimpleItems', secondary='container_items', \
+back_populates='container')})
 
 
             @mapper_registry.mapped
@@ -2419,10 +2435,12 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
                 __tablename__ = 'simple_items'
                 __sa_dataclass_metadata_key__ = 'sa'
 
-                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, \
+primary_key=True)})
 
-                container: List[SimpleContainers] = field(default_factory=list, metadata=\
-{'sa': relationship('SimpleContainers', secondary='container_items', back_populates='item')})
+                container: List[SimpleContainers] = \
+field(default_factory=list, metadata={'sa': relationship('SimpleContainers', \
+secondary='container_items', back_populates='item')})
 
 
             t_container_items = Table(
@@ -2469,9 +2487,11 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
                 __tablename__ = 'simple_containers'
                 __sa_dataclass_metadata_key__ = 'sa'
 
-                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, \
+primary_key=True)})
 
-                simple_items: List[SimpleItems] = field(default_factory=list, metadata={'sa': relationship('SimpleItems', back_populates='container')})
+                simple_items: List[SimpleItems] = field(default_factory=list, \
+metadata={'sa': relationship('SimpleItems', back_populates='container')})
 
 
             @mapper_registry.mapped
@@ -2479,14 +2499,18 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
             class SimpleItems:
                 __tablename__ = 'simple_items'
                 __table_args__ = (
-                    ForeignKeyConstraint(['container_id'], ['simple_containers.id'], name='foreignkeytest'),
+                    ForeignKeyConstraint(['container_id'], ['simple_containers.id'], \
+name='foreignkeytest'),
                 )
                 __sa_dataclass_metadata_key__ = 'sa'
 
-                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
-                container_id: Optional[int] = field(default=None, metadata={'sa': Column(Integer)})
+                id: int = field(init=False, metadata={'sa': Column(Integer, \
+primary_key=True)})
+                container_id: Optional[int] = field(default=None, metadata={'sa': \
+Column(Integer)})
 
-                container: Optional[SimpleContainers] = field(default=None, metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')})
+                container: Optional[SimpleContainers] = field(default=None, \
+metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')})
             """,
         )
 
@@ -2517,6 +2541,7 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
                 __tablename__ = 'simple'
                 __sa_dataclass_metadata_key__ = 'sa'
 
-                id: str = field(init=False, metadata={'sa': Column(UUID, primary_key=True)})
+                id: str = field(init=False, metadata={'sa': \
+Column(UUID, primary_key=True)})
             """,
         )

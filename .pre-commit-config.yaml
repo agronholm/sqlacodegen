@@ -31,6 +31,11 @@ repos:
     hooks:
       - id: isort
 
+  - repo: https://github.com/csachs/pyproject-flake8
+    rev: v0.0.1a4
+    hooks:
+      - id: pyproject-flake8
+
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.942
     hooks:

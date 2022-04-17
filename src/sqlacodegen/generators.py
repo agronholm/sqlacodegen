@@ -142,7 +142,8 @@ class TablesGenerator(CodeGenerator):
                 if "nocomments" in self.options:
                     column.comment = None
 
-        # Use information from column constraints to figure out the intended column types
+        # Use information from column constraints to figure out the intended column
+        # types
         for table in self.metadata.tables.values():
             self.fix_column_types(table)
 
@@ -233,9 +234,10 @@ class TablesGenerator(CodeGenerator):
         type_ = type(obj) if not isinstance(obj, type) else obj
         pkgname = type_.__module__
 
-        # The column types have already been adapted towards generic types if possible, so if this
-        # is still a vendor specific type (e.g., MySQL INTEGER) be sure to use that rather than the
-        # generic sqlalchemy type as it might have different constructor parameters.
+        # The column types have already been adapted towards generic types if possible,
+        # so if this is still a vendor specific type (e.g., MySQL INTEGER) be sure to
+        # use that rather than the generic sqlalchemy type as it might have different
+        # constructor parameters.
         if pkgname.startswith("sqlalchemy.dialects."):
             dialect_pkgname = ".".join(pkgname.split(".")[0:3])
             dialect_pkg = import_module(dialect_pkgname)
@@ -316,7 +318,8 @@ class TablesGenerator(CodeGenerator):
         args: list[str] = [f"{table.name!r}, metadata"]
         kwargs: dict[str, object] = {}
         for column in table.columns:
-            # Cast is required because of a bug in the SQLAlchemy stubs regarding Table.columns
+            # Cast is required because of a bug in the SQLAlchemy stubs regarding
+            # Table.columns
             args.append(self.render_column(column, True))
 
         for constraint in sorted(table.constraints, key=get_constraint_sort_key):
@@ -383,8 +386,8 @@ class TablesGenerator(CodeGenerator):
         if show_name:
             args.append(repr(column.name))
 
-        # Render the column type if there are no foreign keys on it or any of them points back to
-        # itself
+        # Render the column type if there are no foreign keys on it or any of them
+        # points back to itself
         if not dedicated_fks or any(fk.column is column for fk in dedicated_fks):
             args.append(self.render_column_type(column.type))
 
@@ -522,13 +525,17 @@ class TablesGenerator(CodeGenerator):
         return render_callable(constraint.__class__.__name__, *args, kwargs=kwargs)
 
     def should_ignore_table(self, table: Table) -> bool:
-        # Support for Alembic and sqlalchemy-migrate -- never expose the schema version tables
+        # Support for Alembic and sqlalchemy-migrate -- never expose the schema version
+        # tables
         return table.name in ("alembic_version", "migrate_version")
 
     def find_free_name(
         self, name: str, global_names: set[str], local_names: Collection[str] = ()
     ) -> str:
-        """Generate an attribute name that does not clash with other local or global names."""
+        """
+        Generate an attribute name that does not clash with other local or global names.
+
+        """
         name = name.strip()
         assert name, "Identifier cannot be empty"
         name = _re_invalid_identifier.sub("_", name)
@@ -611,7 +618,8 @@ class TablesGenerator(CodeGenerator):
             if not supercls.__name__.startswith("_") and hasattr(
                 supercls, "__visit_name__"
             ):
-                # Hack to fix adaptation of the Enum class which is broken since SQLAlchemy 1.2
+                # Hack to fix adaptation of the Enum class which is broken since
+                # SQLAlchemy 1.2
                 kw = {}
                 if supercls is Enum:
                     kw["name"] = coltype.name
@@ -629,12 +637,12 @@ class TablesGenerator(CodeGenerator):
                     new_coltype.item_type = self.get_adapted_type(new_coltype.item_type)
 
                 try:
-                    # If the adapted column type does not render the same as the original, don't
-                    # substitute it
+                    # If the adapted column type does not render the same as the
+                    # original, don't substitute it
                     if new_coltype.compile(self.bind.engine.dialect) != compiled_type:
-                        # Make an exception to the rule for Float and arrays of Float, since at
-                        # least on PostgreSQL, Float can accurately represent both REAL and
-                        # DOUBLE_PRECISION
+                        # Make an exception to the rule for Float and arrays of Float,
+                        # since at least on PostgreSQL, Float can accurately represent
+                        # both REAL and DOUBLE_PRECISION
                         if not isinstance(new_coltype, Float) and not (
                             isinstance(new_coltype, ARRAY)
                             and isinstance(new_coltype.item_type, Float)
@@ -692,13 +700,14 @@ class DeclarativeGenerator(TablesGenerator):
     def generate_models(self) -> list[Model]:
         models_by_table_name: dict[str, Model] = {}
 
-        # Pick association tables from the metadata into their own set, don't process them normally
+        # Pick association tables from the metadata into their own set, don't process
+        # them normally
         links: defaultdict[str, list[Model]] = defaultdict(lambda: [])
         for table in self.metadata.sorted_tables:
             qualified_name = qualified_table_name(table)
 
-            # Link tables have exactly two foreign key constraints and all columns are involved in
-            # them
+            # Link tables have exactly two foreign key constraints and all columns are
+            # involved in them
             fk_constraints = sorted(
                 table.foreign_key_constraints, key=get_constraint_sort_key
             )
@@ -710,8 +719,8 @@ class DeclarativeGenerator(TablesGenerator):
                 links[tablename].append(model)
                 continue
 
-            # Only form model classes for tables that have a primary key and are not association
-            # tables
+            # Only form model classes for tables that have a primary key and are not
+            # association tables
             if not table.primary_key:
                 models_by_table_name[qualified_name] = Model(table)
             else:
@@ -749,7 +758,8 @@ class DeclarativeGenerator(TablesGenerator):
         # Collect the imports
         self.collect_imports(models_by_table_name.values())
 
-        # Rename models and their attributes that conflict with imports or other attributes
+        # Rename models and their attributes that conflict with imports or other
+        # attributes
         global_names = {
             name for namespace in self.imports.values() for name in namespace
         }
@@ -809,7 +819,8 @@ class DeclarativeGenerator(TablesGenerator):
                     ]
 
                 # If the two tables share more than one foreign key constraint,
-                # SQLAlchemy needs an explicit primaryjoin to figure out which column(s) it needs
+                # SQLAlchemy needs an explicit primaryjoin to figure out which column(s)
+                # it needs
                 common_fk_constraints = get_common_fk_constraints(
                     source.table, target.table
                 )
@@ -875,7 +886,8 @@ class DeclarativeGenerator(TablesGenerator):
                     relationship.backref = reverse_relationship
                     target.relationships.append(reverse_relationship)
 
-                # Add a primary/secondary join for self-referential many-to-many relationships
+                # Add a primary/secondary join for self-referential many-to-many
+                # relationships
                 if source is target:
                     both_relationships = [relationship]
                     reverse_flags = [False, True]
@@ -973,8 +985,8 @@ class DeclarativeGenerator(TablesGenerator):
         else:
             preferred_name = relationship.target.table.name
 
-            # If there's a constraint with a single column that ends with "_id", use the preceding
-            # part as the relationship name
+            # If there's a constraint with a single column that ends with "_id", use the
+            # preceding part as the relationship name
             if relationship.constraint:
                 is_source = relationship.source.table is relationship.constraint.table
                 if is_source or relationship.type not in (

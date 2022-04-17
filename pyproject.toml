@@ -65,10 +65,7 @@ skip_gitignore = true
 profile = "black"
 
 [tool.flake8]
-max-line-length = 99
-
-[tool.autopep8]
-max_line_length = 99
+max-line-length = 88
 
 [tool.mypy]
 python_version = "3.7"
