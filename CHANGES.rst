@@ -4,6 +4,8 @@ Version history
 **UNRELEASED**
 
 - Migrated all packaging/testing configuration to ``pyproject.toml``
+- Fixed unwarranted ``ForeignKey`` declarations appearing in column attributes when there are
+  named, single column foreign key constraints (PR by Leonardus Chen)
 . Fixed ``KeyError`` when rendering an index without any columns
 - Worked around PostgreSQL UUID columns getting ``Any`` as the type annotation
 
