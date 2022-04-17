@@ -7,6 +7,7 @@ Version history
 - Fixed unwarranted ``ForeignKey`` declarations appearing in column attributes when there are
   named, single column foreign key constraints (PR by Leonardus Chen)
 . Fixed ``KeyError`` when rendering an index without any columns
+- Fixed improper handling of schema prefixes in sequence names in server defaults
 - Worked around PostgreSQL UUID columns getting ``Any`` as the type annotation
 
 **3.0.0b3**

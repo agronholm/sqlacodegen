@@ -71,7 +71,9 @@ _re_column_name = re.compile(r'(?:(["`]?).*\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 _re_invalid_identifier = re.compile(r"(?u)\W")
-_re_postgresql_nextval_sequence = re.compile(r"nextval\('(.+)'::regclass\)")
+_re_postgresql_nextval_sequence = re.compile(
+    r"nextval\('(?:\"(.+?)\"\.)?(.+)'::regclass\)"
+)
 
 
 class CodeGenerator(metaclass=ABCMeta):
@@ -405,9 +407,17 @@ class TablesGenerator(CodeGenerator):
                     )
                     if match:
                         # Add an explicit sequence
-                        if match.group(1) != f"{column.table.name}_{column.name}_seq":
+                        if match.group(2) != f"{column.table.name}_{column.name}_seq":
+                            callable_kwargs = {}
+                            if match.group(1):
+                                callable_kwargs["schema"] = repr(match.group(1))
+
                             args.append(
-                                render_callable("Sequence", repr(match.group(1)))
+                                render_callable(
+                                    "Sequence",
+                                    repr(match.group(2)),
+                                    kwargs=callable_kwargs,
+                                )
                             )
                             self.add_literal_import("sqlalchemy", "Sequence")
 

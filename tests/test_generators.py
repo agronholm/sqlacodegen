@@ -4,7 +4,7 @@ from textwrap import dedent
 
 import pytest
 from _pytest.fixtures import FixtureRequest
-from sqlalchemy import PrimaryKeyConstraint
+from sqlalchemy import PrimaryKeyConstraint, Sequence
 from sqlalchemy.dialects import mysql, postgresql
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Engine, create_engine
@@ -929,6 +929,37 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
             t_simple_items = Table(
                 'simple_items', metadata,
                 Column('id', Integer, Sequence('test_seq'), primary_key=True)
+            )
+            """,
+        )
+
+    @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+    def test_postgresql_sequence_with_schema(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple_items",
+            generator.metadata,
+            Column(
+                "id",
+                INTEGER,
+                primary_key=True,
+                server_default=text("nextval('\"myschema\".test_seq'::regclass)"),
+            ),
+            schema="myschema",
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+            from sqlalchemy import Column, Integer, MetaData, Sequence, Table
+
+            metadata = MetaData()
+
+
+            t_simple_items = Table(
+                'simple_items', metadata,
+                Column('id', Integer, Sequence('test_seq', schema='myschema'), \
+primary_key=True),
+                schema='myschema'
             )
             """,
         )
