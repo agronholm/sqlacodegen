@@ -4,8 +4,8 @@ Version history
 **UNRELEASED**
 
 - Migrated all packaging/testing configuration to ``pyproject.toml``
-- Fixed unwarranted ``ForeignKey`` declarations appearing in column attributes when there are
-  named, single column foreign key constraints (PR by Leonardus Chen)
+- Fixed unwarranted ``ForeignKey`` declarations appearing in column attributes when
+  there are named, single column foreign key constraints (PR by Leonardus Chen)
 . Fixed ``KeyError`` when rendering an index without any columns
 - Fixed improper handling of schema prefixes in sequence names in server defaults
 - Fixed identically named tables from different schemas resulting in invalid generated
@@ -18,28 +18,29 @@ Version history
 - Dropped support for SQLAlchemy 1.3
 - Added a ``__main__`` module which can be used as an alternate entry point to the CLI
 - Added detection for sequence use in column defaults on PostgreSQL
-- Fixed ``sqlalchemy.exc.InvalidRequestError`` when encountering a column named "metadata"
-  (regression from 2.0)
-- Fixed missing ``MetaData`` import with ``DeclarativeGenerator`` when only plain tables are
-  generated
-- Fixed invalid data classes being generated due to some relationships having been rendered without
-  a default value
-- Improved translation of column names into column attributes where the column name has whitespace
-  at the beginning or end
-- Modified constraint and index rendering to add them explicitly instead of using shortcuts like
-  ``unique=True``, ``index=True`` or ``primary=True`` when the constraint or index has a name that
-  does not match the default naming convention
+- Fixed ``sqlalchemy.exc.InvalidRequestError`` when encountering a column named
+  "metadata" (regression from 2.0)
+- Fixed missing ``MetaData`` import with ``DeclarativeGenerator`` when only plain tables
+  are generated
+- Fixed invalid data classes being generated due to some relationships having been
+  rendered without a default value
+- Improved translation of column names into column attributes where the column name has
+  whitespace at the beginning or end
+- Modified constraint and index rendering to add them explicitly instead of using
+  shortcuts like ``unique=True``, ``index=True`` or ``primary=True`` when the constraint
+  or index has a name that does not match the default naming convention
 
 **3.0.0b2**
 
-- Fixed ``IDENTITY`` columns not rendering properly when they are part of the primary key
+- Fixed ``IDENTITY`` columns not rendering properly when they are part of the primary
+  key
 
 **3.0.0b1**
 
-**NOTE**: Both the API and the command line interface have been refactored in a backwards
-incompatible fashion. Notably several command line options have been moved to specific generators
-and are no longer visible from ``sqlacodegen --help``. Their replacement are documented in the
-README.
+**NOTE**: Both the API and the command line interface have been refactored in a
+backwards incompatible fashion. Notably several command line options have been moved to
+specific generators and are no longer visible from ``sqlacodegen --help``. Their
+replacement are documented in the README.
 
 - Dropped support for Python < 3.6
 - Added support for Python 3.10
@@ -49,14 +50,15 @@ README.
 - Added support for ``IDENTITY`` columns
 - Disabled inflection during table/relationship name generation by default
   (use ``--option use_inflect`` to re-enable)
-- Refactored the old ``CodeGenerator`` class into separate generator classes, selectable via
-  ``--generator``
+- Refactored the old ``CodeGenerator`` class into separate generator classes, selectable
+  via ``--generator``
 - Refactored several command line options into generator specific options:
 
   - ``--noindexes`` → ``--option noindexes``
   - ``--noconstraints`` → ``--option noconstraints``
   - ``--nocomments`` → ``--option nocomments``
-  - ``--nojoined`` → ``--option nojoined`` (``declarative`` and ``dataclass`` generators only)
+  - ``--nojoined`` → ``--option nojoined`` (``declarative`` and ``dataclass`` generators
+    only)
   - ``--noinflect`` → (now the default; use ``--option use_inflect`` instead)
     (``declarative`` and ``dataclass`` generators only)
 - Fixed missing import for ``JSONB`` ``astext_type`` argument
@@ -101,7 +103,8 @@ README.
 - Fixed attribute name of columns named ``metadata`` in mapped classes (fixes #62)
 - Fixed rendered column types being changed from the original (fixes #11)
 - Fixed server defaults which contain double quotes (fixes #7, #17, #28, #33, #36)
-- Fixed ``secondary=`` not taking into account the association table's schema name (fixes #30)
+- Fixed ``secondary=`` not taking into account the association table's schema name
+  (fixes #30)
 - Sort models by foreign key dependencies instead of schema and name (fixes #15, #16)
 
 **1.1.6**
@@ -111,7 +114,8 @@ README.
 
 **1.1.5**
 
-- Fixed potential assignment of columns or relationships into invalid attribute names (fixes #10)
+- Fixed potential assignment of columns or relationships into invalid attribute names
+  (fixes #10)
 - Fixed unique=True missing from unique Index declarations
 - Fixed several issues with server defaults
 - Fixed potential assignment of columns or relationships into invalid attribute names
@@ -136,7 +140,8 @@ README.
 
 **1.1.1**
 
-- Fixed TypeError when inflect could not determine the singular name of a table for a many-to-1 relationship
+- Fixed TypeError when inflect could not determine the singular name of a table for a
+  many-to-1 relationship
 - Fixed _IntegerType, _StringType etc. being rendered instead of proper types on MySQL
 
 **1.1.0**

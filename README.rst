@@ -5,11 +5,12 @@
   :target: https://coveralls.io/github/agronholm/sqlacodegen?branch=master
   :alt: Code Coverage
 
-This is a tool that reads the structure of an existing database and generates the appropriate
-SQLAlchemy model code, using the declarative style if possible.
+This is a tool that reads the structure of an existing database and generates the
+appropriate SQLAlchemy model code, using the declarative style if possible.
 
-This tool was written as a replacement for `sqlautocode`_, which was suffering from several issues
-(including, but not limited to, incompatibility with Python 3 and the latest SQLAlchemy version).
+This tool was written as a replacement for `sqlautocode`_, which was suffering from
+several issues (including, but not limited to, incompatibility with Python 3 and the
+latest SQLAlchemy version).
 
 .. _sqlautocode: http://code.google.com/p/sqlautocode/
 
@@ -34,8 +35,8 @@ To install, do::
 
     pip install sqlacodegen
 
-To include support for the PostgreSQL ``CITEXT`` extension type (which should be considered as
-tested only under a few environments) specify the ``citext`` extra::
+To include support for the PostgreSQL ``CITEXT`` extension type (which should be
+considered as tested only under a few environments) specify the ``citext`` extra::
 
     pip install sqlacodegen[citext]
 
@@ -43,9 +44,9 @@ tested only under a few environments) specify the ``citext`` extra::
 Quickstart
 ==========
 
-At the minimum, you have to give sqlacodegen a database URL. The URL is passed directly to
-SQLAlchemy's `create_engine()`_ method so please refer to `SQLAlchemy's documentation`_ for
-instructions on how to construct a proper URL.
+At the minimum, you have to give sqlacodegen a database URL. The URL is passed directly
+to SQLAlchemy's `create_engine()`_ method so please refer to
+`SQLAlchemy's documentation`_ for instructions on how to construct a proper URL.
 
 Examples::
 
@@ -74,8 +75,8 @@ The following built-in generators are available:
 Generator-specific options
 ==========================
 
-The following options can be turned on by passing them using ``--option`` (can be used multiple
-times):
+The following options can be turned on by passing them using ``--option`` (can be used
+multiple times):
 
 * ``tables``
 
@@ -89,8 +90,9 @@ times):
   * ``use_inflect``: use the ``inflect`` library when naming classes and relationships
     (turning plural names into singular; see below for details)
   * ``nojoined``: don't try to detect joined-class inheritance (see below for details)
-  * ``nobidi``: generate relationships in a unidirectional fashion, so only the many-to-one
-    or first side of many-to-many relationships gets a relationship attribute, as on v2.X
+  * ``nobidi``: generate relationships in a unidirectional fashion, so only the
+    many-to-one or first side of many-to-many relationships gets a relationship
+    attribute, as on v2.X
 
 * ``dataclasses``
 
@@ -99,24 +101,27 @@ times):
 Model class generators
 ----------------------
 
-The code generators that generate classes try to generate model classes whenever possible.
-There are two circumstances in which a ``Table`` is generated instead:
+The code generators that generate classes try to generate model classes whenever
+possible. There are two circumstances in which a ``Table`` is generated instead:
 
-* the table has no primary key constraint (which is required by SQLAlchemy for every model class)
-* the table is an association table between two other tables (see below for the specifics)
+* the table has no primary key constraint (which is required by SQLAlchemy for every
+  model class)
+* the table is an association table between two other tables (see below for the
+  specifics)
 
 Model class naming logic
 ++++++++++++++++++++++++
 
-By default, table names are converted to valid PEP 8 compliant class names by replacing all
-characters unsuitable for Python identifiers with ``_``. Then, each valid parts (separated by
-underscores) are title cased and then joined together, eliminating the underscores. So,
-``example_name`` becomes ``ExampleName``.
+By default, table names are converted to valid PEP 8 compliant class names by replacing
+all characters unsuitable for Python identifiers with ``_``. Then, each valid parts
+(separated by underscores) are title cased and then joined together, eliminating the
+underscores. So, ``example_name`` becomes ``ExampleName``.
 
-If the ``use_inflect`` option is used, the table name (which is assumed to be in English) is
-converted to singular form using the "inflect" library. For example, ``sales_invoices`` becomes
-``SalesInvoice``. Since table names are not always in English, and the inflection process is far
-from perfect, inflection is disabled by default.
+If the ``use_inflect`` option is used, the table name (which is assumed to be in
+English) is converted to singular form using the "inflect" library. For example,
+``sales_invoices`` becomes ``SalesInvoice``. Since table names are not always in
+English, and the inflection process is far from perfect, inflection is disabled by
+default.
 
 Relationship detection logic
 ++++++++++++++++++++++++++++
@@ -124,10 +129,12 @@ Relationship detection logic
 Relationships are detected based on existing foreign key constraints as follows:
 
 * **many-to-one**: a foreign key constraint exists on the table
-* **one-to-one**: same as **many-to-one**, but a unique constraint exists on the column(s) involved
+* **one-to-one**: same as **many-to-one**, but a unique constraint exists on the
+  column(s) involved
 * **many-to-many**: an association table is found to exist between two tables
 
-A table is considered an association table if it satisfies all of the following conditions:
+A table is considered an association table if it satisfies all of the following
+conditions:
 
 #. has exactly two foreign key constraints
 #. all its columns are involved in said constraints
@@ -136,26 +143,27 @@ Relationship naming logic
 +++++++++++++++++++++++++
 
 Relationships are typically named based on the table name of the opposite class.
-For example, if a class has a relationship to another class with the table named ``companies``, the
-relationship would be named ``companies`` (unless the ``use_inflect`` option was enabled, in which
-case it would be named ``company`` in the case of a many-to-one or one-to-one relationship).
+For example, if a class has a relationship to another class with the table named
+``companies``, the relationship would be named ``companies`` (unless the ``use_inflect``
+option was enabled, in which case it would be named ``company`` in the case of a
+many-to-one or one-to-one relationship).
 
-A special case for single column many-to-one and one-to-one relationships, however, is if the
-column is named like ``employer_id``. Then the relationship is named ``employer`` due to that
-``_id`` suffix.
+A special case for single column many-to-one and one-to-one relationships, however, is
+if the column is named like ``employer_id``. Then the relationship is named ``employer``
+due to that ``_id`` suffix.
 
-For self referential relationships, the reverse side of the relationship will be named with the
-``_reverse`` suffix appended to it.
+For self referential relationships, the reverse side of the relationship will be named
+with the ``_reverse`` suffix appended to it.
 
 Customizing code generation logic
 =================================
 
-If the built-in generators with all their options don't quite do what you want, you can customize
-the logic by subclassing one of the existing code generator classes. Override whichever methods
-you need, and then add an `entry point`_ in the ``sqlacodegen.generators`` namespace that points
-to your new class. Once the entry point is in place (you typically have to install the project with
-``pip install``), you can use ``--generator <yourentrypoint>`` to invoke your custom code
-generator.
+If the built-in generators with all their options don't quite do what you want, you can
+customize the logic by subclassing one of the existing code generator classes. Override
+whichever methods you need, and then add an `entry point`_ in the
+``sqlacodegen.generators`` namespace that points to your new class. Once the entry point
+is in place (you typically have to install the project with ``pip install``), you can
+use ``--generator <yourentrypoint>`` to invoke your custom code generator.
 
 For examples, you can look at sqlacodegen's own entry points in its `setup.cfg`_.
 
