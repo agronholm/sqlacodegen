@@ -2096,17 +2096,23 @@ String, UniqueConstraint
 
     def test_named_foreign_key_constraints(self, generator: CodeGenerator) -> None:
         Table(
-            'simple_items', generator.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('container_id', INTEGER),
-            ForeignKeyConstraint(['container_id'], ['simple_containers.id'], name='foreignkeytest')
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("container_id", INTEGER),
+            ForeignKeyConstraint(
+                ["container_id"], ["simple_containers.id"], name="foreignkeytest"
+            ),
         )
         Table(
-            'simple_containers', generator.metadata,
-            Column('id', INTEGER, primary_key=True)
+            "simple_containers",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
         )
 
-        validate_code(generator.generate(), """\
+        validate_code(
+            generator.generate(),
+            """\
             from sqlalchemy import Column, ForeignKeyConstraint, Integer
             from sqlalchemy.orm import declarative_base, relationship
 
@@ -2131,7 +2137,8 @@ String, UniqueConstraint
                 container_id = Column(Integer)
 
                 container = relationship('SimpleContainers', back_populates='simple_items')
-            """)
+            """,
+        )
 
 
 class TestDataclassGenerator:
@@ -2332,17 +2339,23 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
 
     def test_named_foreign_key_constraints(self, generator: CodeGenerator) -> None:
         Table(
-            'simple_items', generator.metadata,
-            Column('id', INTEGER, primary_key=True),
-            Column('container_id', INTEGER),
-            ForeignKeyConstraint(['container_id'], ['simple_containers.id'], name='foreignkeytest')
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("container_id", INTEGER),
+            ForeignKeyConstraint(
+                ["container_id"], ["simple_containers.id"], name="foreignkeytest"
+            ),
         )
         Table(
-            'simple_containers', generator.metadata,
-            Column('id', INTEGER, primary_key=True)
+            "simple_containers",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
         )
 
-        validate_code(generator.generate(), """\
+        validate_code(
+            generator.generate(),
+            """\
             from __future__ import annotations
 
             from dataclasses import dataclass, field
@@ -2378,4 +2391,5 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
                 container_id: Optional[int] = field(default=None, metadata={'sa': Column(Integer)})
 
                 container: Optional[SimpleContainers] = field(default=None, metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')})
-            """)
+            """,
+        )

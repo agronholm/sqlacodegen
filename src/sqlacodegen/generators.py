@@ -347,7 +347,9 @@ class TablesGenerator(CodeGenerator):
         dedicated_fks = [
             c
             for c in column.foreign_keys
-            if c.constraint and len(c.constraint.columns) == 1 and uses_default_name(c.constraint)
+            if c.constraint
+            and len(c.constraint.columns) == 1
+            and uses_default_name(c.constraint)
         ]
         is_unique = any(
             isinstance(c, UniqueConstraint)
