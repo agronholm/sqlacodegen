@@ -300,6 +300,7 @@ UniqueConstraint
             Column("id", INTEGER),
             Column("number", INTEGER),
             Column("text", VARCHAR),
+            Index("ix_empty"),
         )
         simple_items.indexes.add(Index("ix_number", simple_items.c.number))
         simple_items.indexes.add(
@@ -325,6 +326,7 @@ UniqueConstraint
                 Column('id', Integer),
                 Column('number', Integer, index=True),
                 Column('text', String, unique=True),
+                Index('ix_empty'),
                 Index('ix_text_number', 'text', 'number', unique=True)
             )
             """,

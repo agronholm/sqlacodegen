@@ -4,6 +4,7 @@ Version history
 **UNRELEASED**
 
 - Migrated all packaging/testing configuration to ``pyproject.toml``
+. Fixed ``KeyError`` when rendering an index without any columns
 
 **3.0.0b3**
 

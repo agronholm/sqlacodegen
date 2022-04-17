@@ -127,10 +127,9 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
 
     try:
         convention: str = table.metadata.naming_convention[key]
+        return constraint.name == (convention % values)
     except KeyError:
         return False
-
-    return constraint.name == (convention % values)
 
 
 def render_callable(
