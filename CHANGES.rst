@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**3.0.0rc1**
 
 - Migrated all packaging/testing configuration to ``pyproject.toml``
 - Fixed unwarranted ``ForeignKey`` declarations appearing in column attributes when
