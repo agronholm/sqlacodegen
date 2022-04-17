@@ -10,7 +10,7 @@ from sqlalchemy.sql.schema import Column, ForeignKeyConstraint, Table
 @dataclass
 class Model:
     table: Table
-    name: str = field(init=False, default='')
+    name: str = field(init=False, default="")
 
     @property
     def schema(self) -> str | None:
@@ -29,7 +29,7 @@ class ModelClass(Model):
             if column.column.name == column_name:
                 return column
 
-        raise LookupError(f'Cannot find column attribute for {column_name!r}')
+        raise LookupError(f"Cannot find column attribute for {column_name!r}")
 
 
 class RelationshipType(Enum):
@@ -43,10 +43,10 @@ class RelationshipType(Enum):
 class ColumnAttribute:
     model: ModelClass
     column: Column[Any]
-    name: str = field(init=False, default='')
+    name: str = field(init=False, default="")
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(name={self.name!r}, type={self.column.type})'
+        return f"{self.__class__.__name__}(name={self.name!r}, type={self.column.type})"
 
     def __str__(self) -> str:
         return self.name
@@ -67,11 +67,13 @@ class RelationshipAttribute:
     foreign_keys: list[ColumnAttribute] = field(default_factory=list)
     primaryjoin: list[JoinType] = field(default_factory=list)
     secondaryjoin: list[JoinType] = field(default_factory=list)
-    name: str = field(init=False, default='')
+    name: str = field(init=False, default="")
 
     def __repr__(self) -> str:
-        return (f'{self.__class__.__name__}(name={self.name!r}, type={self.type}, '
-                f'target={self.target.name})')
+        return (
+            f"{self.__class__.__name__}(name={self.name!r}, type={self.type}, "
+            f"target={self.target.name})"
+        )
 
     def __str__(self) -> str:
         return self.name

@@ -17,27 +17,40 @@ else:
 future_imports = "from __future__ import annotations\n\n"
 
 if _sqla_version < (1, 4):
-    declarative_package = 'sqlalchemy.ext.declarative'
+    declarative_package = "sqlalchemy.ext.declarative"
 else:
-    declarative_package = 'sqlalchemy.orm'
+    declarative_package = "sqlalchemy.orm"
 
 
 @pytest.fixture
 def db_path(tmp_path: Path) -> Path:
-    path = tmp_path / 'test.db'
+    path = tmp_path / "test.db"
     with sqlite3.connect(str(path)) as conn:
         cursor = conn.cursor()
-        cursor.execute("CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL)")
+        cursor.execute(
+            "CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL)"
+        )
 
     return path
 
 
 def test_cli_tables(db_path: Path, tmp_path: Path) -> None:
-    output_path = tmp_path / 'outfile'
-    subprocess.run(['sqlacodegen', f'sqlite:///{db_path}', '--generator', 'tables',
-                    '--outfile', str(output_path)], check=True)
+    output_path = tmp_path / "outfile"
+    subprocess.run(
+        [
+            "sqlacodegen",
+            f"sqlite:///{db_path}",
+            "--generator",
+            "tables",
+            "--outfile",
+            str(output_path),
+        ],
+        check=True,
+    )
 
-    assert output_path.read_text() == """\
+    assert (
+        output_path.read_text()
+        == """\
 from sqlalchemy import Column, Integer, MetaData, Table, Text
 
 metadata = MetaData()
@@ -49,14 +62,26 @@ t_foo = Table(
     Column('name', Text, nullable=False)
 )
 """
+    )
 
 
 def test_cli_declarative(db_path: Path, tmp_path: Path) -> None:
-    output_path = tmp_path / 'outfile'
-    subprocess.run(['sqlacodegen', f'sqlite:///{db_path}', '--generator', 'declarative',
-                    '--outfile', str(output_path)], check=True)
+    output_path = tmp_path / "outfile"
+    subprocess.run(
+        [
+            "sqlacodegen",
+            f"sqlite:///{db_path}",
+            "--generator",
+            "declarative",
+            "--outfile",
+            str(output_path),
+        ],
+        check=True,
+    )
 
-    assert output_path.read_text() == f"""\
+    assert (
+        output_path.read_text()
+        == f"""\
 from sqlalchemy import Column, Integer, Text
 from {declarative_package} import declarative_base
 
@@ -69,14 +94,26 @@ class Foo(Base):
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False)
 """
+    )
 
 
 def test_cli_dataclass(db_path: Path, tmp_path: Path) -> None:
-    output_path = tmp_path / 'outfile'
-    subprocess.run(['sqlacodegen', f'sqlite:///{db_path}', '--generator', 'dataclasses',
-                    '--outfile', str(output_path)], check=True)
+    output_path = tmp_path / "outfile"
+    subprocess.run(
+        [
+            "sqlacodegen",
+            f"sqlite:///{db_path}",
+            "--generator",
+            "dataclasses",
+            "--outfile",
+            str(output_path),
+        ],
+        check=True,
+    )
 
-    assert output_path.read_text() == f"""\
+    assert (
+        output_path.read_text()
+        == f"""\
 {future_imports}from dataclasses import dataclass, field
 
 from sqlalchemy import Column, Integer, Text
@@ -94,10 +131,14 @@ class Foo:
     id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
     name: str = field(metadata={{'sa': Column(Text, nullable=False)}})
 """
+    )
 
 
 def test_main() -> None:
-    expected_version = version('sqlacodegen')
-    completed = subprocess.run([sys.executable, '-m', 'sqlacodegen', '--version'],
-                               stdout=subprocess.PIPE, check=True)
+    expected_version = version("sqlacodegen")
+    completed = subprocess.run(
+        [sys.executable, "-m", "sqlacodegen", "--version"],
+        stdout=subprocess.PIPE,
+        check=True,
+    )
     assert completed.stdout.decode().strip() == expected_version
