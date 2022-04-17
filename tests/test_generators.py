@@ -2094,6 +2094,52 @@ String, UniqueConstraint
             """,
         )
 
+    def test_named_foreign_key_constraints(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("container_id", INTEGER),
+            ForeignKeyConstraint(
+                ["container_id"], ["simple_containers.id"], name="foreignkeytest"
+            ),
+        )
+        Table(
+            "simple_containers",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+            from sqlalchemy import Column, ForeignKeyConstraint, Integer
+            from sqlalchemy.orm import declarative_base, relationship
+
+            Base = declarative_base()
+
+
+            class SimpleContainers(Base):
+                __tablename__ = 'simple_containers'
+
+                id = Column(Integer, primary_key=True)
+
+                simple_items = relationship('SimpleItems', back_populates='container')
+
+
+            class SimpleItems(Base):
+                __tablename__ = 'simple_items'
+                __table_args__ = (
+                    ForeignKeyConstraint(['container_id'], ['simple_containers.id'], name='foreignkeytest'),
+                )
+
+                id = Column(Integer, primary_key=True)
+                container_id = Column(Integer)
+
+                container = relationship('SimpleContainers', back_populates='simple_items')
+            """,
+        )
+
 
 class TestDataclassGenerator:
     @pytest.fixture
@@ -2288,5 +2334,62 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
                 Column('item_id', ForeignKey('simple_items.id')),
                 Column('container_id', ForeignKey('simple_containers.id'))
             )
+            """,
+        )
+
+    def test_named_foreign_key_constraints(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("container_id", INTEGER),
+            ForeignKeyConstraint(
+                ["container_id"], ["simple_containers.id"], name="foreignkeytest"
+            ),
+        )
+        Table(
+            "simple_containers",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+            from __future__ import annotations
+
+            from dataclasses import dataclass, field
+            from typing import List, Optional
+
+            from sqlalchemy import Column, ForeignKeyConstraint, Integer
+            from sqlalchemy.orm import registry, relationship
+
+            mapper_registry = registry()
+
+
+            @mapper_registry.mapped
+            @dataclass
+            class SimpleContainers:
+                __tablename__ = 'simple_containers'
+                __sa_dataclass_metadata_key__ = 'sa'
+
+                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+
+                simple_items: List[SimpleItems] = field(default_factory=list, metadata={'sa': relationship('SimpleItems', back_populates='container')})
+
+
+            @mapper_registry.mapped
+            @dataclass
+            class SimpleItems:
+                __tablename__ = 'simple_items'
+                __table_args__ = (
+                    ForeignKeyConstraint(['container_id'], ['simple_containers.id'], name='foreignkeytest'),
+                )
+                __sa_dataclass_metadata_key__ = 'sa'
+
+                id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+                container_id: Optional[int] = field(default=None, metadata={'sa': Column(Integer)})
+
+                container: Optional[SimpleContainers] = field(default=None, metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')})
             """,
         )
