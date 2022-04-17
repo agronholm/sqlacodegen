@@ -2105,7 +2105,7 @@ String, UniqueConstraint
             'simple_containers', generator.metadata,
             Column('id', INTEGER, primary_key=True)
         )
-        print(generator.generate())
+
         validate_code(generator.generate(), """\
             from sqlalchemy import Column, ForeignKeyConstraint, Integer
             from sqlalchemy.orm import declarative_base, relationship
@@ -2342,7 +2342,6 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
             Column('id', INTEGER, primary_key=True)
         )
 
-        print(generator.generate())
         validate_code(generator.generate(), """\
             from __future__ import annotations
 
