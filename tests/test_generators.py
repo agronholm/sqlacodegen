@@ -6,6 +6,7 @@ import pytest
 from _pytest.fixtures import FixtureRequest
 from sqlalchemy import PrimaryKeyConstraint
 from sqlalchemy.dialects import mysql, postgresql
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.schema import (
     CheckConstraint,
@@ -2391,5 +2392,36 @@ metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')}
                 container_id: Optional[int] = field(default=None, metadata={'sa': Column(Integer)})
 
                 container: Optional[SimpleContainers] = field(default=None, metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')})
+            """,
+        )
+
+    def test_uuid_type_annotation(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple",
+            generator.metadata,
+            Column("id", UUID, primary_key=True),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+            from __future__ import annotations
+
+            from dataclasses import dataclass, field
+
+            from sqlalchemy import Column
+            from sqlalchemy.dialects.postgresql import UUID
+            from sqlalchemy.orm import registry
+
+            mapper_registry = registry()
+
+
+            @mapper_registry.mapped
+            @dataclass
+            class Simple:
+                __tablename__ = 'simple'
+                __sa_dataclass_metadata_key__ = 'sa'
+
+                id: str = field(init=False, metadata={'sa': Column(UUID, primary_key=True)})
             """,
         )

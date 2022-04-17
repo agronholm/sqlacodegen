@@ -5,6 +5,7 @@ Version history
 
 - Migrated all packaging/testing configuration to ``pyproject.toml``
 . Fixed ``KeyError`` when rendering an index without any columns
+- Worked around PostgreSQL UUID columns getting ``Any`` as the type annotation
 
 **3.0.0b3**
 
