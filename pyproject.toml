@@ -74,6 +74,7 @@ max_line_length = 99
 python_version = "3.7"
 strict = true
 ignore_missing_imports = true
+plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [tool.pytest.ini_options]
 addopts = "-rsx --tb=short"

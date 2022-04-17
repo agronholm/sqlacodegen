@@ -77,9 +77,9 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
             values.update(
                 {
                     "column_0_name": constraint.columns[0].name,  # type: ignore[index]
-                    "column_0_label": constraint.columns[0]
+                    "column_0_label": constraint.columns[0]  # type: ignore[index]
                     .label(constraint.columns[0].name)  # type: ignore[index]
-                    .name,  # type: ignore[index]
+                    .name,
                     "column_0_key": constraint.columns[0].key,  # type: ignore[index]
                 }
             )

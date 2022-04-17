@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 from contextlib import ExitStack
+from typing import TextIO
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
@@ -63,6 +64,7 @@ def main() -> None:
 
     # Open the target file (if given)
     with ExitStack() as stack:
+        outfile: TextIO
         if args.outfile:
             outfile = open(args.outfile, "w", encoding="utf-8")
             stack.enter_context(outfile)
