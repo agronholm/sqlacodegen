@@ -10,6 +10,7 @@ Version history
 - Fixed improper handling of schema prefixes in sequence names in server defaults
 - Fixed identically named tables from different schemas resulting in invalid generated
   code
+- Fixed imports caused by ``server_default`` conflicting with class attribute names
 - Worked around PostgreSQL UUID columns getting ``Any`` as the type annotation
 
 **3.0.0b3**

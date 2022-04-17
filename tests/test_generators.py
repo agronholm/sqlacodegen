@@ -2208,6 +2208,34 @@ String, UniqueConstraint
             """,
         )
 
+    # @pytest.mark.xfail(strict=True)
+    def test_colname_import_conflict(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("text", VARCHAR),
+            Column("textwithdefault", VARCHAR, server_default=text("'test'")),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+            from sqlalchemy import Column, Integer, String, text
+            from sqlalchemy.orm import declarative_base
+
+            Base = declarative_base()
+
+
+            class Simple(Base):
+                __tablename__ = 'simple'
+
+                id = Column(Integer, primary_key=True)
+                text_ = Column('text', String)
+                textwithdefault = Column(String, server_default=text("'test'"))
+            """,
+        )
+
 
 class TestDataclassGenerator:
     @pytest.fixture
@@ -2255,7 +2283,7 @@ class TestDataclassGenerator:
             "simple",
             generator.metadata,
             Column("id", INTEGER, primary_key=True),
-            Column("name", VARCHAR(20), default="foo"),
+            Column("name", VARCHAR(20), server_default=text("foo")),
             Column("age", INTEGER, nullable=False),
         )
 
@@ -2267,7 +2295,7 @@ class TestDataclassGenerator:
             from dataclasses import dataclass, field
             from typing import Optional
 
-            from sqlalchemy import Column, Integer, String
+            from sqlalchemy import Column, Integer, String, text
             from sqlalchemy.orm import registry
 
             mapper_registry = registry()
@@ -2281,7 +2309,7 @@ class TestDataclassGenerator:
 
                 id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
                 age: int = field(metadata={'sa': Column(Integer, nullable=False)})
-                name: Optional[str] = field(default=None, metadata={'sa': Column(String(20))})
+                name: Optional[str] = field(default=None, metadata={'sa': Column(String(20), server_default=text('foo'))})
             """,
         )
 

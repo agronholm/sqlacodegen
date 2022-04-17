@@ -198,6 +198,15 @@ class TablesGenerator(CodeGenerator):
             ):
                 self.add_import(column.type.astext_type)
 
+        if column.default:
+            self.add_import(column.default)
+
+        if column.server_default:
+            if isinstance(column.server_default, (Computed, Identity)):
+                self.add_import(column.server_default)
+            elif isinstance(column.server_default, DefaultClause):
+                self.add_literal_import("sqlalchemy", "text")
+
     def collect_imports_for_constraint(self, constraint: Constraint | Index) -> None:
         if isinstance(constraint, Index):
             if len(constraint.columns) > 1 or not uses_default_name(constraint):
@@ -382,6 +391,9 @@ class TablesGenerator(CodeGenerator):
         for fk in dedicated_fks:
             args.append(self.render_constraint(fk))
 
+        if column.default:
+            args.append(repr(column.default))
+
         if column.key != column.name:
             kwargs["key"] = column.key
         if is_primary:
@@ -401,31 +413,6 @@ class TablesGenerator(CodeGenerator):
             kwargs["server_default"] = render_callable(
                 "text", repr(column.server_default.arg.text)
             )
-            if isinstance(column.server_default.arg, TextClause):
-                if self.bind.dialect.name == "postgresql":
-                    match = _re_postgresql_nextval_sequence.match(
-                        column.server_default.arg.text
-                    )
-                    if match:
-                        # Add an explicit sequence
-                        if match.group(2) != f"{column.table.name}_{column.name}_seq":
-                            callable_kwargs = {}
-                            if match.group(1):
-                                callable_kwargs["schema"] = repr(match.group(1))
-
-                            args.append(
-                                render_callable(
-                                    "Sequence",
-                                    repr(match.group(2)),
-                                    kwargs=callable_kwargs,
-                                )
-                            )
-                            self.add_literal_import("sqlalchemy", "Sequence")
-
-                        del kwargs["server_default"]
-
-            if "server_default" in kwargs:
-                self.add_literal_import("sqlalchemy", "text")
         elif isinstance(column.server_default, Computed):
             expression = str(column.server_default.sqltext)
 
@@ -436,10 +423,8 @@ class TablesGenerator(CodeGenerator):
             args.append(
                 render_callable("Computed", repr(expression), kwargs=computed_kwargs)
             )
-            self.add_import(Computed)
         elif isinstance(column.server_default, Identity):
             args.append(repr(column.server_default))
-            self.add_import(Identity)
         elif column.server_default:
             kwargs["server_default"] = repr(column.server_default)
 
@@ -602,6 +587,23 @@ class TablesGenerator(CodeGenerator):
                 column.type = self.get_adapted_type(column.type)
             except CompileError:
                 pass
+
+            # PostgreSQL specific fix: detect sequences from server_default
+            if column.server_default and self.bind.dialect.name == "postgresql":
+                if isinstance(column.server_default, DefaultClause) and isinstance(
+                    column.server_default.arg, TextClause
+                ):
+                    match = _re_postgresql_nextval_sequence.match(
+                        column.server_default.arg.text
+                    )
+                    if match:
+                        # Add an explicit sequence
+                        if match.group(2) != f"{column.table.name}_{column.name}_seq":
+                            column.default = sqlalchemy.Sequence(
+                                match.group(2), schema=match.group(1)
+                            )
+
+                        column.server_default = None
 
     def get_adapted_type(self, coltype: Any) -> Any:
         compiled_type = coltype.compile(self.bind.engine.dialect)
