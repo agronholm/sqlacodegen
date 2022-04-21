@@ -51,6 +51,7 @@ citext = ["sqlalchemy-citext >= 1.7.0"]
 tables = "sqlacodegen.generators:TablesGenerator"
 declarative = "sqlacodegen.generators:DeclarativeGenerator"
 dataclasses = "sqlacodegen.generators:DataclassGenerator"
+sqlmodels = "sqlacodegen.generators:SQLModelGenerator"
 
 [project.scripts]
 sqlacodegen = "sqlacodegen.cli:main"
