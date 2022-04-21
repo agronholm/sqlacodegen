@@ -665,7 +665,6 @@ class DeclarativeGenerator(TablesGenerator):
         "use_inflect",
         "nojoined",
         "nobidi",
-        "forcepk",
     }
 
     def __init__(
@@ -720,14 +719,11 @@ class DeclarativeGenerator(TablesGenerator):
                 links[tablename].append(model)
                 continue
 
-            # Form model classes for tables that have a primary key
-            # and forces primary key on first column for those who don't
-            # and are not association tables
-            if "forcepk" in self.options:
-                if not table.primary_key:
-                    first_col_name = table.c.values()[0].name
-                    pk = PrimaryKeyConstraint(first_col_name)
-                    table.append_constraint(pk)
+            # Only form model classes for tables that have a primary key and are not
+            # association tables
+            if not table.primary_key:
+                models_by_table_name[qualified_name] = Model(table)
+            else:
                 model = ModelClass(table)
                 models_by_table_name[qualified_name] = model
 
@@ -735,19 +731,6 @@ class DeclarativeGenerator(TablesGenerator):
                 for column in table.c:
                     column_attr = ColumnAttribute(model, column)
                     model.columns.append(column_attr)
-            # Only form model classes for tables that have a primary key and are not
-            # association tables
-            else:
-                if not table.primary_key:
-                    models_by_table_name[qualified_name] = Model(table)
-                else:
-                    model = ModelClass(table)
-                    models_by_table_name[qualified_name] = model
-
-                    # Fill in the columns
-                    for column in table.c:
-                        column_attr = ColumnAttribute(model, column)
-                        model.columns.append(column_attr)
 
         # Add relationships
         for model in models_by_table_name.values():
@@ -1378,8 +1361,6 @@ class SQLModelGenerator(DeclarativeGenerator):
             indentation=indentation,
             base_class_name=base_class_name,
         )
-        if "forcepk" not in self.options:
-            self.options.add("forcepk")
 
     def collect_imports(self, models: Iterable[Model]) -> None:
         super(DeclarativeGenerator, self).collect_imports(models)
@@ -1477,7 +1458,7 @@ class SQLModelGenerator(DeclarativeGenerator):
         rendered_field = render_callable("Relationship", *args, kwargs=kwargs)
         return f"{relationship.name}: {annotation} = {rendered_field}"
 
-    def render_relationship_args(self, arguments: str):
+    def render_relationship_args(self, arguments: str) -> list[str]:
         argument_list = arguments.split(",")
         # delete ')' and ' ' from args
         argument_list[-1] = argument_list[-1][:-1]
