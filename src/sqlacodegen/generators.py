@@ -96,7 +96,6 @@ class CodeGenerator(metaclass=ABCMeta):
     def generate(self) -> str:
         """
         Generate the code for the given metadata.
-
         .. note:: May modify the metadata.
         """
 
@@ -534,7 +533,6 @@ class TablesGenerator(CodeGenerator):
     ) -> str:
         """
         Generate an attribute name that does not clash with other local or global names.
-
         """
         name = name.strip()
         assert name, "Identifier cannot be empty"
@@ -665,7 +663,6 @@ class DeclarativeGenerator(TablesGenerator):
         "use_inflect",
         "nojoined",
         "nobidi",
-        "forcepk",
     }
 
     def __init__(
@@ -720,14 +717,11 @@ class DeclarativeGenerator(TablesGenerator):
                 links[tablename].append(model)
                 continue
 
-            # Form model classes for tables that have a primary key
-            # and forces primary key on first column for those who don't
-            # and are not association tables
-            if 'forcepk' in self.options:
-                if not table.primary_key:
-                    first_col_name = table.c.values()[0].name
-                    pk = PrimaryKeyConstraint(first_col_name)
-                    table.append_constraint(pk)
+            # Only form model classes for tables that have a primary key and are not
+            # association tables
+            if not table.primary_key:
+                models_by_table_name[qualified_name] = Model(table)
+            else:
                 model = ModelClass(table)
                 models_by_table_name[qualified_name] = model
 
@@ -735,19 +729,6 @@ class DeclarativeGenerator(TablesGenerator):
                 for column in table.c:
                     column_attr = ColumnAttribute(model, column)
                     model.columns.append(column_attr)
-            # Only form model classes for tables that have a primary key and are not
-            # association tables
-            else:
-                if not table.primary_key:
-                    models_by_table_name[qualified_name] = Model(table)
-                else:
-                    model = ModelClass(table)
-                    models_by_table_name[qualified_name] = model
-
-                    # Fill in the columns
-                    for column in table.c:
-                        column_attr = ColumnAttribute(model, column)
-                        model.columns.append(column_attr)
 
         # Add relationships
         for model in models_by_table_name.values():
@@ -1362,112 +1343,129 @@ class DataclassGenerator(DeclarativeGenerator):
 
 
 class SQLModelGenerator(DeclarativeGenerator):
-    def __init__(self, metadata: MetaData, bind: Connection | Engine, options: Sequence[str], *,
-                 indentation: str = '    ', base_class_name: str = 'SQLModel'):
-        super().__init__(metadata, bind, options, indentation=indentation,
-                         base_class_name=base_class_name)
-        if 'forcepk' not in self.options:
-            self.options.add('forcepk')
+    def __init__(
+        self,
+        metadata: MetaData,
+        bind: Connection | Engine,
+        options: Sequence[str],
+        *,
+        indentation: str = "    ",
+        base_class_name: str = "SQLModel",
+    ):
+        super().__init__(
+            metadata,
+            bind,
+            options,
+            indentation=indentation,
+            base_class_name=base_class_name,
+        )
 
     def collect_imports(self, models: Iterable[Model]) -> None:
         super(DeclarativeGenerator, self).collect_imports(models)
         if any(isinstance(model, ModelClass) for model in models):
-            self.remove_literal_import('sqlalchemy', 'MetaData')
-            self.add_literal_import('sqlmodel', 'SQLModel')
-            self.add_literal_import('sqlmodel', 'Field')
+            self.remove_literal_import("sqlalchemy", "MetaData")
+            self.add_literal_import("sqlmodel", "SQLModel")
+            self.add_literal_import("sqlmodel", "Field")
 
     def collect_imports_for_model(self, model: Model) -> None:
         super(DeclarativeGenerator, self).collect_imports_for_model(model)
         if isinstance(model, ModelClass):
             for column_attr in model.columns:
                 if column_attr.column.nullable:
-                    self.add_literal_import('typing', 'Optional')
+                    self.add_literal_import("typing", "Optional")
                     break
             if model.relationships:
-                self.add_literal_import('sqlmodel', 'Relationship')
+                self.add_literal_import("sqlmodel", "Relationship")
 
             for relationship_attr in model.relationships:
-                if relationship_attr.type in (RelationshipType.ONE_TO_MANY,
-                                              RelationshipType.MANY_TO_MANY):
-                    self.add_literal_import('typing', 'List')
+                if relationship_attr.type in (
+                    RelationshipType.ONE_TO_MANY,
+                    RelationshipType.MANY_TO_MANY,
+                ):
+                    self.add_literal_import("typing", "List")
 
     def collect_imports_for_column(self, column: Column[Any]) -> None:
         super().collect_imports_for_column(column)
         try:
             python_type = column.type.python_type
         except NotImplementedError:
-            self.add_literal_import('typing', 'Any')
+            self.add_literal_import("typing", "Any")
         else:
             self.add_import(python_type)
 
     def render_module_variables(self, models: list[Model]) -> str:
         declarations: list[str] = []
         if any(not isinstance(model, ModelClass) for model in models):
-            declarations.append(f'metadata = {self.base_class_name}.metadata')
-        return '\n'.join(declarations)
+            declarations.append(f"metadata = {self.base_class_name}.metadata")
+        return "\n".join(declarations)
 
     def render_class_declaration(self, model: ModelClass) -> str:
         if model.parent_class:
             parent = model.parent_class.name
         else:
             parent = self.base_class_name
-        superclass_part = f'({parent}, table=True)'
-        return f'class {model.name}{superclass_part}:'
+        superclass_part = f"({parent}, table=True)"
+        return f"class {model.name}{superclass_part}:"
 
     def render_class_variables(self, model: ModelClass) -> str:
         # Render constraints and indexes as __table_args__
         table_args = self.render_table_args(model.table)
         if table_args:
-            variables = [f'__table_args__ = {table_args}']
-            return ''.join(variables)
-        return ''
+            variables = [f"__table_args__ = {table_args}"]
+            return "".join(variables)
+        return ""
 
     def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
         column = column_attr.column
         try:
             python_type = column.type.python_type
         except NotImplementedError:
-            python_type_name = 'Any'
+            python_type_name = "Any"
         else:
             python_type_name = python_type.__name__
 
         kwargs: dict[str, Any] = {}
-        if (column.autoincrement and column.name in column.table.primary_key) or column.nullable:
-            self.add_literal_import('typing', 'Optional')
-            kwargs['default'] = None
-            python_type_name = f'Optional[{python_type_name}]'
+        if (
+            column.autoincrement and column.name in column.table.primary_key
+        ) or column.nullable:
+            self.add_literal_import("typing", "Optional")
+            kwargs["default"] = None
+            python_type_name = f"Optional[{python_type_name}]"
 
         rendered_column = self.render_column(column, True)
-        kwargs['sa_column'] = f'{rendered_column}'
-        rendered_field = render_callable('Field', kwargs=kwargs)
-        return f'{column_attr.name}: {python_type_name} = {rendered_field}'
+        kwargs["sa_column"] = f"{rendered_column}"
+        rendered_field = render_callable("Field", kwargs=kwargs)
+        return f"{column_attr.name}: {python_type_name} = {rendered_field}"
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
-        rendered = super().render_relationship(relationship).partition(' = ')[2]
+        rendered = super().render_relationship(relationship).partition(" = ")[2]
         args = self.render_relationship_args(rendered)
         kwargs: dict[str, Any] = {}
         annotation = repr(relationship.target.name)
 
-        if relationship.type in (RelationshipType.ONE_TO_MANY, RelationshipType.MANY_TO_MANY):
-            self.add_literal_import('typing', 'List')
-            annotation = f'List[{annotation}]'
+        if relationship.type in (
+            RelationshipType.ONE_TO_MANY,
+            RelationshipType.MANY_TO_MANY,
+        ):
+            self.add_literal_import("typing", "List")
+            annotation = f"List[{annotation}]"
         else:
-            self.add_literal_import('typing', 'Optional')
-            annotation = f'Optional[{annotation}]'
+            self.add_literal_import("typing", "Optional")
+            annotation = f"Optional[{annotation}]"
 
-        rendered_field = render_callable('Relationship', *args, kwargs=kwargs)
-        return f'{relationship.name}: {annotation} = {rendered_field}'
+        rendered_field = render_callable("Relationship", *args, kwargs=kwargs)
+        return f"{relationship.name}: {annotation} = {rendered_field}"
 
     def render_relationship_args(self, arguments: str) -> list[str]:
-        argument_list = arguments.split(',')
+        argument_list = arguments.split(",")
         # delete ')' and ' ' from args
-        argument_list[-1] = arguments[-1][:-1]
+        argument_list[-1] = argument_list[-1][:-1]
         argument_list = [argument[1:] for argument in argument_list]
 
         rendered_args = []
         for arg in argument_list:
-            if 'back_populates' in arg:
+            if "back_populates" in arg:
                 rendered_args.append(arg)
-            if 'uselist=False' in arg:
+            if "uselist=False" in arg:
                 rendered_args.append("sa_relationship_kwargs={'uselist': False}")
         return rendered_args
