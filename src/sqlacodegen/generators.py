@@ -735,8 +735,8 @@ class DeclarativeGenerator(TablesGenerator):
                 for column in table.c:
                     column_attr = ColumnAttribute(model, column)
                     model.columns.append(column_attr)
-            # Only form model classes for tables that have a primary key and are not association
-            # tables
+            # Only form model classes for tables that have a primary key and are not
+            # association tables
             else:
                 if not table.primary_key:
                     models_by_table_name[qualified_name] = Model(table)
@@ -1407,7 +1407,11 @@ class SQLModelGenerator(DeclarativeGenerator):
         return '\n'.join(declarations)
 
     def render_class_declaration(self, model: ModelClass) -> str:
-        superclass_part = f'({model.parent_class.name if model.parent_class else self.base_class_name}, table=True)'
+        if model.parent_class:
+            parent = model.parent_class.name
+        else:
+            parent = self.base_class_name
+        superclass_part = f'({parent}, table=True)'
         return f'class {model.name}{superclass_part}:'
 
     def render_class_variables(self, model: ModelClass) -> str:
@@ -1454,14 +1458,14 @@ class SQLModelGenerator(DeclarativeGenerator):
         rendered_field = render_callable('Relationship', *args, kwargs=kwargs)
         return f'{relationship.name}: {annotation} = {rendered_field}'
 
-    def render_relationship_args(self, arguments: str):
-        arguments = arguments.split(',')
+    def render_relationship_args(self, arguments: str) -> list[str]:
+        argument_list = arguments.split(',')
         # delete ')' and ' ' from args
-        arguments[-1] = arguments[-1][:-1]
-        arguments = [argument[1:] for argument in arguments]
+        argument_list[-1] = arguments[-1][:-1]
+        argument_list = [argument[1:] for argument in argument_list]
 
         rendered_args = []
-        for arg in arguments:
+        for arg in argument_list:
             if 'back_populates' in arg:
                 rendered_args.append(arg)
             if 'uselist=False' in arg:
