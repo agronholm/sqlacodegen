@@ -96,6 +96,7 @@ class CodeGenerator(metaclass=ABCMeta):
     def generate(self) -> str:
         """
         Generate the code for the given metadata.
+
         .. note:: May modify the metadata.
         """
 
@@ -533,6 +534,7 @@ class TablesGenerator(CodeGenerator):
     ) -> str:
         """
         Generate an attribute name that does not clash with other local or global names.
+
         """
         name = name.strip()
         assert name, "Identifier cannot be empty"
@@ -727,7 +729,7 @@ class DeclarativeGenerator(TablesGenerator):
                     pk = PrimaryKeyConstraint(first_col_name)
                     table.append_constraint(pk)
                 model = ModelClass(table)
-                models_by_table_name[table.name] = model
+                models_by_table_name[qualified_name] = model
 
                 # Fill in the columns
                 for column in table.c:
@@ -737,10 +739,10 @@ class DeclarativeGenerator(TablesGenerator):
             # tables
             else:
                 if not table.primary_key:
-                    models_by_table_name[table.name] = Model(table)
+                    models_by_table_name[qualified_name] = Model(table)
                 else:
                     model = ModelClass(table)
-                    models_by_table_name[table.name] = model
+                    models_by_table_name[qualified_name] = model
 
                     # Fill in the columns
                     for column in table.c:
