@@ -326,7 +326,7 @@ UniqueConstraint
                 'simple_items', metadata,
                 Column('id', Integer),
                 Column('number', Integer, index=True),
-                Column('text', String, unique=True),
+                Column('text', String, unique=True, index=True),
                 Index('ix_empty'),
                 Index('ix_text_number', 'text', 'number', unique=True)
             )
@@ -987,7 +987,7 @@ class TestDeclarativeGenerator:
             Index("idx_text_number", simple_items.c.text, simple_items.c.number)
         )
         simple_items.indexes.add(Index("idx_text", simple_items.c.text, unique=True))
-
+        print(generator.generate())
         validate_code(
             generator.generate(),
             """\
@@ -1000,12 +1000,14 @@ class TestDeclarativeGenerator:
             class SimpleItems(Base):
                 __tablename__ = 'simple_items'
                 __table_args__ = (
-                    Index('idx_text_number', 'text', 'number'),
+                    Index('idx_number', 'number'),
+                    Index('idx_text', 'text', unique=True),
+                    Index('idx_text_number', 'text', 'number')
                 )
 
                 id = Column(Integer, primary_key=True)
-                number = Column(Integer, index=True)
-                text = Column(String, unique=True)
+                number = Column(Integer)
+                text = Column(String)
             """,
         )
 
