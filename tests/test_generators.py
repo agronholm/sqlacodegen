@@ -987,7 +987,7 @@ class TestDeclarativeGenerator:
             Index("idx_text_number", simple_items.c.text, simple_items.c.number)
         )
         simple_items.indexes.add(Index("idx_text", simple_items.c.text, unique=True))
-        print(generator.generate())
+
         validate_code(
             generator.generate(),
             """\
