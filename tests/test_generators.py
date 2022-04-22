@@ -29,6 +29,7 @@ from sqlacodegen.generators import (
     DataclassGenerator,
     DeclarativeGenerator,
     TablesGenerator,
+    SQLModelGenerator,
 )
 
 
