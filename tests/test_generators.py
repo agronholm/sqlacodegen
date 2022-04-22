@@ -28,8 +28,8 @@ from sqlacodegen.generators import (
     CodeGenerator,
     DataclassGenerator,
     DeclarativeGenerator,
-    TablesGenerator,
     SQLModelGenerator,
+    TablesGenerator,
 )
 
 
