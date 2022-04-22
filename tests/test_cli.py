@@ -134,6 +134,24 @@ class Foo:
     )
 
 
+def test_cli_sqlmodels(db_path: Path, tmp_path: Path) -> None:
+    output_path = tmp_path / 'outfile'
+    subprocess.run(['sqlacodegen', f'sqlite:///{db_path}', '--generator', 'sqlmodels',
+                    '--outfile', str(output_path)], check=True)
+
+    assert output_path.read_text() == f"""\
+from typing import Optional
+
+from sqlalchemy import Column, Integer, Text
+from sqlmodel import Field, SQLModel
+
+class Foo(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
+primary_key=True))
+    name: str = Field(sa_column=Column('name', Text, nullable=False))
+"""
+
+
 def test_main() -> None:
     expected_version = version("sqlacodegen")
     completed = subprocess.run(
