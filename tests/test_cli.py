@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sqlacodegen.generators import _sqla_version
+from src.sqlacodegen.generators import _sqla_version
 
 if sys.version_info < (3, 8):
     from importlib_metadata import version
