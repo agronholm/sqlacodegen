@@ -150,7 +150,7 @@ def test_cli_sqlmodels(db_path: Path, tmp_path: Path) -> None:
 
     assert (
         output_path.read_text()
-        == f"""\
+        == """\
 from typing import Optional
 
 from sqlalchemy import Column, Integer, Text
