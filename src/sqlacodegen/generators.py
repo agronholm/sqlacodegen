@@ -372,7 +372,8 @@ class TablesGenerator(CodeGenerator):
             for c in column.table.constraints
         )
         is_unique = is_unique or any(
-            i.unique and set(i.columns) == {column} for i in column.table.indexes
+            i.unique and set(i.columns) == {column} and uses_default_name(i)
+            for i in column.table.indexes
         )
         is_primary = any(
             isinstance(c, PrimaryKeyConstraint)
@@ -380,7 +381,10 @@ class TablesGenerator(CodeGenerator):
             and uses_default_name(c)
             for c in column.table.constraints
         )
-        has_index = any(set(i.columns) == {column} for i in column.table.indexes)
+        has_index = any(
+            set(i.columns) == {column} and uses_default_name(i)
+            for i in column.table.indexes
+        )
 
         if show_name:
             args.append(repr(column.name))
@@ -406,7 +410,7 @@ class TablesGenerator(CodeGenerator):
         if is_unique:
             column.unique = True
             kwargs["unique"] = True
-        elif has_index:
+        if has_index:
             column.index = True
             kwarg.append("index")
             kwargs["index"] = True
@@ -1098,7 +1102,7 @@ class DeclarativeGenerator(TablesGenerator):
 
         # Render indexes
         for index in sorted(table.indexes, key=lambda i: i.name):
-            if len(index.columns) > 1:
+            if len(index.columns) > 1 or not uses_default_name(index):
                 args.append(self.render_index(index))
 
         if table.schema:
