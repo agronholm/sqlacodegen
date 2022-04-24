@@ -19,8 +19,8 @@ from sqlalchemy.schema import (
     MetaData,
     Table,
     UniqueConstraint,
-    conv,
 )
+from sqlalchemy.sql.elements import conv
 from sqlalchemy.sql.expression import text
 from sqlalchemy.sql.sqltypes import NullType
 from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
@@ -2285,16 +2285,18 @@ back_populates='simple_items')
             generator.generate(),
             """\
             from sqlalchemy import CheckConstraint, Column, ForeignKey, \
-Integer, String, UniqueConstraint
+Integer, String, UniqueConstraint, MetaData
             from sqlalchemy.orm import declarative_base, relationship
 
-            metadata = MetaData.naming_convention = {
-                "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
-                "ck": "CHECK_%(table_name)s",
-                "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_\
+            metadata = MetaData(
+                naming_convention={
+                    "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
+                    "ck": "CHECK_%(table_name)s",
+                    "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_\
 %(referred_table_name)s_%(referred_column_0_label)s",
-                "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
-            }
+                    "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
+                }
+            )
 
             Base = declarative_base(metadata=metadata)
 
@@ -2342,13 +2344,16 @@ Integer, String, UniqueConstraint
         validate_code(
             generator.generate(),
             """\
-            from sqlalchemy import CheckConstraint, Column, Integer
+            from sqlalchemy import CheckConstraint, Column, Integer, MetaData
             from sqlalchemy.orm import declarative_base
+            from sqlalchemy.sql.elements import conv
 
-            metadata = MetaData.naming_convention = {
-                "ck": "ck_%(table_name)s_%(constraint_name)s",
-                "pk": "pk_%(table_name)s",
-            }
+            metadata = MetaData(
+                naming_convention={
+                    "ck": "ck_%(table_name)s_%(constraint_name)s",
+                    "pk": "pk_%(table_name)s",
+                }
+            )
 
             Base = declarative_base(metadata=metadata)
 
