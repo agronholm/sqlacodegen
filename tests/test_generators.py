@@ -19,6 +19,7 @@ from sqlalchemy.schema import (
     MetaData,
     Table,
     UniqueConstraint,
+    conv,
 )
 from sqlalchemy.sql.expression import text
 from sqlalchemy.sql.sqltypes import NullType
@@ -2244,6 +2245,123 @@ back_populates='simple_items')
                 id = Column(Integer, primary_key=True)
                 text_ = Column('text', String)
                 textwithdefault = Column(String, server_default=text("'test'"))
+            """,
+        )
+
+    def test_constraints_with_default_names(self, generator: CodeGenerator) -> None:
+        generator.metadata.naming_convention = {
+            "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
+            "ck": "CHECK_%(table_name)s",
+            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s"
+            "_%(referred_table_name)s_%(referred_column_0_label)s",
+            "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
+        }
+
+        Table(
+            "items",
+            generator.metadata,
+            Column("id", INTEGER),
+            Column("name", VARCHAR),
+            Column("container_id", INTEGER),
+            PrimaryKeyConstraint("id", "name", name="PRIMARY_items_idname"),
+            UniqueConstraint("id", name="UNIQUE_items_id"),
+            ForeignKeyConstraint(
+                ["container_id"],
+                ["containers.id"],
+                name="FOREIGN_items_container_id_containers_id",
+            ),
+        )
+        Table(
+            "containers",
+            generator.metadata,
+            Column("id", INTEGER),
+            Column("name", VARCHAR),
+            PrimaryKeyConstraint("id", name="PRIMARY_containers_id"),
+            UniqueConstraint("id", "name", name="UNIQUE_containers_id_name"),
+            CheckConstraint("id > 0", name="CHECK_containers"),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+            from sqlalchemy import CheckConstraint, Column, ForeignKey, \
+Integer, String, UniqueConstraint
+            from sqlalchemy.orm import declarative_base, relationship
+
+            metadata = MetaData.naming_convention = {
+                "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
+                "ck": "CHECK_%(table_name)s",
+                "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_\
+%(referred_table_name)s_%(referred_column_0_label)s",
+                "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
+            }
+
+            Base = declarative_base(metadata=metadata)
+
+
+            class Containers(Base):
+                __tablename__ = 'containers'
+                __table_args__ = (
+                    CheckConstraint('id > 0'),
+                    UniqueConstraint('id', 'name')
+                )
+
+                id = Column(Integer, primary_key=True)
+                name = Column(String)
+
+                items = relationship('Items', back_populates='container')
+
+
+            class Items(Base):
+                __tablename__ = 'items'
+
+                id = Column(Integer, primary_key=True, nullable=False, unique=True)
+                name = Column(String, primary_key=True, nullable=False)
+                container_id = Column(ForeignKey('containers.id'))
+
+                container = relationship('Containers', back_populates='items')
+        """,
+        )
+
+    def test_constraint_name_token(self, generator: CodeGenerator) -> None:
+        generator.metadata.naming_convention = {
+            "ck": "ck_%(table_name)s_%(constraint_name)s",
+            "pk": "pk_%(table_name)s",
+        }
+
+        Table(
+            "simple",
+            generator.metadata,
+            Column("id", INTEGER),
+            Column("number", INTEGER),
+            PrimaryKeyConstraint("id", name="pk_simple"),
+            CheckConstraint("id > 0", name=conv("ck_simple_idcheck")),
+            CheckConstraint("number > 0", name=conv("non_default_name")),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+            from sqlalchemy import CheckConstraint, Column, Integer
+            from sqlalchemy.orm import declarative_base
+
+            metadata = MetaData.naming_convention = {
+                "ck": "ck_%(table_name)s_%(constraint_name)s",
+                "pk": "pk_%(table_name)s",
+            }
+
+            Base = declarative_base(metadata=metadata)
+
+
+            class Simple(Base):
+                __tablename__ = 'simple'
+                __table_args__ = (
+                    CheckConstraint('id > 0', name='idcheck'),
+                    CheckConstraint('number > 0', name=conv('non_default_name'))
+                )
+
+                id = Column(Integer, primary_key=True)
+                number = Column(Integer)
             """,
         )
 
