@@ -1428,7 +1428,10 @@ class SQLModelGenerator(DeclarativeGenerator):
         try:
             python_type = column.type.python_type
         except NotImplementedError:
-            python_type_name = "Any"
+            if column.type.__class__.__name__ == "UUID":
+                python_type_name = "str"
+            else:
+                python_type_name = "Any"
         else:
             python_type_name = python_type.__name__
 
