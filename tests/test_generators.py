@@ -2582,15 +2582,17 @@ class TestSQLModelGenerator:
 
             class SimpleItems(SQLModel, table=True):
                 __table_args__ = (
-                    Index('idx_text_number', 'text', 'number'),
+                    Index('idx_number', 'number'),
+                    Index('idx_text', 'text', unique=True),
+                    Index('idx_text_number', 'text', 'number')
                 )
 
                 id: Optional[int] = Field(default=None, sa_column=Column(\
 'id', Integer, primary_key=True))
                 number: Optional[int] = Field(default=None, sa_column=Column(\
-'number', Integer, index=True))
+'number', Integer))
                 text: Optional[str] = Field(default=None, sa_column=Column(\
-'text', String, unique=True))
+'text', String))
             """,
         )
 
