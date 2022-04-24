@@ -1374,6 +1374,7 @@ class SQLModelGenerator(DeclarativeGenerator):
                 if column_attr.column.nullable:
                     self.add_literal_import("typing", "Optional")
                     break
+
             if model.relationships:
                 self.add_literal_import("sqlmodel", "Relationship")
 
@@ -1397,6 +1398,7 @@ class SQLModelGenerator(DeclarativeGenerator):
         declarations: list[str] = []
         if any(not isinstance(model, ModelClass) for model in models):
             declarations.append(f"metadata = {self.base_class_name}.metadata")
+
         return "\n".join(declarations)
 
     def render_class_declaration(self, model: ModelClass) -> str:
@@ -1404,6 +1406,7 @@ class SQLModelGenerator(DeclarativeGenerator):
             parent = model.parent_class.name
         else:
             parent = self.base_class_name
+
         superclass_part = f"({parent}, table=True)"
         return f"class {model.name}{superclass_part}:"
 
@@ -1413,6 +1416,7 @@ class SQLModelGenerator(DeclarativeGenerator):
         if table_args:
             variables = [f"__table_args__ = {table_args}"]
             return "".join(variables)
+
         return ""
 
     def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
@@ -1468,4 +1472,5 @@ class SQLModelGenerator(DeclarativeGenerator):
                 rendered_args.append(arg)
             if "uselist=False" in arg:
                 rendered_args.append("sa_relationship_kwargs={'uselist': False}")
+
         return rendered_args

@@ -2573,22 +2573,22 @@ class TestSQLModelGenerator:
         validate_code(
             generator.generate(),
             """\
-from typing import Optional
+            from typing import Optional
 
-from sqlalchemy import Column, Index, Integer, String
-from sqlmodel import Field, SQLModel
+            from sqlalchemy import Column, Index, Integer, String
+            from sqlmodel import Field, SQLModel
 
-class SimpleItems(SQLModel, table=True):
-    __table_args__ = (
-        Index('idx_text_number', 'text', 'number'),
-    )
+            class SimpleItems(SQLModel, table=True):
+                __table_args__ = (
+                    Index('idx_text_number', 'text', 'number'),
+                )
 
-    id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
-primary_key=True))
-    number: Optional[int] = Field(default=None, sa_column=Column('number', Integer, \
-index=True))
-    text: Optional[str] = Field(default=None, sa_column=Column('text', String, \
-unique=True))
+                id: Optional[int] = Field(default=None, sa_column=Column(\
+'id', Integer, primary_key=True))
+                number: Optional[int] = Field(default=None, sa_column=Column(\
+'number', Integer, index=True))
+                text: Optional[str] = Field(default=None, sa_column=Column(\
+'text', String, unique=True))
             """,
         )
 
@@ -2605,20 +2605,21 @@ unique=True))
         validate_code(
             generator.generate(),
             """\
-from typing import Optional
+            from typing import Optional
 
-from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
-from sqlmodel import Field, SQLModel
+            from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
+            from sqlmodel import Field, SQLModel
 
-class SimpleConstraints(SQLModel, table=True):
-    __table_args__ = (
-        CheckConstraint('number > 0'),
-        UniqueConstraint('id', 'number')
-    )
+            class SimpleConstraints(SQLModel, table=True):
+                __table_args__ = (
+                    CheckConstraint('number > 0'),
+                    UniqueConstraint('id', 'number')
+                )
 
-    id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
-primary_key=True))
-    number: Optional[int] = Field(default=None, sa_column=Column('number', Integer))
+                id: Optional[int] = Field(default=None, sa_column=Column(\
+'id', Integer, primary_key=True))
+                number: Optional[int] = Field(default=None, sa_column=Column(\
+'number', Integer))
             """,
         )
 
@@ -2639,26 +2640,27 @@ primary_key=True))
         validate_code(
             generator.generate(),
             """\
-from typing import List, Optional
+            from typing import List, Optional
 
-from sqlalchemy import Column, ForeignKey, Integer
-from sqlmodel import Field, Relationship, SQLModel
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlmodel import Field, Relationship, SQLModel
 
-class SimpleContainers(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
-primary_key=True))
+            class SimpleContainers(SQLModel, table=True):
+                id: Optional[int] = Field(default=None, sa_column=Column(\
+'id', Integer, primary_key=True))
 
-    simple_goods: List['SimpleGoods'] = Relationship(back_populates='container')
+                simple_goods: List['SimpleGoods'] = Relationship(\
+back_populates='container')
 
 
-class SimpleGoods(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
-primary_key=True))
-    container_id: Optional[int] = Field(default=None, sa_column=Column('container_id', \
-ForeignKey('simple_containers.id')))
+            class SimpleGoods(SQLModel, table=True):
+                id: Optional[int] = Field(default=None, sa_column=Column(\
+'id', Integer, primary_key=True))
+                container_id: Optional[int] = Field(default=None, sa_column=Column(\
+'container_id', ForeignKey('simple_containers.id')))
 
-    container: Optional['SimpleContainers'] = Relationship(back_populates=\
-'simple_goods')
+                container: Optional['SimpleContainers'] = Relationship(\
+back_populates='simple_goods')
             """,
         )
 
@@ -2678,25 +2680,26 @@ ForeignKey('simple_containers.id')))
         validate_code(
             generator.generate(),
             """\
-from typing import Optional
+            from typing import Optional
 
-from sqlalchemy import Column, ForeignKey, Integer
-from sqlmodel import Field, Relationship, SQLModel
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlmodel import Field, Relationship, SQLModel
 
-class OtherItems(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
-primary_key=True))
+            class OtherItems(SQLModel, table=True):
+                id: Optional[int] = Field(default=None, sa_column=Column(\
+'id', Integer, primary_key=True))
 
-    simple_onetoone: Optional['SimpleOnetoone'] = Relationship(sa_relationship_kwargs=\
-{'uselist': False}, back_populates='other_item')
+                simple_onetoone: Optional['SimpleOnetoone'] = Relationship(\
+sa_relationship_kwargs={'uselist': False}, back_populates='other_item')
 
 
-class SimpleOnetoone(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
-primary_key=True))
-    other_item_id: Optional[int] = Field(default=None, \
-sa_column=Column('other_item_id', ForeignKey('other_items.id'), unique=True))
+            class SimpleOnetoone(SQLModel, table=True):
+                id: Optional[int] = Field(default=None, sa_column=Column(\
+'id', Integer, primary_key=True))
+                other_item_id: Optional[int] = Field(default=None, sa_column=Column(\
+'other_item_id', ForeignKey('other_items.id'), unique=True))
 
-    other_item: Optional['OtherItems'] = Relationship(back_populates='simple_onetoone')
+                other_item: Optional['OtherItems'] = Relationship(\
+back_populates='simple_onetoone')
                 """,
         )
