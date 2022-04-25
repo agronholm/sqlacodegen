@@ -71,6 +71,9 @@ The following built-in generators are available:
 * ``tables`` (only generates ``Table`` objects, for those who don't want to use the ORM)
 * ``declarative`` (the default; generates classes inheriting from ``declarative_base()``
 * ``dataclasses`` (generates dataclass-based models; v1.4+ only)
+* ``sqlmodel`` (generates model classes for SQLModel_)
+
+.. _SQLModel: https://sqlmodel.tiangolo.com/
 
 Generator-specific options
 ==========================
@@ -95,6 +98,10 @@ multiple times):
     attribute, as on v2.X
 
 * ``dataclasses``
+
+  * all the options from ``declarative``
+
+* ``sqlmodel``
 
   * all the options from ``declarative``
 
@@ -131,7 +138,8 @@ Relationships are detected based on existing foreign key constraints as follows:
 * **many-to-one**: a foreign key constraint exists on the table
 * **one-to-one**: same as **many-to-one**, but a unique constraint exists on the
   column(s) involved
-* **many-to-many**: an association table is found to exist between two tables
+* **many-to-many**: (not implemented on the ``sqlmodel`` generator) an association table
+  is found to exist between two tables
 
 A table is considered an association table if it satisfies all of the following
 conditions:
@@ -165,10 +173,10 @@ whichever methods you need, and then add an `entry point`_ in the
 is in place (you typically have to install the project with ``pip install``), you can
 use ``--generator <yourentrypoint>`` to invoke your custom code generator.
 
-For examples, you can look at sqlacodegen's own entry points in its `setup.cfg`_.
+For examples, you can look at sqlacodegen's own entry points in its `pyproject.toml`_.
 
 .. _entry point: https://setuptools.readthedocs.io/en/latest/userguide/entry_point.html
-.. _setup.cfg: https://github.com/agronholm/sqlacodegen/blob/master/setup.cfg
+.. _pyproject.toml: https://github.com/agronholm/sqlacodegen/blob/master/pyproject.toml
 
 Getting help
 ============

@@ -1,6 +1,12 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Added support for generating SQLModel classes (PR by Andrii Khirilov)
+- Fixed code generation when a single-column index is unique or does not match the
+  dialect's naming convention (PR by Leonardus Chen)
+
 **3.0.0rc1**
 
 - Migrated all packaging/testing configuration to ``pyproject.toml``
