@@ -1024,6 +1024,13 @@ class DeclarativeGenerator(TablesGenerator):
             return super().render_module_variables(models)
 
         declarations = [f"{self.base_class_name} = declarative_base()"]
+
+        if self.metadata.naming_convention != DEFAULT_NAMING_CONVENTION:
+            formatted_naming_convention = pformat(self.metadata.naming_convention)
+            declarations.append(
+                f"Base.metadata.naming_convention = {formatted_naming_convention}"
+            )
+
         if any(not isinstance(model, ModelClass) for model in models):
             declarations.append(f"metadata = {self.base_class_name}.metadata")
 

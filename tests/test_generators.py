@@ -2310,13 +2310,11 @@ back_populates='simple_items')
             """,
         )
 
-    @pytest.mark.xfail
     def test_constraints_with_default_names(self, generator: CodeGenerator) -> None:
         generator.metadata.naming_convention = {
             "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
             "ck": "CHECK_%(table_name)s",
-            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s"
-            "_%(referred_table_name)s_%(referred_column_0_label)s",
+            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s",
             "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
         }
 
@@ -2331,7 +2329,7 @@ back_populates='simple_items')
             ForeignKeyConstraint(
                 ["container_id"],
                 ["containers.id"],
-                name="FOREIGN_items_container_id_containers_id",
+                name="FOREIGN_items_container_id_containers",
             ),
         )
         Table(
@@ -2347,44 +2345,38 @@ back_populates='simple_items')
         validate_code(
             generator.generate(),
             """\
-            from sqlalchemy import CheckConstraint, Column, ForeignKey, \
-Integer, String, UniqueConstraint, MetaData
-            from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import CheckConstraint, Column, ForeignKey, \
+Integer, String, UniqueConstraint
+from sqlalchemy.orm import declarative_base, relationship
 
-            metadata = MetaData(
-                naming_convention={
-                    "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
-                    "ck": "CHECK_%(table_name)s",
-                    "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_\
-%(referred_table_name)s_%(referred_column_0_label)s",
-                    "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
-                }
-            )
-
-            Base = declarative_base(metadata=metadata)
+Base = declarative_base()
+Base.metadata.naming_convention = {'ck': 'CHECK_%(table_name)s',
+ 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s',
+ 'pk': 'PRIMARY_%(table_name)s_%(column_0N_name)s',
+ 'uq': 'UNIQUE_%(table_name)s_%(column_0_N_name)s'}
 
 
-            class Containers(Base):
-                __tablename__ = 'containers'
-                __table_args__ = (
-                    CheckConstraint('id > 0'),
-                    UniqueConstraint('id', 'name')
-                )
+class Containers(Base):
+    __tablename__ = 'containers'
+    __table_args__ = (
+        CheckConstraint('id > 0'),
+        UniqueConstraint('id', 'name')
+    )
 
-                id = Column(Integer, primary_key=True)
-                name = Column(String)
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
 
-                items = relationship('Items', back_populates='container')
+    items = relationship('Items', back_populates='container')
 
 
-            class Items(Base):
-                __tablename__ = 'items'
+class Items(Base):
+    __tablename__ = 'items'
 
-                id = Column(Integer, primary_key=True, nullable=False, unique=True)
-                name = Column(String, primary_key=True, nullable=False)
-                container_id = Column(ForeignKey('containers.id'))
+    id = Column(Integer, primary_key=True, nullable=False, unique=True)
+    name = Column(String, primary_key=True, nullable=False)
+    container_id = Column(ForeignKey('containers.id'))
 
-                container = relationship('Containers', back_populates='items')
+    container = relationship('Containers', back_populates='items')
         """,
         )
 
