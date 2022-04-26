@@ -1286,6 +1286,15 @@ class DataclassGenerator(DeclarativeGenerator):
             return super().render_module_variables(models)
 
         declarations: list[str] = ["mapper_registry = registry()"]
+
+        if self.metadata.naming_convention != DEFAULT_NAMING_CONVENTION:
+            formatted_naming_convention = pformat(self.metadata.naming_convention)
+            declarations.append(
+                "mapper_registry.metadata.naming_convention = {}".format(
+                    formatted_naming_convention
+                )
+            )
+
         if any(not isinstance(model, ModelClass) for model in models):
             declarations.append("metadata = mapper_registry.metadata")
 

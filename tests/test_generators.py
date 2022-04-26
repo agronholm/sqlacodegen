@@ -2728,13 +2728,11 @@ Column(UUID, primary_key=True)})
             """,
         )
 
-    @pytest.mark.xfail
     def test_constraints_with_default_names(self, generator: CodeGenerator) -> None:
         generator.metadata.naming_convention = {
             "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
             "ck": "CHECK_%(table_name)s",
-            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s"
-            "_%(referred_table_name)s_%(referred_column_0_label)s",
+            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s",
             "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
         }
 
@@ -2749,7 +2747,7 @@ Column(UUID, primary_key=True)})
             ForeignKeyConstraint(
                 ["container_id"],
                 ["containers.id"],
-                name="FOREIGN_items_container_id_containers_id",
+                name="FOREIGN_items_container_id_containers",
             ),
         )
         Table(
@@ -2765,49 +2763,53 @@ Column(UUID, primary_key=True)})
         validate_code(
             generator.generate(),
             """\
-            from __future__ import annotations
-            from dataclasses import dataclass, field
-            from typing import List, Optional
-            from sqlalchemy import CheckConstraint, Column, ForeignKey, \
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+from sqlalchemy import CheckConstraint, Column, ForeignKey, \
 Integer, String, UniqueConstraint
-            from sqlalchemy.orm import registry, relationship
-            metadata = MetaData(
-                naming_convention={
-                    "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
-                    "ck": "CHECK_%(table_name)s",
-                    "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_\
-            %(referred_table_name)s_%(referred_column_0_label)s",
-                    "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
-                }
-            )
-            mapper_registry = registry(metadata=metadata)
-            @mapper_registry.mapped
-            @dataclass
-            class Containers:
-                __tablename__ = 'containers'
-                __table_args__ = (
-                    CheckConstraint('id > 0'),
-                    UniqueConstraint('id', 'name')
-                )
-                __sa_dataclass_metadata_key__ = 'sa'
-                id: int = field(init=False, metadata={'sa': \
-Column(Integer, primary_key=True)})
-                name: Optional[str] = field(default=None, metadata={'sa': \
-Column(String)})
-                items: List[Items] = field(default_factory=list, metadata={'sa': \
+from sqlalchemy.orm import registry, relationship
+
+mapper_registry = registry()
+mapper_registry.metadata.naming_convention = {'ck': 'CHECK_%(table_name)s',
+ 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s',
+ 'pk': 'PRIMARY_%(table_name)s_%(column_0N_name)s',
+ 'uq': 'UNIQUE_%(table_name)s_%(column_0_N_name)s'}
+
+
+@mapper_registry.mapped
+@dataclass
+class Containers:
+    __tablename__ = 'containers'
+    __table_args__ = (
+        CheckConstraint('id > 0'),
+        UniqueConstraint('id', 'name')
+    )
+    __sa_dataclass_metadata_key__ = 'sa'
+
+    id: int = field(init=False, metadata={'sa': Column(Integer, primary_key=True)})
+    name: Optional[str] = field(default=None, metadata={'sa': Column(String)})
+
+    items: List[Items] = field(default_factory=list, metadata={'sa': \
 relationship('Items', back_populates='container')})
-            @mapper_registry.mapped
-            @dataclass
-            class Items:
-                __tablename__ = 'items'
-                __sa_dataclass_metadata_key__ = 'sa'
-                id: int = field(init=False, metadata={'sa': \
+
+
+@mapper_registry.mapped
+@dataclass
+class Items:
+    __tablename__ = 'items'
+    __sa_dataclass_metadata_key__ = 'sa'
+
+    id: int = field(init=False, metadata={'sa': \
 Column(Integer, primary_key=True, nullable=False, unique=True)})
-                name: str = field(init=False, metadata={'sa': \
+    name: str = field(init=False, metadata={'sa': \
 Column(String, primary_key=True, nullable=False)})
-                container_id: Optional[int] = field(default=None, metadata={'sa': \
+    container_id: Optional[int] = field(default=None, metadata={'sa': \
 Column(ForeignKey('containers.id'))})
-                container: Optional[Containers] = field(default=None, metadata={'sa': \
+
+    container: Optional[Containers] = field(default=None, metadata={'sa': \
 relationship('Containers', back_populates='items')})
         """,
         )
