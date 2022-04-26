@@ -2400,29 +2400,24 @@ class Items(Base):
         validate_code(
             generator.generate(),
             """\
-            from sqlalchemy import CheckConstraint, Column, Integer, MetaData
-            from sqlalchemy.orm import declarative_base
-            from sqlalchemy.sql.elements import conv
+from sqlalchemy import CheckConstraint, Column, Integer, MetaData
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.sql.elements import conv
 
-            metadata = MetaData(
-                naming_convention={
-                    "ck": "ck_%(table_name)s_%(constraint_name)s",
-                    "pk": "pk_%(table_name)s",
-                }
-            )
-
-            Base = declarative_base(metadata=metadata)
+Base = declarative_base()
+Base.metadata.naming_convention = \
+{'ck': 'ck_%(table_name)s_%(constraint_name)s', 'pk': 'pk_%(table_name)s'}
 
 
-            class Simple(Base):
-                __tablename__ = 'simple'
-                __table_args__ = (
-                    CheckConstraint('id > 0', name='idcheck'),
-                    CheckConstraint('number > 0', name=conv('non_default_name'))
-                )
+class Simple(Base):
+    __tablename__ = 'simple'
+    __table_args__ = (
+        CheckConstraint('id > 0', name='idcheck'),
+        CheckConstraint('number > 0', name=conv('non_default_name'))
+    )
 
-                id = Column(Integer, primary_key=True)
-                number = Column(Integer)
+    id = Column(Integer, primary_key=True)
+    number = Column(Integer)
             """,
         )
 
