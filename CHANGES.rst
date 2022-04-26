@@ -6,6 +6,8 @@ Version history
 - Added support for generating SQLModel classes (PR by Andrii Khirilov)
 - Fixed code generation when a single-column index is unique or does not match the
   dialect's naming convention (PR by Leonardus Chen)
+- Increased mimimum SQLAlchemy version to 1.4.36 to address issues with ``ForeignKey``
+  and indexes, and to eliminate the PostgreSQL UUID column type annotation hack
 
 **3.0.0rc1**
 

@@ -1263,9 +1263,7 @@ class DataclassGenerator(DeclarativeGenerator):
         try:
             python_type = column.type.python_type
         except NotImplementedError:
-            if column.type.__class__.__name__ != "UUID":
-                # Workaround for https://github.com/sqlalchemy/sqlalchemy/issues/7943
-                self.add_literal_import("typing", "Any")
+            pass
         else:
             self.add_import(python_type)
 
@@ -1300,11 +1298,7 @@ class DataclassGenerator(DeclarativeGenerator):
         try:
             python_type = column.type.python_type
         except NotImplementedError:
-            if column.type.__class__.__name__ == "UUID":
-                # Workaround for https://github.com/sqlalchemy/sqlalchemy/issues/7943
-                python_type_name = "str"
-            else:
-                python_type_name = "Any"
+            python_type_name = "Any"
         else:
             python_type_name = python_type.__name__
 
@@ -1428,10 +1422,7 @@ class SQLModelGenerator(DeclarativeGenerator):
         try:
             python_type = column.type.python_type
         except NotImplementedError:
-            if column.type.__class__.__name__ == "UUID":
-                python_type_name = "str"
-            else:
-                python_type_name = "Any"
+            python_type_name = "Any"
         else:
             python_type_name = python_type.__name__
 
