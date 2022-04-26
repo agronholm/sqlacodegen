@@ -42,6 +42,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
+from sqlalchemy.sql.schema import DEFAULT_NAMING_CONVENTION
 
 from .models import (
     ColumnAttribute,
@@ -303,7 +304,13 @@ class TablesGenerator(CodeGenerator):
         model.name = self.find_free_name(preferred_name, global_names)
 
     def render_module_variables(self, models: list[Model]) -> str:
-        return "metadata = MetaData()"
+        module_vars = ["metadata = MetaData()"]
+        if self.metadata.naming_convention != DEFAULT_NAMING_CONVENTION:
+            formatted_naming_convention = pformat(self.metadata.naming_convention)
+            module_vars.append(
+                f"metadata.naming_convention = {formatted_naming_convention}"
+            )
+        return "\n".join(module_vars)
 
     def render_models(self, models: list[Model]) -> str:
         rendered = []
