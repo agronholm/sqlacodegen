@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 from contextlib import ExitStack
-from typing import TextIO
+from typing import Sequence, TextIO
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
@@ -12,6 +12,18 @@ if sys.version_info < (3, 10):
     from importlib_metadata import entry_points, version
 else:
     from importlib.metadata import entry_points, version
+
+
+def parse_naming_convs(naming_convs: Sequence[str]) -> dict[str, str]:
+    d = {}
+    for naming_conv in naming_convs:
+        try:
+            key, value = naming_conv.split("=", 1)
+        except ValueError:
+            raise ValueError('Naming convention must be in "key=template" format')
+
+        d[key] = value
+    return d
 
 
 def main() -> None:
@@ -40,6 +52,13 @@ def main() -> None:
     )
     parser.add_argument("--noviews", action="store_true", help="ignore views")
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
+    parser.add_argument(
+        "--conv",
+        nargs="*",
+        help='constraint naming conventions in "key=template" format \
+e.g., --conv "pk=pk_%%(table_name)s" "uq=uq_%%(table_name)s_%%(column_0_name)s"',
+    )
+
     args = parser.parse_args()
 
     if args.version:
@@ -57,6 +76,11 @@ def main() -> None:
     schemas = args.schemas.split(",") if args.schemas else [None]
     for schema in schemas:
         metadata.reflect(engine, schema, not args.noviews, tables)
+
+    # Naming convention must be added after reflection to
+    # avoid the token %(constraint_name)s duplicating the name
+    if args.conv:
+        metadata.naming_convention = parse_naming_convs(args.conv)
 
     # Instantiate the generator
     generator_class = generators[args.generator].load()

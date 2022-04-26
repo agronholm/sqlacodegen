@@ -172,3 +172,36 @@ def test_main() -> None:
         check=True,
     )
     assert completed.stdout.decode().strip() == expected_version
+
+
+@pytest.fixture
+def empty_db_path(tmp_path: Path) -> Path:
+    path = tmp_path / "test.db"
+
+    return path
+
+
+def test_naming_convention(empty_db_path: Path, tmp_path: Path) -> None:
+    output_path = tmp_path / "outfile"
+    subprocess.run(
+        [
+            "sqlacodegen",
+            f"sqlite:///{empty_db_path}",
+            "--outfile",
+            str(output_path),
+            "--conv",
+            "pk=pk_%(table_name)s",
+        ],
+        check=True,
+    )
+
+    assert (
+        output_path.read_text()
+        == """\
+from sqlalchemy import MetaData
+
+metadata = MetaData()
+metadata.naming_convention = {'pk': 'pk_%(table_name)s'}
+
+"""
+    )
