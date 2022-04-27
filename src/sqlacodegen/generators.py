@@ -41,7 +41,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
-from sqlalchemy.sql.elements import TextClause
+from sqlalchemy.sql.elements import TextClause, conv
+from sqlalchemy.sql.schema import DEFAULT_NAMING_CONVENTION
 
 from .models import (
     ColumnAttribute,
@@ -56,9 +57,9 @@ from .utils import (
     get_common_fk_constraints,
     get_compiled_expression,
     get_constraint_sort_key,
+    get_explicit_name,
     qualified_table_name,
     render_callable,
-    uses_default_name,
 )
 
 if sys.version_info < (3, 10):
@@ -209,21 +210,24 @@ class TablesGenerator(CodeGenerator):
 
     def collect_imports_for_constraint(self, constraint: Constraint | Index) -> None:
         if isinstance(constraint, Index):
-            if len(constraint.columns) > 1 or not uses_default_name(constraint):
+            if len(constraint.columns) > 1 or get_explicit_name(constraint):
                 self.add_literal_import("sqlalchemy", "Index")
         elif isinstance(constraint, PrimaryKeyConstraint):
-            if not uses_default_name(constraint):
+            if get_explicit_name(constraint):
                 self.add_literal_import("sqlalchemy", "PrimaryKeyConstraint")
         elif isinstance(constraint, UniqueConstraint):
-            if len(constraint.columns) > 1 or not uses_default_name(constraint):
+            if len(constraint.columns) > 1 or get_explicit_name(constraint):
                 self.add_literal_import("sqlalchemy", "UniqueConstraint")
         elif isinstance(constraint, ForeignKeyConstraint):
-            if len(constraint.columns) > 1 or not uses_default_name(constraint):
+            if len(constraint.columns) > 1 or get_explicit_name(constraint):
                 self.add_literal_import("sqlalchemy", "ForeignKeyConstraint")
             else:
                 self.add_import(ForeignKey)
         else:
             self.add_import(constraint)
+
+        if isinstance(get_explicit_name(constraint), conv):
+            self.add_literal_import("sqlalchemy.sql.elements", "conv")
 
     def add_import(self, obj: Any) -> None:
         # Don't store builtin imports
@@ -303,7 +307,13 @@ class TablesGenerator(CodeGenerator):
         model.name = self.find_free_name(preferred_name, global_names)
 
     def render_module_variables(self, models: list[Model]) -> str:
-        return "metadata = MetaData()"
+        module_vars = ["metadata = MetaData()"]
+        if self.metadata.naming_convention != DEFAULT_NAMING_CONVENTION:
+            formatted_naming_convention = pformat(self.metadata.naming_convention)
+            module_vars.append(
+                f"metadata.naming_convention = {formatted_naming_convention}"
+            )
+        return "\n".join(module_vars)
 
     def render_models(self, models: list[Model]) -> str:
         rendered = []
@@ -322,7 +332,7 @@ class TablesGenerator(CodeGenerator):
             args.append(self.render_column(column, True))
 
         for constraint in sorted(table.constraints, key=get_constraint_sort_key):
-            if uses_default_name(constraint):
+            if not get_explicit_name(constraint):
                 if isinstance(constraint, PrimaryKeyConstraint):
                     continue
                 elif isinstance(constraint, (ForeignKeyConstraint, UniqueConstraint)):
@@ -333,7 +343,7 @@ class TablesGenerator(CodeGenerator):
 
         for index in sorted(table.indexes, key=lambda i: i.name):
             # One-column indexes should be rendered as index=True on columns
-            if len(index.columns) > 1 or not uses_default_name(index):
+            if len(index.columns) > 1 or get_explicit_name(index):
                 args.append(self.render_index(index))
 
         if table.schema:
@@ -363,26 +373,26 @@ class TablesGenerator(CodeGenerator):
             for c in column.foreign_keys
             if c.constraint
             and len(c.constraint.columns) == 1
-            and uses_default_name(c.constraint)
+            and not get_explicit_name(c.constraint)
         ]
         is_unique = any(
             isinstance(c, UniqueConstraint)
             and set(c.columns) == {column}
-            and uses_default_name(c)
+            and not get_explicit_name(c)
             for c in column.table.constraints
         )
         is_unique = is_unique or any(
-            i.unique and set(i.columns) == {column} and uses_default_name(i)
+            i.unique and set(i.columns) == {column} and not get_explicit_name(i)
             for i in column.table.indexes
         )
         is_primary = any(
             isinstance(c, PrimaryKeyConstraint)
             and column.name in c.columns
-            and uses_default_name(c)
+            and not get_explicit_name(c)
             for c in column.table.constraints
         )
         has_index = any(
-            set(i.columns) == {column} and uses_default_name(i)
+            set(i.columns) == {column} and not get_explicit_name(i)
             for i in column.table.indexes
         )
 
@@ -522,8 +532,13 @@ class TablesGenerator(CodeGenerator):
                 f"Cannot render constraint of type {constraint.__class__.__name__}"
             )
 
-        if isinstance(constraint, Constraint) and not uses_default_name(constraint):
-            kwargs["name"] = repr(constraint.name)
+        if isinstance(constraint, Constraint):
+            explicit_name = get_explicit_name(constraint)
+            if explicit_name:
+                if isinstance(explicit_name, conv):
+                    kwargs["name"] = render_callable(conv.__name__, repr(explicit_name))
+                else:
+                    kwargs["name"] = repr(explicit_name)
 
         return render_callable(constraint.__class__.__name__, *args, kwargs=kwargs)
 
@@ -1017,6 +1032,13 @@ class DeclarativeGenerator(TablesGenerator):
             return super().render_module_variables(models)
 
         declarations = [f"{self.base_class_name} = declarative_base()"]
+
+        if self.metadata.naming_convention != DEFAULT_NAMING_CONVENTION:
+            formatted_naming_convention = pformat(self.metadata.naming_convention)
+            declarations.append(
+                f"Base.metadata.naming_convention = {formatted_naming_convention}"
+            )
+
         if any(not isinstance(model, ModelClass) for model in models):
             declarations.append(f"metadata = {self.base_class_name}.metadata")
 
@@ -1089,7 +1111,7 @@ class DeclarativeGenerator(TablesGenerator):
 
         # Render constraints
         for constraint in sorted(table.constraints, key=get_constraint_sort_key):
-            if uses_default_name(constraint):
+            if not get_explicit_name(constraint):
                 if isinstance(constraint, PrimaryKeyConstraint):
                     continue
                 if (
@@ -1102,7 +1124,7 @@ class DeclarativeGenerator(TablesGenerator):
 
         # Render indexes
         for index in sorted(table.indexes, key=lambda i: i.name):
-            if len(index.columns) > 1 or not uses_default_name(index):
+            if len(index.columns) > 1 or get_explicit_name(index):
                 args.append(self.render_index(index))
 
         if table.schema:
@@ -1272,6 +1294,15 @@ class DataclassGenerator(DeclarativeGenerator):
             return super().render_module_variables(models)
 
         declarations: list[str] = ["mapper_registry = registry()"]
+
+        if self.metadata.naming_convention != DEFAULT_NAMING_CONVENTION:
+            formatted_naming_convention = pformat(self.metadata.naming_convention)
+            declarations.append(
+                "mapper_registry.metadata.naming_convention = {}".format(
+                    formatted_naming_convention
+                )
+            )
+
         if any(not isinstance(model, ModelClass) for model in models):
             declarations.append("metadata = mapper_registry.metadata")
 
@@ -1394,6 +1425,15 @@ class SQLModelGenerator(DeclarativeGenerator):
 
     def render_module_variables(self, models: list[Model]) -> str:
         declarations: list[str] = []
+
+        if self.metadata.naming_convention != DEFAULT_NAMING_CONVENTION:
+            formatted_naming_convention = pformat(self.metadata.naming_convention)
+            declarations.append(
+                "{}.metadata.naming_convention = {}".format(
+                    self.base_class_name, formatted_naming_convention
+                )
+            )
+
         if any(not isinstance(model, ModelClass) for model in models):
             declarations.append(f"metadata = {self.base_class_name}.metadata")
 
