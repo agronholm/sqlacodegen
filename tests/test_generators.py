@@ -971,7 +971,8 @@ primary_key=True),
         generator.metadata.naming_convention = {
             "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
             "ck": "CHECK_%(table_name)s",
-            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s",
+            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_\
+%(referred_table_name)s_%(referred_column_0_name)s",
             "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
         }
 
@@ -986,7 +987,7 @@ primary_key=True),
             ForeignKeyConstraint(
                 ["container_id"],
                 ["containers.id"],
-                name="FOREIGN_items_container_id_containers",
+                name="FOREIGN_items_container_id_containers_id",
             ),
         )
         Table(
@@ -1007,7 +1008,8 @@ Integer, MetaData, String, Table, UniqueConstraint
 
 metadata = MetaData()
 metadata.naming_convention = {'ck': 'CHECK_%(table_name)s',
- 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s',
+ 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s_\
+%(referred_column_0_name)s',
  'pk': 'PRIMARY_%(table_name)s_%(column_0N_name)s',
  'uq': 'UNIQUE_%(table_name)s_%(column_0_N_name)s'}
 
@@ -2314,7 +2316,8 @@ back_populates='simple_items')
         generator.metadata.naming_convention = {
             "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
             "ck": "CHECK_%(table_name)s",
-            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s",
+            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_\
+%(referred_table_name)s_%(referred_column_0_name)s",
             "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
         }
 
@@ -2329,7 +2332,7 @@ back_populates='simple_items')
             ForeignKeyConstraint(
                 ["container_id"],
                 ["containers.id"],
-                name="FOREIGN_items_container_id_containers",
+                name="FOREIGN_items_container_id_containers_id",
             ),
         )
         Table(
@@ -2351,7 +2354,8 @@ from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 Base.metadata.naming_convention = {'ck': 'CHECK_%(table_name)s',
- 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s',
+ 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_\
+%(referred_table_name)s_%(referred_column_0_name)s',
  'pk': 'PRIMARY_%(table_name)s_%(column_0N_name)s',
  'uq': 'UNIQUE_%(table_name)s_%(column_0_N_name)s'}
 
@@ -2727,7 +2731,8 @@ Column(UUID, primary_key=True)})
         generator.metadata.naming_convention = {
             "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
             "ck": "CHECK_%(table_name)s",
-            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s",
+            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s\
+_%(referred_table_name)s_%(referred_column_0_name)s",
             "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
         }
 
@@ -2742,7 +2747,7 @@ Column(UUID, primary_key=True)})
             ForeignKeyConstraint(
                 ["container_id"],
                 ["containers.id"],
-                name="FOREIGN_items_container_id_containers",
+                name="FOREIGN_items_container_id_containers_id",
             ),
         )
         Table(
@@ -2769,7 +2774,8 @@ from sqlalchemy.orm import registry, relationship
 
 mapper_registry = registry()
 mapper_registry.metadata.naming_convention = {'ck': 'CHECK_%(table_name)s',
- 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s',
+ 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_\
+%(referred_table_name)s_%(referred_column_0_name)s',
  'pk': 'PRIMARY_%(table_name)s_%(column_0N_name)s',
  'uq': 'UNIQUE_%(table_name)s_%(column_0_N_name)s'}
 
@@ -2972,7 +2978,8 @@ back_populates='simple_onetoone')
         generator.metadata.naming_convention = {
             "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
             "ck": "CHECK_%(table_name)s",
-            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s",
+            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_\
+%(referred_table_name)s_%(referred_column_0_name)s",
             "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
         }
 
@@ -2987,7 +2994,7 @@ back_populates='simple_onetoone')
             ForeignKeyConstraint(
                 ["container_id"],
                 ["containers.id"],
-                name="FOREIGN_items_container_id_containers",
+                name="FOREIGN_items_container_id_containers_id",
             ),
         )
         Table(
@@ -3010,7 +3017,8 @@ String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 SQLModel.metadata.naming_convention = {'ck': 'CHECK_%(table_name)s',
- 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s',
+ 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_\
+%(referred_table_name)s_%(referred_column_0_name)s',
  'pk': 'PRIMARY_%(table_name)s_%(column_0N_name)s',
  'uq': 'UNIQUE_%(table_name)s_%(column_0_N_name)s'}
 
