@@ -66,6 +66,10 @@ def _handle_constraint_name_token(
     Replace first occurence of the token with (\\w+) and subsequent ones with (\1),
     then add ^ and $ for exact match
 
+    :param constraint_name: name of constraint
+    :param convention: naming convention of the constraint as defined in metadata
+    :param values: mapping of token key and value
+
     Example:
     If `convention` is `abc_%(constraint_name)s_123`, the regex pattern will
     be `^abc_(\\w+)_123$`, the first (and only) matched group will then be returned
@@ -89,7 +93,7 @@ def _handle_constraint_name_token(
     return conv(constraint_name) if match is None else match[1]
 
 
-def get_explicit_name(constraint: Constraint | Index) -> str:
+def get_explicit_name(constraint: Constraint | Index) -> str | conv:
     if not constraint.name or constraint.table is None:
         return ""
 
