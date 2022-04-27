@@ -2967,3 +2967,76 @@ sa_relationship_kwargs={'uselist': False}, back_populates='other_item')
 back_populates='simple_onetoone')
                 """,
         )
+
+    def test_constraints_with_default_names(self, generator: CodeGenerator) -> None:
+        generator.metadata.naming_convention = {
+            "uq": "UNIQUE_%(table_name)s_%(column_0_N_name)s",
+            "ck": "CHECK_%(table_name)s",
+            "fk": "FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s",
+            "pk": "PRIMARY_%(table_name)s_%(column_0N_name)s",
+        }
+
+        Table(
+            "items",
+            generator.metadata,
+            Column("id", INTEGER),
+            Column("name", VARCHAR),
+            Column("container_id", INTEGER),
+            PrimaryKeyConstraint("id", "name", name="PRIMARY_items_idname"),
+            UniqueConstraint("id", name="UNIQUE_items_id"),
+            ForeignKeyConstraint(
+                ["container_id"],
+                ["containers.id"],
+                name="FOREIGN_items_container_id_containers",
+            ),
+        )
+        Table(
+            "containers",
+            generator.metadata,
+            Column("id", INTEGER),
+            Column("name", VARCHAR),
+            PrimaryKeyConstraint("id", name="PRIMARY_containers_id"),
+            UniqueConstraint("id", "name", name="UNIQUE_containers_id_name"),
+            CheckConstraint("id > 0", name="CHECK_containers"),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+from typing import List, Optional
+
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, \
+String, UniqueConstraint
+from sqlmodel import Field, Relationship, SQLModel
+
+SQLModel.metadata.naming_convention = {'ck': 'CHECK_%(table_name)s',
+ 'fk': 'FOREIGN_%(table_name)s_%(column_0_key)s_%(referred_table_name)s',
+ 'pk': 'PRIMARY_%(table_name)s_%(column_0N_name)s',
+ 'uq': 'UNIQUE_%(table_name)s_%(column_0_N_name)s'}
+
+
+class Containers(SQLModel, table=True):
+    __table_args__ = (
+        CheckConstraint('id > 0'),
+        UniqueConstraint('id', 'name')
+    )
+
+    id: Optional[int] = Field(default=None, sa_column=Column(\
+'id', Integer, primary_key=True))
+    name: Optional[str] = Field(default=None, sa_column=Column(\
+'name', String))
+
+    items: List['Items'] = Relationship(back_populates='container')
+
+
+class Items(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, sa_column=Column(\
+'id', Integer, primary_key=True, nullable=False, unique=True))
+    name: Optional[str] = Field(default=None, sa_column=Column(\
+'name', String, primary_key=True, nullable=False))
+    container_id: Optional[int] = Field(default=None, sa_column=Column(\
+'container_id', ForeignKey('containers.id')))
+
+    container: Optional['Containers'] = Relationship(back_populates='items')
+        """,
+        )
