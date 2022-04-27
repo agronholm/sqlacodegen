@@ -2384,7 +2384,6 @@ class Items(Base):
         """,
         )
 
-    @pytest.mark.xfail
     def test_constraint_name_token(self, generator: CodeGenerator) -> None:
         generator.metadata.naming_convention = {
             "ck": "ck_%(table_name)s_%(constraint_name)s",
@@ -2399,12 +2398,13 @@ class Items(Base):
             PrimaryKeyConstraint("id", name="pk_simple"),
             CheckConstraint("id > 0", name=conv("ck_simple_idcheck")),
             CheckConstraint("number > 0", name=conv("non_default_name")),
+            CheckConstraint("number > 1", name=conv("non_default_name2")),
         )
 
         validate_code(
             generator.generate(),
             """\
-from sqlalchemy import CheckConstraint, Column, Integer, MetaData
+from sqlalchemy import CheckConstraint, Column, Integer
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql.elements import conv
 
@@ -2417,7 +2417,8 @@ class Simple(Base):
     __tablename__ = 'simple'
     __table_args__ = (
         CheckConstraint('id > 0', name='idcheck'),
-        CheckConstraint('number > 0', name=conv('non_default_name'))
+        CheckConstraint('number > 0', name=conv('non_default_name')),
+        CheckConstraint('number > 1', name=conv('non_default_name2'))
     )
 
     id = Column(Integer, primary_key=True)

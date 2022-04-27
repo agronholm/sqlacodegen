@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 
 from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
 from sqlalchemy.engine import Connectable
 from sqlalchemy.sql import ClauseElement
+from sqlalchemy.sql.elements import conv
 from sqlalchemy.sql.schema import (
     CheckConstraint,
     ColumnCollectionConstraint,
@@ -53,12 +55,46 @@ def get_common_fk_constraints(
     return c1.union(c2)
 
 
-def uses_default_name(constraint: Constraint | Index) -> bool:
+def _handle_constraint_name_token(
+    constraint_name: str,
+    convention: str,
+    values: dict[str, str],
+) -> str | conv:
+    """
+    Get explicit name for conventions with the token `constraint_name` using regex
+
+    Replace first occurence of the token with (\\w+) and subsequent ones with (\1),
+    then add ^ and $ for exact match
+
+    Example:
+    If `convention` is `abc_%(constraint_name)s_123`, the regex pattern will
+    be `^abc_(\\w+)_123$`, the first (and only) matched group will then be returned
+
+    """
+    placeholder = "%(constraint_name)s"
+    try:
+        pattern = convention % {**values, **{"constraint_name": placeholder}}
+    except KeyError:
+        return conv(constraint_name)
+
+    pattern = re.escape(pattern)
+    escaped_placeholder = re.escape(placeholder)
+
+    # Replace first occurence with (\w+) and subsequent ones with (\1), then add ^ and $
+    pattern = pattern.replace(escaped_placeholder, r"(\w+)", 1)
+    pattern = pattern.replace(escaped_placeholder, r"(\1)")
+    pattern = "".join(["^", pattern, "$"])
+
+    match = re.match(pattern, constraint_name)
+    return conv(constraint_name) if match is None else match[1]
+
+
+def get_explicit_name(constraint: Constraint | Index) -> str:
     if not constraint.name or constraint.table is None:
-        return True
+        return ""
 
     table = constraint.table
-    values = {"table_name": table.name, "constraint_name": constraint.name}
+    values = {"table_name": table.name}
     if isinstance(constraint, (Index, ColumnCollectionConstraint)):
         values.update(
             {
@@ -130,11 +166,19 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
     else:
         raise TypeError(f"Unknown constraint type: {constraint.__class__.__qualname__}")
 
+    if key not in table.metadata.naming_convention:
+        return constraint.name
+
+    convention: str = table.metadata.naming_convention[key]
+    if "%(constraint_name)s" in convention:
+        return _handle_constraint_name_token(constraint.name, convention, values)
+
     try:
-        convention: str = table.metadata.naming_convention[key]
-        return constraint.name == (convention % values)
+        parsed = convention % values
+        # No explicit name needed if constraint name already follows naming convention
+        return "" if constraint.name == parsed else constraint.name
     except KeyError:
-        return False
+        return constraint.name
 
 
 def render_callable(
