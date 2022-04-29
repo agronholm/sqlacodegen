@@ -71,7 +71,7 @@ The following built-in generators are available:
 * ``tables`` (only generates ``Table`` objects, for those who don't want to use the ORM)
 * ``declarative`` (the default; generates classes inheriting from ``declarative_base()``
 * ``dataclasses`` (generates dataclass-based models; v1.4+ only)
-* ``sqlmodel`` (generates model classes for SQLModel_)
+* ``sqlmodels`` (generates model classes for SQLModel_)
 
 .. _SQLModel: https://sqlmodel.tiangolo.com/
 
