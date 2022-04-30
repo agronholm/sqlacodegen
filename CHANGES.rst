@@ -8,6 +8,8 @@ Version history
   dialect's naming convention (PR by Leonardus Chen)
 - Fixed another problem where sequence schemas were not properly separated from the
   sequence name
+- Fixed invalid generated primary/secondaryjoin expressions in self-referential
+  many-to-many relationships by using lambdas instead of strings
 - Increased mimimum SQLAlchemy version to 1.4.36 to address issues with ``ForeignKey``
   and indexes, and to eliminate the PostgreSQL UUID column type annotation hack
 

@@ -1158,7 +1158,7 @@ class DeclarativeGenerator(TablesGenerator):
         def render_join(terms: list[JoinType]) -> str:
             rendered_joins = []
             for source, source_col, target, target_col in terms:
-                rendered = f"{source.name}.{source_col} == {target.name}."
+                rendered = f"lambda: {source.name}.{source_col} == {target.name}."
                 if target.__class__ is Model:
                     rendered += "c."
 
@@ -1169,7 +1169,7 @@ class DeclarativeGenerator(TablesGenerator):
                 rendered = ", ".join(rendered_joins)
                 return f"and_({rendered})"
             else:
-                return repr(rendered_joins[0])
+                return rendered_joins[0]
 
         # Render keyword arguments
         kwargs: dict[str, Any] = {}

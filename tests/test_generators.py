@@ -8,6 +8,7 @@ from sqlalchemy import PrimaryKeyConstraint
 from sqlalchemy.dialects import mysql, postgresql
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy.orm import clear_mappers, configure_mappers
 from sqlalchemy.schema import (
     CheckConstraint,
     Column,
@@ -36,7 +37,11 @@ from sqlacodegen.generators import (
 def validate_code(generated_code: str, expected_code: str) -> None:
     expected_code = dedent(expected_code)
     assert generated_code == expected_code
-    exec(generated_code, {})
+    try:
+        exec(generated_code, {})
+        configure_mappers()
+    finally:
+        clear_mappers()
 
 
 @pytest.fixture
@@ -1607,11 +1612,13 @@ class SimpleItems(Base):
     id = Column(Integer, primary_key=True)
 
     parent = relationship('SimpleItems', secondary='otherschema.child_items', \
-primaryjoin='SimpleItems.id == t_child_items.c.child_id', \
-secondaryjoin='SimpleItems.id == t_child_items.c.parent_id', back_populates='child')
+primaryjoin=lambda: SimpleItems.id == t_child_items.c.child_id, \
+secondaryjoin=lambda: SimpleItems.id == t_child_items.c.parent_id, \
+back_populates='child')
     child = relationship('SimpleItems', secondary='otherschema.child_items', \
-primaryjoin='SimpleItems.id == t_child_items.c.parent_id', \
-secondaryjoin='SimpleItems.id == t_child_items.c.child_id', back_populates='parent')
+primaryjoin=lambda: SimpleItems.id == t_child_items.c.parent_id, \
+secondaryjoin=lambda: SimpleItems.id == t_child_items.c.child_id, \
+back_populates='parent')
 
 
 t_child_items = Table(
