@@ -935,8 +935,20 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
             """,
         )
 
+    @pytest.mark.parametrize(
+        "schemaname, seqname",
+        [
+            pytest.param("myschema", "test_seq"),
+            pytest.param("myschema", '"test_seq"'),
+            pytest.param('"my.schema"', "test_seq"),
+            pytest.param('"my.schema"', '"test_seq"'),
+        ],
+    )
     @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
-    def test_postgresql_sequence_with_schema(self, generator: CodeGenerator) -> None:
+    def test_postgresql_sequence_with_schema(
+        self, generator: CodeGenerator, schemaname: str, seqname: str
+    ) -> None:
+        expected_schema = schemaname.strip('"')
         Table(
             "simple_items",
             generator.metadata,
@@ -944,14 +956,14 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
                 "id",
                 INTEGER,
                 primary_key=True,
-                server_default=text("nextval('\"myschema\".test_seq'::regclass)"),
+                server_default=text(f"nextval('{schemaname}.{seqname}'::regclass)"),
             ),
-            schema="myschema",
+            schema=expected_schema,
         )
 
         validate_code(
             generator.generate(),
-            """\
+            f"""\
             from sqlalchemy import Column, Integer, MetaData, Sequence, Table
 
             metadata = MetaData()
@@ -959,9 +971,9 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
 
             t_simple_items = Table(
                 'simple_items', metadata,
-                Column('id', Integer, Sequence('test_seq', schema='myschema'), \
-primary_key=True),
-                schema='myschema'
+                Column('id', Integer, Sequence('test_seq', \
+schema='{expected_schema}'), primary_key=True),
+                schema='{expected_schema}'
             )
             """,
         )

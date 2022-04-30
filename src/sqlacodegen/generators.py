@@ -52,6 +52,7 @@ from .models import (
     RelationshipType,
 )
 from .utils import (
+    decode_postgresql_sequence,
     get_column_names,
     get_common_fk_constraints,
     get_compiled_expression,
@@ -72,9 +73,6 @@ _re_column_name = re.compile(r'(?:(["`]?).*\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 _re_invalid_identifier = re.compile(r"(?u)\W")
-_re_postgresql_nextval_sequence = re.compile(
-    r"nextval\('(?:\"(.+?)\"\.)?(.+)'::regclass\)"
-)
 
 
 class CodeGenerator(metaclass=ABCMeta):
@@ -602,15 +600,13 @@ class TablesGenerator(CodeGenerator):
                 if isinstance(column.server_default, DefaultClause) and isinstance(
                     column.server_default.arg, TextClause
                 ):
-                    match = _re_postgresql_nextval_sequence.match(
-                        column.server_default.arg.text
+                    schema, seqname = decode_postgresql_sequence(
+                        column.server_default.arg
                     )
-                    if match:
+                    if seqname:
                         # Add an explicit sequence
-                        if match.group(2) != f"{column.table.name}_{column.name}_seq":
-                            column.default = sqlalchemy.Sequence(
-                                match.group(2), schema=match.group(1)
-                            )
+                        if seqname != f"{column.table.name}_{column.name}_seq":
+                            column.default = sqlalchemy.Sequence(seqname, schema=schema)
 
                         column.server_default = None
 

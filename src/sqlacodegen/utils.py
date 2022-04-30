@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 
 from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
 from sqlalchemy.engine import Connectable
 from sqlalchemy.sql import ClauseElement
+from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.schema import (
     CheckConstraint,
     ColumnCollectionConstraint,
@@ -13,6 +15,9 @@ from sqlalchemy.sql.schema import (
     Index,
     Table,
 )
+
+_re_postgresql_nextval_sequence = re.compile(r"nextval\('(.+)'::regclass\)")
+_re_postgresql_sequence_delimiter = re.compile(r'(.*?)([."]|$)')
 
 
 def get_column_names(constraint: ColumnCollectionConstraint) -> list[str]:
@@ -173,3 +178,24 @@ def qualified_table_name(table: Table) -> str:
         return f"{table.schema}.{table.name}"
     else:
         return str(table.name)
+
+
+def decode_postgresql_sequence(clause: TextClause) -> tuple[str | None, str | None]:
+    match = _re_postgresql_nextval_sequence.match(clause.text)
+    if not match:
+        return None, None
+
+    schema: str | None = None
+    sequence: str = ""
+    in_quotes = False
+    for match in _re_postgresql_sequence_delimiter.finditer(match.group(1)):
+        sequence += match.group(1)
+        if match.group(2) == '"':
+            in_quotes = not in_quotes
+        elif match.group(2) == ".":
+            if in_quotes:
+                sequence += "."
+            else:
+                schema, sequence = sequence, ""
+
+    return schema, sequence
