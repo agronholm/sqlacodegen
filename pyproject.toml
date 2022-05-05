@@ -42,7 +42,7 @@ dynamic = ["version"]
 test = [
     "pytest",
     "pytest-cov",
-    "psycopg2-binary",
+    "psycopg2",
     "mysql-connector-python",
     "sqlmodel",
 ]

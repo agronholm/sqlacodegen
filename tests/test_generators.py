@@ -87,7 +87,8 @@ class TestTablesGenerator:
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('enum', Enum('A', 'B', name='blah')),
                 Column('bool', Boolean),
                 Column('number', Numeric(10, asdecimal=False))
@@ -116,7 +117,8 @@ class TestTablesGenerator:
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('bool1', Boolean),
                 Column('bool2', Boolean),
                 Column('bool3', Boolean)
@@ -144,9 +146,10 @@ class TestTablesGenerator:
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
-                Column('dp_array', ARRAY(Float(precision=53))),
-                Column('int_array', ARRAY(Integer()))
+                'simple_items',
+                metadata,
+                Column('dp_array', ARRAY(Float(53))),
+                Column('int_array', ARRAY(Integer))
             )
             """,
         )
@@ -169,8 +172,9 @@ class TestTablesGenerator:
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
-                Column('jsonb', JSONB(astext_type=Text(length=50)))
+                'simple_items',
+                metadata,
+                Column('jsonb', JSONB(astext_type=Text(50)))
             )
             """,
         )
@@ -189,7 +193,8 @@ class TestTablesGenerator:
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('jsonb', JSONB)
             )
             """,
@@ -212,7 +217,8 @@ class TestTablesGenerator:
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('enum', Enum('A', "\\\\'B", 'C'))
             )
             """,
@@ -236,7 +242,8 @@ class TestTablesGenerator:
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', BigInteger),
                 Column('length', Float)
             )
@@ -263,7 +270,8 @@ class TestTablesGenerator:
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer),
                 Column('name', String(255)),
                 Column('set', SET('one', 'two'))
@@ -291,7 +299,8 @@ UniqueConstraint
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer),
                 Column('number', Integer),
                 CheckConstraint('number > 0'),
@@ -329,10 +338,11 @@ UniqueConstraint
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer),
                 Column('number', Integer, index=True),
-                Column('text', String, unique=True, index=True),
+                Column('text', String, index=True, unique=True),
                 Index('ix_empty'),
                 Index('ix_text_number', 'text', 'number', unique=True)
             )
@@ -356,7 +366,8 @@ UniqueConstraint
 
 
             t_simple = Table(
-                'simple', metadata,
+                'simple',
+                metadata,
                 Column('id', Integer, primary_key=True),
                 comment="this is a 'comment'"
             )
@@ -379,7 +390,8 @@ UniqueConstraint
 
 
             t_simple_items_table = Table(
-                'simple-items table', metadata,
+                'simple-items table',
+                metadata,
                 Column('id', Integer, primary_key=True)
             )
             """,
@@ -404,7 +416,8 @@ UniqueConstraint
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('number', Integer),
                 CheckConstraint('number > 2')
             )
@@ -430,7 +443,8 @@ UniqueConstraint
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('number', Integer, index=True)
             )
             """,
@@ -454,7 +468,8 @@ UniqueConstraint
 
 
             t_simple = Table(
-                'simple', metadata,
+                'simple',
+                metadata,
                 Column('id', Integer, primary_key=True)
             )
             """,
@@ -483,7 +498,8 @@ UniqueConstraint
 
 
             t_computed = Table(
-                'computed', metadata,
+                'computed',
+                metadata,
                 Column('id', Integer, primary_key=True),
                 Column('computed', Integer, Computed('1 + 2'{extra_args}))
             )
@@ -507,7 +523,8 @@ UniqueConstraint
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('name', String),
                 schema='testschema'
             )
@@ -540,7 +557,8 @@ UniqueConstraint
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('name', String, ForeignKey('simple_items.name', \
 ondelete='CASCADE', onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
             )
@@ -568,9 +586,10 @@ ondelete='CASCADE', onupdate='CASCADE', deferrable=True, initially='DEFERRED'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
-                Column('id', Integer, primary_key=True, \
-server_default=text('uuid_generate_v4()'))
+                'simple_items',
+                metadata,
+                Column('id', Integer, \
+server_default=text('uuid_generate_v4()'), primary_key=True)
             )
             """,
         )
@@ -593,7 +612,8 @@ server_default=text('uuid_generate_v4()'))
 
 
             t_simple = Table(
-                'simple', metadata,
+                'simple',
+                metadata,
                 Column('id', Integer, primary_key=True),
                 Column('timestamp', TIMESTAMP)
             )
@@ -619,7 +639,8 @@ server_default=text('uuid_generate_v4()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer, primary_key=True),
                 Column('number', INTEGER(11))
             )
@@ -645,7 +666,8 @@ server_default=text('uuid_generate_v4()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer, primary_key=True),
                 Column('my_tinytext', TINYTEXT)
             )
@@ -671,7 +693,8 @@ server_default=text('uuid_generate_v4()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer, primary_key=True),
                 Column('my_mediumtext', MEDIUMTEXT)
             )
@@ -697,7 +720,8 @@ server_default=text('uuid_generate_v4()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer, primary_key=True),
                 Column('my_longtext', LONGTEXT)
             )
@@ -722,7 +746,8 @@ server_default=text('uuid_generate_v4()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('bool1', Boolean),
                 schema='testschema'
             )
@@ -757,9 +782,10 @@ server_default=text('uuid_generate_v4()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
-                Column('id', Integer, primary_key=True, server_default=\
-text('/*Comment*/\\n/*Next line*/\\nsomething()'))
+                'simple_items',
+                metadata,
+                Column('id', Integer, server_default=\
+text('/*Comment*/\\n/*Next line*/\\nsomething()'), primary_key=True)
             )
             """,
         )
@@ -780,7 +806,8 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('problem', String, server_default=text("':001'"))
             )
             """,
@@ -803,7 +830,8 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('problem', NullType)
             )
             """,
@@ -830,7 +858,8 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer, Identity(start=1, increment=2), primary_key=True)
             )
             """,
@@ -852,7 +881,8 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer, comment='This\\nis a multi-line\\ncomment')
             )
             """,
@@ -875,7 +905,8 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer),
                 comment='This\\nis a multi-line\\ncomment'
             )
@@ -904,7 +935,8 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer, primary_key=True)
             )
             """,
@@ -934,7 +966,8 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer, Sequence('test_seq'), primary_key=True)
             )
             """,
@@ -975,7 +1008,8 @@ text('/*Comment*/\\n/*Next line*/\\nsomething()'))
 
 
             t_simple_items = Table(
-                'simple_items', metadata,
+                'simple_items',
+                metadata,
                 Column('id', Integer, Sequence('test_seq', \
 schema='{expected_schema}'), primary_key=True),
                 schema='{expected_schema}'

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
+from keyword import iskeyword
 
 from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
 from sqlalchemy.engine import Connectable
@@ -16,6 +17,7 @@ from sqlalchemy.sql.schema import (
     Table,
 )
 
+_re_invalid_identifier = re.compile(r"(?u)\W")
 _re_postgresql_nextval_sequence = re.compile(r"nextval\('(.+)'::regclass\)")
 _re_postgresql_sequence_delimiter = re.compile(r'(.*?)([."]|$)')
 
@@ -199,3 +201,13 @@ def decode_postgresql_sequence(clause: TextClause) -> tuple[str | None, str | No
                 schema, sequence = sequence, ""
 
     return schema, sequence
+
+
+def convert_to_valid_identifier(name: str) -> str:
+    name = _re_invalid_identifier.sub("_", name)
+    if name[0].isdigit():
+        name = "_" + name
+    elif iskeyword(name):
+        name += "_"
+
+    return name
