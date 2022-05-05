@@ -938,7 +938,9 @@ class DeclarativeGenerator(TablesGenerator):
                 part[:1].upper() + part[1:] for part in preferred_name.split("_")
             )
             if "use_inflect" in self.options:
-                preferred_name = self.inflect_engine.singular_noun(preferred_name)
+                singular_name = self.inflect_engine.singular_noun(preferred_name)
+                if singular_name:
+                    preferred_name = singular_name
 
             model.name = self.find_free_name(preferred_name, global_names)
 

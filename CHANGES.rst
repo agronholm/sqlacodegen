@@ -10,6 +10,8 @@ Version history
   sequence name
 - Fixed invalid generated primary/secondaryjoin expressions in self-referential
   many-to-many relationships by using lambdas instead of strings
+- Fixed ``AttributeError`` when the declarative generator encounters a table name
+  already in singular form when ``--option use_inflect`` is enabled
 - Increased mimimum SQLAlchemy version to 1.4.36 to address issues with ``ForeignKey``
   and indexes, and to eliminate the PostgreSQL UUID column type annotation hack
 

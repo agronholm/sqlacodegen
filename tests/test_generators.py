@@ -1798,6 +1798,8 @@ class SimpleSubItems(SimpleItems):
             "simple_items", generator.metadata, Column("id", INTEGER, primary_key=True)
         )
 
+        Table("singular", generator.metadata, Column("id", INTEGER, primary_key=True))
+
         validate_code(
             generator.generate(),
             """\
@@ -1809,6 +1811,12 @@ Base = declarative_base()
 
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+
+
+class Singular(Base):
+    __tablename__ = 'singular'
 
     id = Column(Integer, primary_key=True)
             """,
