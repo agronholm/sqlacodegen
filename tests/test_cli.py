@@ -157,6 +157,8 @@ from sqlalchemy import Column, Integer, Text
 from sqlmodel import Field, SQLModel
 
 class Foo(SQLModel, table=True):
+    __tablename__ = 'foo'
+
     id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
 primary_key=True))
     name: str = Field(sa_column=Column('name', Text, nullable=False))
