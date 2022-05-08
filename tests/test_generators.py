@@ -2608,6 +2608,7 @@ class TestSQLModelGenerator:
             from sqlmodel import Field, SQLModel
 
             class SimpleItems(SQLModel, table=True):
+                __tablename__ = 'simple_items'
                 __table_args__ = (
                     Index('idx_number', 'number'),
                     Index('idx_text', 'text', unique=True),
@@ -2642,6 +2643,7 @@ class TestSQLModelGenerator:
             from sqlmodel import Field, SQLModel
 
             class SimpleConstraints(SQLModel, table=True):
+                __tablename__ = 'simple_constraints'
                 __table_args__ = (
                     CheckConstraint('number > 0'),
                     UniqueConstraint('id', 'number')
@@ -2677,6 +2679,8 @@ class TestSQLModelGenerator:
             from sqlmodel import Field, Relationship, SQLModel
 
             class SimpleContainers(SQLModel, table=True):
+                __tablename__ = 'simple_containers'
+
                 id: Optional[int] = Field(default=None, sa_column=Column(\
 'id', Integer, primary_key=True))
 
@@ -2685,6 +2689,8 @@ back_populates='container')
 
 
             class SimpleGoods(SQLModel, table=True):
+                __tablename__ = 'simple_goods'
+
                 id: Optional[int] = Field(default=None, sa_column=Column(\
 'id', Integer, primary_key=True))
                 container_id: Optional[int] = Field(default=None, sa_column=Column(\
@@ -2717,6 +2723,8 @@ back_populates='simple_goods')
             from sqlmodel import Field, Relationship, SQLModel
 
             class OtherItems(SQLModel, table=True):
+                __tablename__ = 'other_items'
+
                 id: Optional[int] = Field(default=None, sa_column=Column(\
 'id', Integer, primary_key=True))
 
@@ -2725,6 +2733,8 @@ sa_relationship_kwargs={'uselist': False}, back_populates='other_item')
 
 
             class SimpleOnetoone(SQLModel, table=True):
+                __tablename__ = 'simple_onetoone'
+
                 id: Optional[int] = Field(default=None, sa_column=Column(\
 'id', Integer, primary_key=True))
                 other_item_id: Optional[int] = Field(default=None, sa_column=Column(\
