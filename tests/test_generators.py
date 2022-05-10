@@ -1822,6 +1822,90 @@ class Singular(Base):
             """,
         )
 
+    @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+    def test_use_inflect_relationship_singular(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("container_id", INTEGER),
+            ForeignKeyConstraint(["container_id"], ["singular_container.id"]),
+        )
+        Table(
+            "singular_container",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+class SingularContainer(Base):
+    __tablename__ = 'singular_container'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_items = relationship('SimpleItem', back_populates='container')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    container_id = Column(ForeignKey('singular_container.id'))
+
+    container = relationship('SingularContainer', back_populates='simple_items')
+            """,
+        )
+
+    @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+    def test_use_inflect_relationship_plural(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("container_id", INTEGER),
+            ForeignKeyConstraint(["container_id"], ["simple_containers.id"]),
+        )
+        Table(
+            "simple_containers",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+class SimpleContainer(Base):
+    __tablename__ = 'simple_containers'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_items = relationship('SimpleItem', back_populates='container')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    container_id = Column(ForeignKey('simple_containers.id'))
+
+    container = relationship('SimpleContainer', back_populates='simple_items')
+            """,
+        )
+
     def test_table_kwargs(self, generator: CodeGenerator) -> None:
         Table(
             "simple_items",

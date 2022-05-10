@@ -998,13 +998,16 @@ class DeclarativeGenerator(TablesGenerator):
                         preferred_name = column_names[0][:-3]
 
             if "use_inflect" in self.options:
+                # plural_noun expects a singular noun, so we should always try to
+                # convert the table name to singular first
+                singular_name = self.inflect_engine.singular_noun(preferred_name)
+                if singular_name:
+                    preferred_name = singular_name
                 if relationship.type in (
                     RelationshipType.ONE_TO_MANY,
                     RelationshipType.MANY_TO_MANY,
                 ):
                     preferred_name = self.inflect_engine.plural_noun(preferred_name)
-                else:
-                    preferred_name = self.inflect_engine.singular_noun(preferred_name)
 
         relationship.name = self.find_free_name(
             preferred_name, global_names, local_names
