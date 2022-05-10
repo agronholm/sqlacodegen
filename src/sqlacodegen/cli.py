@@ -8,6 +8,16 @@ from typing import TextIO
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
+try:
+    import citext
+except ImportError:
+    citext = None
+
+try:
+    import geoalchemy2
+except ImportError:
+    geoalchemy2 = None
+
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points, version
 else:
@@ -49,6 +59,12 @@ def main() -> None:
         print("You must supply a url\n", file=sys.stderr)
         parser.print_help()
         return
+
+    if citext:
+        print(f"Using sqlalchemy-citext {citext.__version__}")
+
+    if geoalchemy2:
+        print(f"Using geoalchemy2 {geoalchemy2.__version__}")
 
     # Use reflection to fill in the metadata
     engine = create_engine(args.url)
