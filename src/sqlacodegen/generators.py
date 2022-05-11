@@ -67,6 +67,11 @@ if sys.version_info < (3, 10):
 else:
     from importlib.metadata import version
 
+try:
+    from citext import CIText
+except (NameError, ImportError):
+    pass
+
 _sqla_version = tuple(int(x) for x in version("sqlalchemy").split(".")[:2])
 _re_boolean_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?).*\1\.)?(["`]?)(.*)\2')
