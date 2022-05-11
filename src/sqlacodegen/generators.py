@@ -68,7 +68,7 @@ else:
     from importlib.metadata import version
 
 try:
-    from citext import CIText
+    import citext  # noqa: F401
 except ImportError:
     pass
 
