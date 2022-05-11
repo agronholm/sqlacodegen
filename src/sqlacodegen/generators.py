@@ -69,7 +69,7 @@ else:
 
 try:
     from citext import CIText
-except (NameError, ImportError):
+except ImportError:
     pass
 
 _sqla_version = tuple(int(x) for x in version("sqlalchemy").split(".")[:2])
