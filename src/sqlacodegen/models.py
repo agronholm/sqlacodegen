@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import sys
 from abc import ABCMeta, abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, MutableSequence, Sequence
 from dataclasses import dataclass, field
 from importlib import import_module
 from inspect import isclass, isfunction
 from keyword import iskeyword
 from types import ModuleType
-from typing import Any
+from typing import Any, ClassVar
 
 from sqlalchemy.sql.schema import Table
 
@@ -22,14 +22,10 @@ else:
 class Named:
     name: str
 
-    def __str__(self):
-        return self.name
 
-
-class ContainsImports(metaclass=ABCMeta):
-    @abstractmethod
+class ContainsImports:
     def collect_imports(self) -> set[Import]:
-        pass
+        return set()
 
 
 @dataclass
@@ -66,10 +62,28 @@ class CallableModel(ContainsImports):
 
         return imports
 
-    def __str__(self):
-        args = self.args + [f"{key}={value}" for key, value in self.kwargs.items()]
-        rendered_args = ", ".join(str(arg) for arg in args)
-        return f"{self.func.__name__}({rendered_args})"
+
+class ListModel(ContainsImports):
+    def __init__(self, values: Iterable[Any]):
+        self.values = list(values)
+
+
+class Reference(ContainsImports):
+    def __init__(self, *targets: Named):
+        self.targets = targets
+
+
+class LambdaReference(Reference):
+    pass
+
+
+class ReprReference(Reference):
+    pass
+
+
+@dataclass
+class Lambda(ContainsImports):
+    value: object
 
 
 @dataclass
@@ -89,45 +103,119 @@ class Attribute(Named, ContainsImports):
         return imports
 
 
+class ColumnAttribute(Attribute):
+    @property
+    def column_name(self) -> str:
+        if isinstance(self.value.args[0], str):
+            return self.value.args[0][1:-1]
+        else:
+            return self.name
+
+
+# class RelationshipType(Enum):
+#     ONE_TO_ONE = auto()
+#     ONE_TO_MANY = auto()
+#     MANY_TO_ONE = auto()
+#     MANY_TO_MANY = auto()
+
+
+@dataclass
+class RelationshipAttribute(Attribute):
+    pass
+
+
+@dataclass
+class TableArgsModel(ContainsImports):
+    args: list[Any] = field(default_factory=list)
+    kwargs: dict[str, Any] = field(default_factory=dict)
+
+    def collect_imports(self) -> set[Import]:
+        imports: set[Import] = set()
+
+        for item in self.args:
+            if isinstance(item, ContainsImports):
+                imports.update(item.collect_imports())
+
+        for value in self.kwargs.values():
+            if isinstance(value, ContainsImports):
+                imports.update(value.collect_imports())
+
+        return imports
+
+    def __bool__(self) -> bool:
+        return bool(self.args) or bool(self.kwargs)
+
+
 class TableModel(Named, CallableModel):
-    def __init__(self, name: str, args: list[Any], kwargs: dict[str, Any]):
+    def __init__(
+        self, name: str, args: list[Any], kwargs: dict[str, Any], table: Table
+    ):
         Named.__init__(self, name)
         CallableModel.__init__(self, Table, args, kwargs)
+        self.table = table
+
+    @property
+    def table_name(self) -> str:
+        return self.table.fullname
 
 
 class ColumnTypeModel(CallableModel):
-    def __str__(self):
-        rendered = super().__str__()
+    pass
 
-        # Remove the () from the end if the column type has no arguments
-        if not self.args and not self.kwargs:
-            rendered = rendered[:-2]
 
-        return rendered
+@dataclass
+class JoinModel(ContainsImports):
+    source_class: ClassModel
+    target_table: TableModel
+    joins: Sequence[tuple[ColumnAttribute, str]]
+
+    def collect_imports(self) -> set[Import]:
+        return set()
 
 
 @dataclass
 class ClassModel(Named, ContainsImports):
-    bases: Sequence[str]
-    attributes: Sequence[Attribute]
+    bases: MutableSequence[Attribute]
+    decorators: MutableSequence[CallableModel]
+    attributes: MutableSequence[Attribute]
     docstring: str | None = None
+    table: Table | None = None
 
     def collect_imports(self) -> set[Import]:
         imports: set[Import] = set()
+        for base in self.bases:
+            imports.update(base.collect_imports())
+
+        for decorator in self.decorators:
+            imports.update(decorator.collect_imports())
+
         for attr in self.attributes:
             imports.update(attr.collect_imports())
 
         return imports
 
+    @property
+    def table_name(self) -> str:
+        if self.table is None:
+            raise RuntimeError("no table associated with this class")
 
-@dataclass(frozen=True)
+        return self.table.fullname
+
+
+@dataclass(unsafe_hash=True)
 class Import:
     name: str
     from_: str | None = None
     alias: str | None = field(init=False, default=None, compare=False)
 
+    _all_values: ClassVar[dict[tuple[str, str | None], Import]] = {}
+
     @classmethod
-    def from_object(cls, obj) -> Import:
+    def reset_cache(cls) -> None:
+        cls._all_values.clear()
+
+    @classmethod
+    def from_object(cls, obj: object) -> Import:
         if isinstance(obj, ModuleType):
             return cls(name=object.__name__)
         elif isclass(obj) or isfunction(obj):
@@ -149,58 +237,17 @@ class Import:
 
                 del parts[-1]
 
-        return cls(target.__name__, module)
+        try:
+            return cls._all_values[target.__name__, module]
+        except KeyError:
+            instance = cls(target.__name__, module)
+            cls._all_values[target.__name__, module] = instance
+            return instance
+
+    @property
+    def visible_name(self) -> str:
+        return self.alias or self.name
 
     @property
     def module(self) -> str:
         return self.from_ or self.name
-
-    def __str__(self):
-        return self.alias or self.name
-
-
-# class RelationshipType(Enum):
-#     ONE_TO_ONE = auto()
-#     ONE_TO_MANY = auto()
-#     MANY_TO_ONE = auto()
-#     MANY_TO_MANY = auto()
-#
-#
-# @dataclass
-# class ColumnAttribute:
-#     model: ModelClass
-#     column: Column[Any]
-#     name: str = field(init=False, default="")
-#
-#     def __repr__(self) -> str:
-#         return f"{self.__class__.__name__}(name={self.name!r}, type={self.column.type})"
-#
-#     def __str__(self) -> str:
-#         return self.name
-#
-#
-# JoinType = Tuple[Model, Union[ColumnAttribute, str], Model, Union[ColumnAttribute, str]]
-#
-#
-# @dataclass
-# class RelationshipAttribute:
-#     type: RelationshipType
-#     source: ModelClass
-#     target: ModelClass
-#     constraint: ForeignKeyConstraint | None = None
-#     association_table: Model | None = None
-#     backref: RelationshipAttribute | None = None
-#     remote_side: list[ColumnAttribute] = field(default_factory=list)
-#     foreign_keys: list[ColumnAttribute] = field(default_factory=list)
-#     primaryjoin: list[JoinType] = field(default_factory=list)
-#     secondaryjoin: list[JoinType] = field(default_factory=list)
-#     name: str = field(init=False, default="")
-#
-#     def __repr__(self) -> str:
-#         return (
-#             f"{self.__class__.__name__}(name={self.name!r}, type={self.type}, "
-#             f"target={self.target.name})"
-#         )
-#
-#     def __str__(self) -> str:
-#         return self.name

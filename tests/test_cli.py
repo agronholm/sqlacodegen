@@ -57,7 +57,8 @@ metadata = MetaData()
 
 
 t_foo = Table(
-    'foo', metadata,
+    'foo',
+    metadata,
     Column('id', Integer, primary_key=True),
     Column('name', Text, nullable=False)
 )

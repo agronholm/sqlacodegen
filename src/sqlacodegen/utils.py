@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Container, Mapping
 from keyword import iskeyword
+from typing import Any
 
 from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
 from sqlalchemy.engine import Connectable
@@ -58,6 +59,16 @@ def get_common_fk_constraints(
         if isinstance(c, ForeignKeyConstraint) and c.elements[0].column.table == table1
     }
     return c1.union(c2)
+
+
+def get_fk_options(constraint: ForeignKeyConstraint) -> dict[str, Any]:
+    options: dict[str, Any] = {}
+    for attr in "ondelete", "onupdate", "deferrable", "initially", "match":
+        value = getattr(constraint, attr, None)
+        if value:
+            options[attr] = repr(value)
+
+    return options
 
 
 def uses_default_name(constraint: Constraint | Index) -> bool:
@@ -204,10 +215,28 @@ def decode_postgresql_sequence(clause: TextClause) -> tuple[str | None, str | No
 
 
 def convert_to_valid_identifier(name: str) -> str:
-    name = _re_invalid_identifier.sub("_", name)
+    name = _re_invalid_identifier.sub("_", name.strip())
     if name[0].isdigit():
         name = "_" + name
     elif iskeyword(name):
         name += "_"
 
     return name
+
+
+def next_alias(name: str, names_to_avoid: Container[str]) -> str:
+    # root, suffix = name.rpartition("_")[::2]
+    # if suffix is None:
+    #     index = -1
+    # else:
+    #     index = int(suffix) if suffix else 0
+
+    while True:
+        # index += 1
+        # suffix = "_"
+        # if index > 0:
+        #     suffix += str(index)
+
+        name += "_"
+        if name not in names_to_avoid:
+            return name

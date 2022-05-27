@@ -4,13 +4,11 @@ import inspect
 import re
 import sys
 from abc import ABCMeta, abstractmethod
-from collections import defaultdict
-from collections.abc import Collection, Iterable, Sequence
+from collections import ChainMap, defaultdict
+from collections.abc import Iterable, Sequence
 from dataclasses import field
+from functools import partial
 from inspect import Parameter
-from itertools import count
-from keyword import iskeyword
-from pprint import pformat
 from textwrap import indent
 from typing import Any, ClassVar, Optional
 
@@ -35,29 +33,42 @@ from sqlalchemy import (
     String,
     Table,
     Text,
-    UniqueConstraint, text,
+    UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql.elements import TextClause
 
 from .models import (
     Attribute,
     CallableModel,
     ClassModel,
+    ColumnAttribute,
     ColumnTypeModel,
     Import,
-    TableModel,
+    JoinModel,
+    LambdaReference,
+    ListModel,
+    Reference,
+    RelationshipAttribute,
+    ReprReference,
+    TableArgsModel,
+    TableModel, Lambda,
 )
 from .utils import (
+    convert_to_valid_identifier,
     decode_postgresql_sequence,
     get_column_names,
     get_common_fk_constraints,
     get_compiled_expression,
     get_constraint_sort_key,
+    get_fk_options,
+    next_alias,
     qualified_table_name,
-    uses_default_name, convert_to_valid_identifier,
+    uses_default_name,
 )
 
 if sys.version_info < (3, 10):
@@ -101,7 +112,7 @@ class CodeGenerator(metaclass=ABCMeta):
         self.adjust_metadata()
         self.generate_models()
         self.collect_imports()
-        self.adjust_model_names()
+        self.fix_name_conflicts()
         return self.render()
 
     def should_ignore_table(self, table: Table) -> bool:
@@ -207,9 +218,7 @@ class CodeGenerator(metaclass=ABCMeta):
             if isinstance(column.server_default, DefaultClause) and isinstance(
                 column.server_default.arg, TextClause
             ):
-                schema, seqname = decode_postgresql_sequence(
-                    column.server_default.arg
-                )
+                schema, seqname = decode_postgresql_sequence(column.server_default.arg)
                 if seqname:
                     # Add an explicit sequence
                     if seqname != f"{column.table.name}_{column.name}_seq":
@@ -241,7 +250,9 @@ class CodeGenerator(metaclass=ABCMeta):
                 if isinstance(coltype, ARRAY):
                     new_coltype.item_type = self.get_adapted_type(new_coltype.item_type)
                 elif isinstance(coltype, JSONB):
-                    new_coltype.astext_type = self.get_adapted_type(new_coltype.astext_type)
+                    new_coltype.astext_type = self.get_adapted_type(
+                        new_coltype.astext_type
+                    )
 
                 try:
                     # If the adapted column type does not render the same as the
@@ -276,7 +287,7 @@ class CodeGenerator(metaclass=ABCMeta):
         """
 
     def generate_table_model(self, table: Table, metadata: Attribute) -> TableModel:
-        args: list[Any] = [repr(table.name), metadata]
+        args: list[Any] = [repr(table.name), Reference(metadata)]
         kwargs: dict[str, Any] = {}
 
         # Generate models for columns
@@ -287,20 +298,43 @@ class CodeGenerator(metaclass=ABCMeta):
 
         # Generate models for constraints
         for constraint in sorted(table.constraints, key=get_constraint_sort_key):
+            # Remove nullable=False from columns involved in a single-column primary key
+            if isinstance(constraint, PrimaryKeyConstraint) and len(constraint.columns) == 1:
+                for col in constraint.columns:
+                    column_models[col.name].kwargs.pop("nullable", None)
+
             if uses_default_name(constraint):
                 if isinstance(constraint, PrimaryKeyConstraint):
                     for col in constraint.columns:
-                        column_models[col.name].kwargs["primary_key"] = True
-                        column_models[col.name].kwargs.pop("nullable", None)
+                        column_models[col.name].kwargs = {"primary_key": True, **column_models[col.name].kwargs}
 
                     continue
                 elif (
                     isinstance(constraint, ForeignKeyConstraint)
                     and len(constraint.columns) == 1
                 ):
-                    column_models[constraint.columns[0].name].args.append(
-                        CallableModel(ForeignKey)
+                    remote_column = constraint.elements[0].target_fullname
+                    column_model = column_models[constraint.columns[0].name]
+                    column_model.args.append(
+                        CallableModel(
+                            ForeignKey,
+                            [repr(remote_column)],
+                            get_fk_options(constraint),
+                        )
                     )
+
+                    # Remove the column type unless the foreign key points to the column
+                    # itself
+                    local_column_name = (
+                        f"{qualified_table_name(table)}.{column_model.args[0][1:-1]}"
+                    )
+                    if remote_column != local_column_name:
+                        column_model.args = [
+                            arg
+                            for arg in column_model.args
+                            if not isinstance(arg, ColumnTypeModel)
+                        ]
+
                     continue
                 elif (
                     isinstance(constraint, UniqueConstraint)
@@ -330,7 +364,7 @@ class CodeGenerator(metaclass=ABCMeta):
         if table_comment:
             kwargs["comment"] = repr(table.comment)
 
-        return TableModel(self.generate_table_name(table), args, kwargs)
+        return TableModel(self.generate_table_name(table), args, kwargs, table)
 
     def generate_table_name(self, table: Table) -> str:
         return convert_to_valid_identifier(f"t_{table.name}")
@@ -359,9 +393,7 @@ class CodeGenerator(metaclass=ABCMeta):
             if column.server_default.persisted is not None:
                 computed_kwargs["persisted"] = column.server_default.persisted
 
-            args.append(
-                CallableModel(Computed, [repr(expression)], computed_kwargs)
-            )
+            args.append(CallableModel(Computed, [repr(expression)], computed_kwargs))
         elif isinstance(column.server_default, Identity):
             args.append(column.server_default)
         elif column.server_default:
@@ -419,7 +451,9 @@ class CodeGenerator(metaclass=ABCMeta):
             ):
                 del kwargs["astext_type"]
             else:
-                kwargs["astext_type"] = self.generate_column_type_model(kwargs["astext_type"])
+                kwargs["astext_type"] = self.generate_column_type_model(
+                    kwargs["astext_type"]
+                )
         elif isinstance(coltype, ARRAY):
             args[0] = self.generate_column_type_model(args[0])
 
@@ -478,6 +512,8 @@ class CodeGenerator(metaclass=ABCMeta):
         This method should fill in the ``imports`` list.
 
         """
+        Import.reset_cache()
+
         for var in self.module_variables:
             self.imports.update(var.collect_imports())
 
@@ -489,8 +525,52 @@ class CodeGenerator(metaclass=ABCMeta):
             if import_.from_ == "builtins":
                 self.imports.remove(import_)
 
-    def adjust_model_names(self) -> None:
-        """Alter model names to avoid conflicts."""
+    def fix_name_conflicts(self) -> None:
+        """Ensure that module names, imports and attribute names are not in conflict."""
+        imports = {i.visible_name: i for i in self.imports}
+        variable_names = {a.name for a in self.module_variables}
+        model_names = {}
+        global_names_to_avoid: ChainMap[str, Any] = ChainMap(
+            variable_names, model_names
+        )
+        for model in self.models:
+            if model.name in global_names_to_avoid:
+                model.name = next_alias(model.name, global_names_to_avoid)
+
+            model_names[model.name] = model
+
+            if isinstance(model, ClassModel):
+                local_names_to_avoid = {}
+                all_names_to_avoid = ChainMap(
+                    local_names_to_avoid, global_names_to_avoid
+                )
+                for attr in model.attributes:
+                    # "metadata" is not an allowable attribute name
+                    if attr.name == "metadata":
+                        attr.name = next_alias(attr.name, local_names_to_avoid)
+                        attr.value.args.insert(0, repr("metadata"))
+
+                    # Check for conflicts with attributes defined earlier
+                    if attr.name in local_names_to_avoid:
+                        if isinstance(attr, ColumnAttribute) and not isinstance(
+                            attr.value.args[0], str
+                        ):
+                            attr.value.args.insert(0, repr(attr.name))
+
+                        attr.name = next_alias(attr.name, local_names_to_avoid)
+
+                    # Add the name to the list of local names to avoid
+                    local_names_to_avoid[attr.name] = attr
+
+                    # Alias any conflicting import
+                    while attr.name in imports:
+                        import_ = imports[attr.name]
+                        old_name = import_.visible_name
+                        new_name = import_.alias = next_alias(
+                            old_name, all_names_to_avoid
+                        )
+                        del imports[old_name]
+                        imports[new_name] = import_
 
     def render(self) -> str:
         """
@@ -541,63 +621,148 @@ class CodeGenerator(metaclass=ABCMeta):
             # Render imports from each module as a separate line
             sections = []
             for modulename in sorted(imports_by_module):
-                names = sorted(
-                    import_.name for import_ in imports_by_module[modulename]
+                sorted_imports = sorted(
+                    imports_by_module[modulename], key=lambda i: i.name
                 )
+                names = [
+                    f"{i.name} as {i.alias}" if i.alias else i.name
+                    for i in sorted_imports
+                ]
                 sections.append(f"from {modulename} import " + ", ".join(names))
 
             rendered_groups.append("\n".join(sections))
 
         return "\n\n".join(grp for grp in rendered_groups if grp)
 
+    def render_object(self, obj: object) -> str:
+        if isinstance(obj, TableModel):
+            return self.render_table(obj)
+        elif isinstance(obj, ClassModel):
+            return self.render_class(obj)
+        elif isinstance(obj, ListModel):
+            return "[" + ", ".join(map(self.render_object, obj.values)) + "]"
+        elif isinstance(obj, TableArgsModel):
+            rendered_kwargs = ", ".join(
+                f"{key!r}: {self.render_object(value)}"
+                for key, value in obj.kwargs.items()
+            )
+            if obj.kwargs and not obj.args:
+                # If only keyword arguments are present, render as a dict
+                return f"{{\n{indent(rendered_kwargs, self.indentation)}\n}}"
+            else:
+                args = obj.args.copy()
+                if obj.kwargs:
+                    args.append(f"{{{rendered_kwargs}}}")
+
+                rendered_args = indent(
+                    ",\n".join(self.render_object(arg) for arg in args),
+                    self.indentation,
+                )
+                if len(args) == 1:
+                    rendered_args += ","
+
+                return f"(\n{rendered_args}\n)"
+        elif isinstance(obj, Attribute):
+            rendered = obj.name
+            if obj.annotation:
+                rendered += f": {obj.annotation}"
+
+            return f"{rendered} = " + self.render_object(obj.value)
+        elif isinstance(obj, CallableModel):
+            func_import = Import.from_object(obj.func)
+            if isinstance(obj, ColumnTypeModel) and not obj.args and not obj.kwargs:
+                return func_import.visible_name
+
+            rendered_args = [self.render_object(arg) for arg in obj.args] + [
+                f"{key}={self.render_object(value)}"
+                for key, value in obj.kwargs.items()
+            ]
+            joined_rendered_args = ", ".join(rendered_args)
+            return f"{func_import.visible_name}({joined_rendered_args})"
+        elif isinstance(obj, Reference):
+            rendered = ".".join(target.name for target in obj.targets)
+            if isinstance(obj, LambdaReference):
+                return "lambda: " + rendered
+            elif isinstance(obj, ReprReference):
+                return repr(rendered)
+            else:
+                return rendered
+        elif isinstance(obj, JoinModel):
+            rendered_joins = " and ".join(
+                [
+                    f"{obj.source_class.name}.{col_attr.name} "
+                    f"== {obj.target_table.name}.c.{target_colname}"
+                    for col_attr, target_colname in obj.joins
+                ]
+            )
+            return f"lambda: {rendered_joins}"
+        elif isinstance(obj, Lambda):
+            return "lambda: " + self.render_object(obj.value)
+        else:
+            return str(obj)
+
     def render_module_variables(self) -> str:
-        rendered_variables: list[str] = []
-        for var in self.module_variables:
-            rendered = var.name
-            if var.annotation:
-                rendered += f": {var.annotation}"
-
-            rendered_variables.append(f"{rendered} = {var.value}")
-
+        rendered_variables: list[str] = [
+            self.render_object(var) for var in self.module_variables
+        ]
         return "\n".join(rendered_variables)
 
     def render_models(self) -> str:
-        rendered_models: list[str] = []
-        for model in self.models:
-            if isinstance(model, TableModel):
-                rendered_models.append(self.render_table(model))
-            elif isinstance(model, ClassModel):
-                rendered_models.append(self.render_class(model))
-            else:
-                raise TypeError(f"Unknown model type {model.__class__.__name__}")
-
+        rendered_models: list[str] = [
+            self.render_object(model) for model in self.models
+        ]
         return "\n\n".join(rendered_models)
 
     def render_table(self, model: TableModel) -> str:
-        args = [str(arg) for arg in model.args]
-        args += [f"{key}={value}" for key, value in model.kwargs.items()]
+        args = [self.render_object(arg) for arg in model.args]
+        args += [
+            f"{key}={self.render_object(value)}" for key, value in model.kwargs.items()
+        ]
         rendered_args = indent(
-            ",\n".join(str(arg) for arg in args), self.indentation
+            ",\n".join(self.render_object(arg) for arg in args), self.indentation
         )
         return f"{model.name} = {model.func.__name__}(\n{rendered_args}\n)\n"
 
     def render_class(self, model: ClassModel) -> str:
-        bases = ", ".join(model.bases)
-
-        rendered = f"{model.name}({bases}):\n"
+        # Render the class name and its bases
+        bases = ", ".join(attr.name for attr in model.bases)
+        rendered = f"class {model.name}({bases}):\n"
         sections: list[str] = []
+
+        # Render the docstring, if present
         if model.docstring:
-            sections.append(f'"""\n{model.docstring}\n"""')
+            sections.append(self.render_docstring(model.docstring))
 
-        if model.attributes:
-            sections.append("\n".join(str(attr) for attr in model.attributes))
+        # Render attributes
+        rendered_attributes: dict[int, list[str]] = defaultdict(list)
+        for attr in model.attributes:
+            rendered_attr = self.render_object(attr)
+            index = self.get_class_attribute_section_index(attr)
+            if index is not None:
+                rendered_attributes[index].append(rendered_attr)
 
+        sections.extend(
+            "\n".join(rendered_attributes[i]) for i in sorted(rendered_attributes)
+        )
+
+        # Join all rendered sections together
         if sections:
             rendered += indent("\n\n".join(sections), self.indentation)
         else:
             rendered += f"{self.indentation}pass"
 
-        return rendered
+        return rendered + "\n"
+
+    def render_docstring(self, docstring: str) -> str:
+        return f'"""\n{docstring}\n"""'
+
+    def get_class_attribute_section_index(self, attr: Attribute) -> int | None:
+        if attr.name.startswith("__") and attr.name.endswith("__"):
+            return 0
+        elif isinstance(attr, ColumnAttribute):
+            return 1
+        else:
+            return 2
 
 
 class TablesGenerator(CodeGenerator):
@@ -607,74 +772,37 @@ class TablesGenerator(CodeGenerator):
         for table in self.metadata.sorted_tables:
             self.models.append(self.generate_table_model(table, metadata))
 
-    # def generate_model_name(self, model: Model, global_names: set[str]) -> None:
-    #     preferred_name = f"t_{model.table.name}"
-    #     model.name = self.find_free_name(preferred_name, global_names)
 
-    def find_free_name(
-        self, name: str, global_names: set[str], local_names: Collection[str] = ()
-    ) -> str:
-        """
-        Generate an attribute name that does not clash with other local or global names.
-        """
-        name = name.strip()
-        assert name, "Identifier cannot be empty"
-        name = _re_invalid_identifier.sub("_", name)
-        if name[0].isdigit():
-            name = "_" + name
-        elif iskeyword(name) or name == "metadata":
-            name += "_"
-
-        original = name
-        for i in count():
-            if name not in global_names and name not in local_names:
-                break
-
-            name = original + (str(i) if i else "_")
-
-        return name
-
-
-class DeclarativeGenerator(TablesGenerator):
+class DeclarativeGenerator(CodeGenerator):
     valid_options: ClassVar[set[str]] = TablesGenerator.valid_options | {
         "use_inflect",
         "nojoined",
         "nobidi",
     }
+    base_class: Attribute
 
-    def __init__(self, metadata: MetaData, bind: Connection | Engine,
-                 options: Sequence[str], *, indentation: str = "    ",
-                 base_class_name: str = "Base"):
+    def __init__(
+        self,
+        metadata: MetaData,
+        bind: Connection | Engine,
+        options: Sequence[str],
+        *,
+        indentation: str = "    ",
+        base_class_name: str = "Base",
+    ):
         super().__init__(metadata, bind, options, indentation=indentation)
         self.base_class_name: str = base_class_name
         self.inflect_engine = inflect.engine()
 
-    # def collect_imports(self, models: Iterable[Model]) -> None:
-    #     super().collect_imports(models)
-    #     if any(isinstance(model, ModelClass) for model in models):
-    #         self.remove_literal_import("sqlalchemy", "MetaData")
-    #         if _sqla_version < (1, 4):
-    #             self.add_literal_import(
-    #                 "sqlalchemy.ext.declarative", "declarative_base"
-    #             )
-    #         else:
-    #             self.add_literal_import("sqlalchemy.orm", "declarative_base")
-    #
-    # def collect_imports_for_model(self, model: Model) -> None:
-    #     super().collect_imports_for_model(model)
-    #     if isinstance(model, ModelClass):
-    #         if model.relationships:
-    #             self.add_literal_import("sqlalchemy.orm", "relationship")
-
     def generate_models(self) -> None:
-        models_by_table_name: dict[str, Model] = {}
+        self.base_class = self.generate_base_class()
+        metadata = Attribute("metadata", CallableModel(MetaData))
 
-        # Pick association tables from the metadata into their own set, don't process
-        # them normally
-        links: defaultdict[str, list[Model]] = defaultdict(lambda: [])
+        # Pick association tables from the metadata into their own set
+        # (don't process them normally)
+        class_models_by_table_name: dict[str, ClassModel] = {}
+        association_tables: list[TableModel] = []
         for table in self.metadata.sorted_tables:
-            qualified_name = qualified_table_name(table)
-
             # Link tables have exactly two foreign key constraints and all columns are
             # involved in them
             fk_constraints = sorted(
@@ -683,136 +811,217 @@ class DeclarativeGenerator(TablesGenerator):
             if len(fk_constraints) == 2 and all(
                 col.foreign_keys for col in table.columns
             ):
-                model = models_by_table_name[qualified_name] = Model(table)
-                tablename = fk_constraints[0].elements[0].column.table.name
-                links[tablename].append(model)
+                link_model = self.generate_table_model(table, metadata)
+                self.models.append(link_model)
+                association_tables.append(link_model)
                 continue
 
-            # Only form model classes for tables that have a primary key and are not
-            # association tables
-            if not table.primary_key:
-                models_by_table_name[qualified_name] = self.generate_table_model(table)
+            table_model = self.generate_table_model(table, metadata)
+            if table.primary_key:
+                model = self.convert_to_class_model(table_model)
+                class_models_by_table_name[qualified_table_name(table)] = model
+                self.models.append(model)
             else:
-                model = self.generate_class_model(table)
-                models_by_table_name[qualified_name] = model
+                self.models.append(table_model)
 
-                # Fill in the columns
-                for column in table.c:
-                    column_attr = ColumnAttribute(model, column)
-                    model.columns.append(column_attr)
-
-        # Add relationships
-        for model in models_by_table_name.values():
-            if isinstance(model, ModelClass):
+        # Generate relationships
+        for model in self.models:
+            if isinstance(model, ClassModel):
                 self.generate_relationships(
-                    model, models_by_table_name, links[model.table.name]
+                    model, class_models_by_table_name, association_tables
                 )
 
-        # Nest inherited classes in their superclasses to ensure proper ordering
-        if "nojoined" not in self.options:
-            for model in list(models_by_table_name.values()):
-                if not isinstance(model, ModelClass):
-                    continue
+        # Add the base class to the module if at least one class model was generated
+        if any(isinstance(model, ClassModel) for model in self.models):
+            metadata.value = f"{self.base_class.name}.metadata"
+            self.module_variables.append(self.base_class)
 
-                pk_column_names = {col.name for col in model.table.primary_key.columns}
-                for constraint in model.table.foreign_key_constraints:
-                    if set(get_column_names(constraint)) == pk_column_names:
-                        target = models_by_table_name[
-                            qualified_table_name(constraint.elements[0].column.table)
-                        ]
-                        if isinstance(target, ModelClass):
-                            model.parent_class = target
-                            target.children.append(model)
+        # If at least one Table was generated, add the "metadata" variable
+        if any(isinstance(model, TableModel) for model in self.models):
+            self.module_variables.append(metadata)
 
-    def generate_class_model(self, table: Table) -> ClassModel:
-        name = self.generate_class_name(table)
-        column_attrs = [self.generate_column_model(col) for col in table.columns]
-        class_model = ClassModel(name, [self.base_class_name], )
-        return class_model
+    def generate_base_class(self) -> Attribute:
+        return Attribute(self.base_class_name, CallableModel(declarative_base))
+
+    def convert_to_class_model(self, table_model: TableModel) -> ClassModel:
+        table_args = TableArgsModel(kwargs=table_model.kwargs)
+        attributes: list[Attribute] = [
+            Attribute("__tablename__", repr(table_model.table.name))
+        ]
+
+        # Generate column attributes
+        for arg in table_model.args[2:]:  # skip the table name and metadata arguments
+            if isinstance(arg, CallableModel) and arg.func is Column:
+                # Remove the explicit column name
+                raw_name = arg.args[0][1:-1]
+                attr_name = convert_to_valid_identifier(raw_name)
+                if attr_name == raw_name:
+                    del arg.args[0]
+
+                attributes.append(ColumnAttribute(attr_name, arg))
+            else:
+                table_args.args.append(arg)
+
+        # Insert __table_args__ if there are any positional or keyword arguments
+        if table_args.args or table_args.kwargs:
+            attributes.insert(1, Attribute("__table_args__", table_args))
+
+        return ClassModel(
+            self.generate_class_name(table_model.args[0]),
+            [self.base_class],
+            [],
+            attributes,
+            None,
+            table_model.table,
+        )
+
+    def generate_class_name(self, table_name: str) -> str:
+        name = convert_to_valid_identifier(table_name)
+        name = "".join(part[:1].upper() + part[1:] for part in name.split("_"))
+        if "use_inflect" in self.options:
+            singular_name = self.inflect_engine.singular_noun(name)
+            if singular_name:
+                name = singular_name
+
+        return name
 
     def generate_relationships(
         self,
-        source: ClassModel,
-        models_by_table_name: dict[str, Model],
-        association_tables: list[Model],
-    ) -> list[RelationshipAttribute]:
-        relationships: list[RelationshipAttribute] = []
-        reverse_relationship: RelationshipAttribute | None
-
+        source_class: ClassModel,
+        class_models_by_table_name: dict[str, ClassModel],
+        association_tables: list[TableModel],
+    ) -> None:
         # Add many-to-one (and one-to-many) relationships
-        pk_column_names = {col.name for col in source.table.primary_key.columns}
+        pk_column_names = {col.name for col in source_class.table.primary_key.columns}
         for constraint in sorted(
-            source.table.foreign_key_constraints, key=get_constraint_sort_key
+            source_class.table.foreign_key_constraints, key=get_constraint_sort_key
         ):
-            target = models_by_table_name[
-                qualified_table_name(constraint.elements[0].column.table)
-            ]
-            if isinstance(target, ModelClass):
-                if "nojoined" not in self.options:
-                    if set(get_column_names(constraint)) == pk_column_names:
-                        parent = models_by_table_name[
-                            qualified_table_name(constraint.elements[0].column.table)
-                        ]
-                        if isinstance(parent, ModelClass):
-                            source.parent_class = parent
-                            parent.children.append(source)
-                            continue
+            # Try to find the target class for the relationship; move on if not found
+            target_class = class_models_by_table_name.get(
+                constraint.referred_table.fullname
+            )
+            if not target_class:
+                continue
 
-                # Add uselist=False to One-to-One relationships
-                column_names = get_column_names(constraint)
+            # Pick out joined-class relationships first
+            if "nojoined" not in self.options:
+                if set(get_column_names(constraint)) == pk_column_names:
+                    source_class.bases = [target_class]
+                    continue
+
+            # Make "lambda: " references to the target if it appears after the source
+            reference_class = (
+                LambdaReference
+                if self.models.index(source_class) <= self.models.index(target_class)
+                else Reference
+            )
+            relationship_model = CallableModel(
+                relationship, [reference_class(target_class)]
+            )
+
+            # Generate the initial preferred name
+            column_names = get_column_names(constraint)
+            if len(column_names) == 1 and column_names[0].endswith("_id"):
+                preferred_name = column_names[0][:-3]
+            else:
+                preferred_name = target_class.table.name
+
+            # For self-referential relationships, remote_side needs to be set
+            if source_class is target_class:
+                relationship_model.kwargs["remote_side"] = ListModel(
+                    Reference(attr)
+                    for attr in source_class.attributes
+                    if isinstance(attr, ColumnAttribute)
+                    and attr.value.kwargs.get("primary_key")
+                )
+
+            # If the two tables share more than one foreign key constraint,
+            # SQLAlchemy needs an explicit primaryjoin to figure out which column(s)
+            # it needs
+            common_fk_constraints = get_common_fk_constraints(
+                source_class.table, target_class.table
+            )
+            if len(common_fk_constraints) > 1:
+                # Make direct references for self-referential relationships
+                if source_class is target_class:
+                    make_reference = Reference
+                else:
+                    make_reference = partial(reference_class, source_class)
+
+                relationship_model.kwargs["foreign_keys"] = ListModel(
+                    Reference(attr)
+                    for attr in source_class.attributes
+                    if isinstance(attr, ColumnAttribute)
+                    and attr.column_name in constraint.column_keys
+                )
+
+            # Add the relationship attribute to the source class
+            relationship_attribute = RelationshipAttribute(
+                preferred_name, relationship_model
+            )
+            source_class.attributes.append(relationship_attribute)
+
+            # Add the reverse relationship to the target class
+            if "nobidi" not in self.options:
+                if self.models.index(source_class) >= self.models.index(target_class):
+                    reverse_ref_class = LambdaReference
+                else:
+                    reverse_ref_class = Reference
+
+                if source_class is target_class:
+                    reverse_preferred_name = preferred_name + "_reverse"
+                else:
+                    reverse_preferred_name = source_class.table.name
+
+                reverse_relationship_model = CallableModel(
+                    relationship, [reverse_ref_class(source_class)]
+                )
+
+                # Add uselist=False to reverse side of one-to-one relationships
                 if any(
                     isinstance(c, (PrimaryKeyConstraint, UniqueConstraint))
                     and {col.name for col in c.columns} == set(column_names)
                     for c in constraint.table.constraints
                 ):
-                    r_type = RelationshipType.ONE_TO_ONE
-                else:
-                    r_type = RelationshipType.MANY_TO_ONE
+                    reverse_relationship_model.kwargs["uselist"] = False
 
-                relationship = RelationshipAttribute(r_type, source, target, constraint)
-                source.relationships.append(relationship)
-
-                # For self referential relationships, remote_side needs to be set
-                if source is target:
-                    relationship.remote_side = [
-                        source.get_column_attribute(col.name)
-                        for col in constraint.referred_table.primary_key
-                    ]
-
-                # If the two tables share more than one foreign key constraint,
-                # SQLAlchemy needs an explicit primaryjoin to figure out which column(s)
-                # it needs
-                common_fk_constraints = get_common_fk_constraints(
-                    source.table, target.table
-                )
-                if len(common_fk_constraints) > 1:
-                    relationship.foreign_keys = [
-                        source.get_column_attribute(key)
-                        for key in constraint.column_keys
-                    ]
-
-                # Generate the opposite end of the relationship in the target class
-                if "nobidi" not in self.options:
-                    if r_type is RelationshipType.MANY_TO_ONE:
-                        r_type = RelationshipType.ONE_TO_MANY
-
-                    reverse_relationship = RelationshipAttribute(
-                        r_type,
-                        target,
-                        source,
-                        constraint,
-                        foreign_keys=relationship.foreign_keys,
-                        backref=relationship,
+                # For self-referential relationships, remote_side needs to be set
+                if source_class is target_class:
+                    reverse_relationship_model.kwargs["remote_side"] = ListModel(
+                        Reference(attr)
+                        for attr in source_class.attributes
+                        if isinstance(attr, ColumnAttribute)
+                        and attr.column_name in column_names
                     )
-                    relationship.backref = reverse_relationship
-                    target.relationships.append(reverse_relationship)
 
-                    # For self referential relationships, remote_side needs to be set
-                    if source is target:
-                        reverse_relationship.remote_side = [
-                            source.get_column_attribute(colname)
-                            for colname in constraint.column_keys
-                        ]
+                if len(common_fk_constraints) > 1:
+                    # Make direct references for self-referential relationships
+                    if source_class is target_class:
+                        make_reference = Reference
+                    else:
+                        make_reference = partial(Reference, source_class)
+
+                    foreign_keys = ListModel(
+                        make_reference(attr)
+                        for attr in source_class.attributes
+                        if isinstance(attr, ColumnAttribute)
+                        and attr.column_name in constraint.column_keys
+                    )
+                    if self.models.index(source_class) > self.models.index(target_class):
+                        foreign_keys = Lambda(foreign_keys)
+
+                    reverse_relationship_model.kwargs["foreign_keys"] = foreign_keys
+
+                reverse_relationship_model.kwargs["back_populates"] = ReprReference(
+                    relationship_attribute
+                )
+                reverse_relationship_attribute = RelationshipAttribute(
+                    reverse_preferred_name, reverse_relationship_model
+                )
+                relationship_model.kwargs["back_populates"] = ReprReference(
+                    reverse_relationship_attribute
+                )
+                target_class.attributes.append(reverse_relationship_attribute)
 
         # Add many-to-many relationships
         for association_table in association_tables:
@@ -820,351 +1029,373 @@ class DeclarativeGenerator(TablesGenerator):
                 association_table.table.foreign_key_constraints,
                 key=get_constraint_sort_key,
             )
-            target = models_by_table_name[
-                qualified_table_name(fk_constraints[1].elements[0].column.table)
-            ]
-            if isinstance(target, ModelClass):
-                relationship = RelationshipAttribute(
-                    RelationshipType.MANY_TO_MANY,
-                    source,
-                    target,
-                    fk_constraints[1],
-                    association_table,
+            if not fk_constraints[0].elements[0].references(source_class.table):
+                continue
+
+            target_class = class_models_by_table_name.get(
+                fk_constraints[1].referred_table.fullname
+            )
+            if not target_class:
+                continue
+
+            # Make "lambda: " references to the target if it appears after the source
+            reference_class = (
+                LambdaReference
+                if self.models.index(source_class) <= self.models.index(target_class)
+                else Reference
+            )
+            relationship_model = CallableModel(
+                relationship,
+                [reference_class(target_class)],
+                {"secondary": repr(association_table.table.fullname)},
+            )
+
+            # Generate primaryjoin and secondaryjoin for self-referential many-to-many
+            if source_class is target_class:
+                source_column_names = {
+                    element.column.name for element in fk_constraints[0].elements
+                }
+                source_columns = [
+                    attr
+                    for attr in source_class.attributes
+                    if isinstance(attr, ColumnAttribute)
+                    and attr.column_name in source_column_names
+                ]
+                target_column_names = fk_constraints[0].column_keys
+                joins = list(zip(source_columns, target_column_names))
+                relationship_model.kwargs["primaryjoin"] = JoinModel(
+                    source_class, association_table, joins
                 )
-                source.relationships.append(relationship)
 
-                # Generate the opposite end of the relationship in the target class
-                reverse_relationship = None
-                if "nobidi" not in self.options:
-                    reverse_relationship = RelationshipAttribute(
-                        RelationshipType.MANY_TO_MANY,
-                        target,
-                        source,
-                        fk_constraints[0],
-                        association_table,
-                        relationship,
-                    )
-                    relationship.backref = reverse_relationship
-                    target.relationships.append(reverse_relationship)
+                source_column_names = {
+                    element.column.name for element in fk_constraints[1].elements
+                }
+                source_columns = [
+                    attr
+                    for attr in source_class.attributes
+                    if isinstance(attr, ColumnAttribute)
+                    and attr.column_name in source_column_names
+                ]
+                target_column_names = fk_constraints[1].column_keys
+                joins = list(zip(source_columns, target_column_names))
+                relationship_model.kwargs["secondaryjoin"] = JoinModel(
+                    source_class, association_table, joins
+                )
 
-                # Add a primary/secondary join for self-referential many-to-many
-                # relationships
-                if source is target:
-                    both_relationships = [relationship]
-                    reverse_flags = [False, True]
-                    if reverse_relationship:
-                        both_relationships.append(reverse_relationship)
-
-                    for relationship, reverse in zip(both_relationships, reverse_flags):
-                        if (
-                            not relationship.association_table
-                            or not relationship.constraint
-                        ):
-                            continue
-
-                        constraints = sorted(
-                            relationship.constraint.table.foreign_key_constraints,
-                            key=get_constraint_sort_key,
-                            reverse=reverse,
-                        )
-                        pri_pairs = zip(
-                            get_column_names(constraints[0]), constraints[0].elements
-                        )
-                        sec_pairs = zip(
-                            get_column_names(constraints[1]), constraints[1].elements
-                        )
-                        relationship.primaryjoin = [
-                            (
-                                relationship.source,
-                                elem.column.name,
-                                relationship.association_table,
-                                col,
-                            )
-                            for col, elem in pri_pairs
-                        ]
-                        relationship.secondaryjoin = [
-                            (
-                                relationship.target,
-                                elem.column.name,
-                                relationship.association_table,
-                                col,
-                            )
-                            for col, elem in sec_pairs
-                        ]
-
-        return relationships
-
-    def generate_class_name(self, table: Table) -> str:
-        name = _re_invalid_identifier.sub("_", table.name)
-        name = "".join(
-            part[:1].upper() + part[1:] for part in name.split("_")
-        )
-        if "use_inflect" in self.options:
-            singular_name = self.inflect_engine.singular_noun(name)
-            if singular_name:
-                name = singular_name
-
-        return name
-        # # Fill in the names for column attributes
-        # local_names: set[str] = set()
-        # for column_attr in model.columns:
-        #     self.generate_column_attr_name(column_attr, global_names, local_names)
-        #     local_names.add(column_attr.name)
-        #
-        # # Fill in the names for relationship attributes
-        # for relationship in model.relationships:
-        #     self.generate_relationship_name(relationship, global_names, local_names)
-        #     local_names.add(relationship.name)
-
-    def generate_column_attr_name(
-        self,
-        column_attr: ColumnAttribute,
-        global_names: set[str],
-        local_names: set[str],
-    ) -> None:
-        column_attr.name = self.find_free_name(
-            column_attr.column.name, global_names, local_names
-        )
-
-    def generate_relationship_name(
-        self,
-        relationship: RelationshipAttribute,
-        global_names: set[str],
-        local_names: set[str],
-    ) -> None:
-        # Self referential reverse relationships
-        if (
-            relationship.type
-            in (RelationshipType.ONE_TO_MANY, RelationshipType.ONE_TO_ONE)
-            and relationship.source is relationship.target
-            and relationship.backref
-            and relationship.backref.name
-        ):
-            preferred_name = relationship.backref.name + "_reverse"
-        else:
-            preferred_name = relationship.target.table.name
-
-            # If there's a constraint with a single column that ends with "_id", use the
-            # preceding part as the relationship name
-            if relationship.constraint:
-                is_source = relationship.source.table is relationship.constraint.table
-                if is_source or relationship.type not in (
-                    RelationshipType.ONE_TO_ONE,
-                    RelationshipType.ONE_TO_MANY,
-                ):
-                    column_names = [c.name for c in relationship.constraint.columns]
-                    if len(column_names) == 1 and column_names[0].endswith("_id"):
-                        preferred_name = column_names[0][:-3]
-
-            if "use_inflect" in self.options:
-                if relationship.type in (
-                    RelationshipType.ONE_TO_MANY,
-                    RelationshipType.MANY_TO_MANY,
-                ):
-                    preferred_name = self.inflect_engine.plural_noun(preferred_name)
-                else:
-                    preferred_name = self.inflect_engine.singular_noun(preferred_name)
-
-        relationship.name = self.find_free_name(
-            preferred_name, global_names, local_names
-        )
-
-    def render_module_variables(self, models: list[Model]) -> str:
-        if not any(isinstance(model, ModelClass) for model in models):
-            return super().render_module_variables(models)
-
-        declarations = [f"{self.base_class_name} = declarative_base()"]
-        if any(not isinstance(model, ModelClass) for model in models):
-            declarations.append(f"metadata = {self.base_class_name}.metadata")
-
-        return "\n".join(declarations)
-
-    def render(self, models: list[Model]) -> str:
-        rendered = []
-        for model in models:
-            if isinstance(model, ModelClass):
-                rendered.append(self.render_class(model))
+            # Generate the initial preferred name
+            column_names = get_column_names(fk_constraints[1])
+            if len(column_names) == 1 and column_names[0].endswith("_id"):
+                preferred_name = column_names[0][:-3]
             else:
-                rendered.append(f"{model.name} = {self.render_table(model.table)}")
+                preferred_name = target_class.table.name
 
-        return "\n\n\n".join(rendered)
+            # Add the relationship attribute to the source class
+            relationship_attribute = RelationshipAttribute(
+                preferred_name, relationship_model
+            )
+            source_class.attributes.append(relationship_attribute)
 
-    def render_class(self, model: ModelClass) -> str:
-        sections: list[str] = []
+            # Generate the opposite end of the relationship in the target class
+            reverse_relationship_model: CallableModel | None = None
+            if "nobidi" not in self.options:
+                if self.models.index(source_class) >= self.models.index(target_class):
+                    reverse_ref_class = LambdaReference
+                else:
+                    reverse_ref_class = Reference
 
-        # Render class variables / special declarations
-        class_vars: str = self.render_class_variables(model)
-        if class_vars:
-            sections.append(class_vars)
+                reverse_relationship_model = CallableModel(
+                    relationship,
+                    [reverse_ref_class(source_class)],
+                    {"secondary": repr(association_table.table.fullname)},
+                )
 
-        # Render column attributes
-        rendered_column_attributes: list[str] = []
-        for nullable in (False, True):
-            for column_attr in model.columns:
-                if column_attr.column.nullable is nullable:
-                    rendered_column_attributes.append(
-                        self.render_column_attribute(column_attr)
+                # Generate primaryjoin and secondaryjoin for self-referential
+                # many-to-many
+                if source_class is target_class:
+                    source_column_names = {
+                        element.column.name for element in fk_constraints[1].elements
+                    }
+                    source_columns = [
+                        attr
+                        for attr in source_class.attributes
+                        if isinstance(attr, ColumnAttribute)
+                        and attr.column_name in source_column_names
+                    ]
+                    target_column_names = fk_constraints[1].column_keys
+                    joins = list(zip(source_columns, target_column_names))
+                    reverse_relationship_model.kwargs["primaryjoin"] = JoinModel(
+                        source_class, association_table, joins
                     )
 
-        if rendered_column_attributes:
-            sections.append("\n".join(rendered_column_attributes))
+                    source_column_names = {
+                        element.column.name for element in fk_constraints[0].elements
+                    }
+                    source_columns = [
+                        attr
+                        for attr in source_class.attributes
+                        if isinstance(attr, ColumnAttribute)
+                        and attr.column_name in source_column_names
+                    ]
+                    target_columns = fk_constraints[0].column_keys
+                    joins = list(zip(source_columns, target_columns))
+                    reverse_relationship_model.kwargs["secondaryjoin"] = JoinModel(
+                        source_class, association_table, joins
+                    )
 
-        # Render relationship attributes
-        rendered_relationship_attributes: list[str] = [
-            self.render_relationship(relationship)
-            for relationship in model.relationships
-        ]
-
-        if rendered_relationship_attributes:
-            sections.append("\n".join(rendered_relationship_attributes))
-
-        declaration = self.render_class_declaration(model)
-        rendered_sections = "\n\n".join(
-            indent(section, self.indentation) for section in sections
-        )
-        return f"{declaration}\n{rendered_sections}"
-
-    def render_class_declaration(self, model: ModelClass) -> str:
-        parent_class_name = (
-            model.parent_class.name if model.parent_class else self.base_class_name
-        )
-        return f"class {model.name}({parent_class_name}):"
-
-    def render_class_variables(self, model: ModelClass) -> str:
-        variables = [f"__tablename__ = {model.table.name!r}"]
-
-        # Render constraints and indexes as __table_args__
-        table_args = self.render_table_args(model.table)
-        if table_args:
-            variables.append(f"__table_args__ = {table_args}")
-
-        return "\n".join(variables)
-
-    def render_table_args(self, table: Table) -> str:
-        args: list[str] = []
-        kwargs: dict[str, str] = {}
-
-        # Render constraints
-        for constraint in sorted(table.constraints, key=get_constraint_sort_key):
-            if uses_default_name(constraint):
-                if isinstance(constraint, PrimaryKeyConstraint):
-                    continue
-                if (
-                    isinstance(constraint, (ForeignKeyConstraint, UniqueConstraint))
-                    and len(constraint.columns) == 1
-                ):
-                    continue
-
-            args.append(self.render_constraint(constraint))
-
-        # Render indexes
-        for index in sorted(table.indexes, key=lambda i: i.name):
-            if len(index.columns) > 1 or not uses_default_name(index):
-                args.append(self.render_index(index))
-
-        if table.schema:
-            kwargs["schema"] = table.schema
-
-        if table.comment:
-            kwargs["comment"] = table.comment
-
-        if kwargs:
-            formatted_kwargs = pformat(kwargs)
-            if not args:
-                return formatted_kwargs
-            else:
-                args.append(formatted_kwargs)
-
-        if args:
-            rendered_args = f",\n{self.indentation}".join(args)
-            if len(args) == 1:
-                rendered_args += ","
-
-            return f"(\n{self.indentation}{rendered_args}\n)"
-        else:
-            return ""
-
-    def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
-        column = column_attr.column
-        rendered_column = self.render_column(column, column_attr.name != column.name)
-        return f"{column_attr.name} = {rendered_column}"
-
-    def render_relationship(self, relationship: RelationshipAttribute) -> str:
-        def render_column_attrs(column_attrs: list[ColumnAttribute]) -> str:
-            rendered = []
-            for attr in column_attrs:
-                if attr.model is relationship.source:
-                    rendered.append(attr.name)
+                # Generate the initial preferred name
+                column_names = get_column_names(fk_constraints[0])
+                if len(column_names) == 1 and column_names[0].endswith("_id"):
+                    reverse_preferred_name = column_names[0][:-3]
                 else:
-                    rendered.append(repr(f"{attr.model.name}.{attr.name}"))
+                    reverse_preferred_name = source_class.table.name
 
-            return "[" + ", ".join(rendered) + "]"
+                reverse_relationship_model.kwargs["back_populates"] = ReprReference(
+                    relationship_attribute
+                )
+                reverse_relationship_attribute = RelationshipAttribute(
+                    reverse_preferred_name, reverse_relationship_model
+                )
+                relationship_model.kwargs["back_populates"] = ReprReference(
+                    reverse_relationship_attribute
+                )
+                target_class.attributes.append(reverse_relationship_attribute)
 
-        def render_foreign_keys(column_attrs: list[ColumnAttribute]) -> str:
-            rendered = []
-            render_as_string = False
-            # Assume that column_attrs are all in relationship.source or none
-            for attr in column_attrs:
-                if attr.model is relationship.source:
-                    rendered.append(attr.name)
-                else:
-                    rendered.append(f"{attr.model.name}.{attr.name}")
-                    render_as_string = True
+    # def generate_relationship_name(
+    #     self,
+    #     relationship: RelationshipAttribute,
+    # ) -> None:
+    #     # Self referential reverse relationships
+    #     if (
+    #         relationship.type
+    #         in (RelationshipType.ONE_TO_MANY, RelationshipType.ONE_TO_ONE)
+    #         and relationship.source is relationship.target
+    #         and relationship.backref
+    #         and relationship.backref.name
+    #     ):
+    #         preferred_name = relationship.backref.name + "_reverse"
+    #     else:
+    #         preferred_name = relationship.target.table.name
+    #
+    #         # If there's a constraint with a single column that ends with "_id", use the
+    #         # preceding part as the relationship name
+    #         if relationship.constraint:
+    #             is_source = relationship.source.table is relationship.constraint.table
+    #             if is_source or relationship.type not in (
+    #                 RelationshipType.ONE_TO_ONE,
+    #                 RelationshipType.ONE_TO_MANY,
+    #             ):
+    #                 column_names = [c.name for c in relationship.constraint.columns]
+    #                 if len(column_names) == 1 and column_names[0].endswith("_id"):
+    #                     preferred_name = column_names[0][:-3]
+    #
+    #         if "use_inflect" in self.options:
+    #             if relationship.type in (
+    #                 RelationshipType.ONE_TO_MANY,
+    #                 RelationshipType.MANY_TO_MANY,
+    #             ):
+    #                 preferred_name = self.inflect_engine.plural_noun(preferred_name)
+    #             else:
+    #                 preferred_name = self.inflect_engine.singular_noun(preferred_name)
+    #
+    #     relationship.name = convert_to_valid_identifier(preferred_name)
 
-            if render_as_string:
-                return "'[" + ", ".join(rendered) + "]'"
-            else:
-                return "[" + ", ".join(rendered) + "]"
-
-        def render_join(terms: list[JoinType]) -> str:
-            rendered_joins = []
-            for source, source_col, target, target_col in terms:
-                rendered = f"lambda: {source.name}.{source_col} == {target.name}."
-                if target.__class__ is Model:
-                    rendered += "c."
-
-                rendered += str(target_col)
-                rendered_joins.append(rendered)
-
-            if len(rendered_joins) > 1:
-                rendered = ", ".join(rendered_joins)
-                return f"and_({rendered})"
-            else:
-                return rendered_joins[0]
-
-        # Render keyword arguments
-        kwargs: dict[str, Any] = {}
-        if relationship.type is RelationshipType.ONE_TO_ONE and relationship.constraint:
-            if relationship.constraint.referred_table is relationship.source.table:
-                kwargs["uselist"] = False
-
-        # Add the "secondary" keyword for many-to-many relationships
-        if relationship.association_table:
-            table_ref = relationship.association_table.table.name
-            if relationship.association_table.schema:
-                table_ref = f"{relationship.association_table.schema}.{table_ref}"
-
-            kwargs["secondary"] = repr(table_ref)
-
-        if relationship.remote_side:
-            kwargs["remote_side"] = render_column_attrs(relationship.remote_side)
-
-        if relationship.foreign_keys:
-            kwargs["foreign_keys"] = render_foreign_keys(relationship.foreign_keys)
-
-        if relationship.primaryjoin:
-            kwargs["primaryjoin"] = render_join(relationship.primaryjoin)
-
-        if relationship.secondaryjoin:
-            kwargs["secondaryjoin"] = render_join(relationship.secondaryjoin)
-
-        if relationship.backref:
-            kwargs["back_populates"] = repr(relationship.backref.name)
-
-        rendered_relationship = render_callable(
-            "relationship", repr(relationship.target.name), kwargs=kwargs
-        )
-        return f"{relationship.name} = {rendered_relationship}"
+    #
+    # def render_module_variables(self, models: list[Model]) -> str:
+    #     if not any(isinstance(model, ModelClass) for model in models):
+    #         return super().render_module_variables(models)
+    #
+    #     declarations = [f"{self.base_class_name} = declarative_base()"]
+    #     if any(not isinstance(model, ModelClass) for model in models):
+    #         declarations.append(f"metadata = {self.base_class_name}.metadata")
+    #
+    #     return "\n".join(declarations)
+    #
+    # def render(self, models: list[Model]) -> str:
+    #     rendered = []
+    #     for model in models:
+    #         if isinstance(model, ModelClass):
+    #             rendered.append(self.render_class(model))
+    #         else:
+    #             rendered.append(f"{model.name} = {self.render_table(model.table)}")
+    #
+    #     return "\n\n\n".join(rendered)
+    #
+    # def render_class(self, model: ModelClass) -> str:
+    #     sections: list[str] = []
+    #
+    #     # Render class variables / special declarations
+    #     class_vars: str = self.render_class_variables(model)
+    #     if class_vars:
+    #         sections.append(class_vars)
+    #
+    #     # Render column attributes
+    #     rendered_column_attributes: list[str] = []
+    #     for nullable in (False, True):
+    #         for column_attr in model.columns:
+    #             if column_attr.column.nullable is nullable:
+    #                 rendered_column_attributes.append(
+    #                     self.render_column_attribute(column_attr)
+    #                 )
+    #
+    #     if rendered_column_attributes:
+    #         sections.append("\n".join(rendered_column_attributes))
+    #
+    #     # Render relationship attributes
+    #     rendered_relationship_attributes: list[str] = [
+    #         self.render_relationship(relationship)
+    #         for relationship in model.relationships
+    #     ]
+    #
+    #     if rendered_relationship_attributes:
+    #         sections.append("\n".join(rendered_relationship_attributes))
+    #
+    #     declaration = self.render_class_declaration(model)
+    #     rendered_sections = "\n\n".join(
+    #         indent(section, self.indentation) for section in sections
+    #     )
+    #     return f"{declaration}\n{rendered_sections}"
+    #
+    # def render_class_declaration(self, model: ModelClass) -> str:
+    #     parent_class_name = (
+    #         model.parent_class.name if model.parent_class else self.base_class_name
+    #     )
+    #     return f"class {model.name}({parent_class_name}):"
+    #
+    # def render_class_variables(self, model: ModelClass) -> str:
+    #     variables = [f"__tablename__ = {model.table.name!r}"]
+    #
+    #     # Render constraints and indexes as __table_args__
+    #     table_args = self.render_table_args(model.table)
+    #     if table_args:
+    #         variables.append(f"__table_args__ = {table_args}")
+    #
+    #     return "\n".join(variables)
+    #
+    # def render_table_args(self, table: Table) -> str:
+    #     args: list[str] = []
+    #     kwargs: dict[str, str] = {}
+    #
+    #     # Render constraints
+    #     for constraint in sorted(table.constraints, key=get_constraint_sort_key):
+    #         if uses_default_name(constraint):
+    #             if isinstance(constraint, PrimaryKeyConstraint):
+    #                 continue
+    #             if (
+    #                 isinstance(constraint, (ForeignKeyConstraint, UniqueConstraint))
+    #                 and len(constraint.columns) == 1
+    #             ):
+    #                 continue
+    #
+    #         args.append(self.render_constraint(constraint))
+    #
+    #     # Render indexes
+    #     for index in sorted(table.indexes, key=lambda i: i.name):
+    #         if len(index.columns) > 1 or not uses_default_name(index):
+    #             args.append(self.render_index(index))
+    #
+    #     if table.schema:
+    #         kwargs["schema"] = table.schema
+    #
+    #     if table.comment:
+    #         kwargs["comment"] = table.comment
+    #
+    #     if kwargs:
+    #         formatted_kwargs = pformat(kwargs)
+    #         if not args:
+    #             return formatted_kwargs
+    #         else:
+    #             args.append(formatted_kwargs)
+    #
+    #     if args:
+    #         rendered_args = f",\n{self.indentation}".join(args)
+    #         if len(args) == 1:
+    #             rendered_args += ","
+    #
+    #         return f"(\n{self.indentation}{rendered_args}\n)"
+    #     else:
+    #         return ""
+    #
+    # def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
+    #     column = column_attr.column
+    #     rendered_column = self.render_column(column, column_attr.name != column.name)
+    #     return f"{column_attr.name} = {rendered_column}"
+    #
+    # def render_relationship(self, relationship: RelationshipAttribute) -> str:
+    #     def render_column_attrs(column_attrs: list[ColumnAttribute]) -> str:
+    #         rendered = []
+    #         for attr in column_attrs:
+    #             if attr.model is relationship.source:
+    #                 rendered.append(attr.name)
+    #             else:
+    #                 rendered.append(repr(f"{attr.model.name}.{attr.name}"))
+    #
+    #         return "[" + ", ".join(rendered) + "]"
+    #
+    #     def render_foreign_keys(column_attrs: list[ColumnAttribute]) -> str:
+    #         rendered = []
+    #         render_as_string = False
+    #         # Assume that column_attrs are all in relationship.source or none
+    #         for attr in column_attrs:
+    #             if attr.model is relationship.source:
+    #                 rendered.append(attr.name)
+    #             else:
+    #                 rendered.append(f"{attr.model.name}.{attr.name}")
+    #                 render_as_string = True
+    #
+    #         if render_as_string:
+    #             return "'[" + ", ".join(rendered) + "]'"
+    #         else:
+    #             return "[" + ", ".join(rendered) + "]"
+    #
+    #     def render_join(terms: list[JoinType]) -> str:
+    #         rendered_joins = []
+    #         for source, source_col, target, target_col in terms:
+    #             rendered = f"lambda: {source.name}.{source_col} == {target.name}."
+    #             if target.__class__ is Model:
+    #                 rendered += "c."
+    #
+    #             rendered += str(target_col)
+    #             rendered_joins.append(rendered)
+    #
+    #         if len(rendered_joins) > 1:
+    #             rendered = ", ".join(rendered_joins)
+    #             return f"and_({rendered})"
+    #         else:
+    #             return rendered_joins[0]
+    #
+    #     # Render keyword arguments
+    #     kwargs: dict[str, Any] = {}
+    #     if relationship.type is RelationshipType.ONE_TO_ONE and relationship.constraint:
+    #         if relationship.constraint.referred_table is relationship.source.table:
+    #             kwargs["uselist"] = False
+    #
+    #     # Add the "secondary" keyword for many-to-many relationships
+    #     if relationship.association_table:
+    #         table_ref = relationship.association_table.table.name
+    #         if relationship.association_table.schema:
+    #             table_ref = f"{relationship.association_table.schema}.{table_ref}"
+    #
+    #         kwargs["secondary"] = repr(table_ref)
+    #
+    #     if relationship.remote_side:
+    #         kwargs["remote_side"] = render_column_attrs(relationship.remote_side)
+    #
+    #     if relationship.foreign_keys:
+    #         kwargs["foreign_keys"] = render_foreign_keys(relationship.foreign_keys)
+    #
+    #     if relationship.primaryjoin:
+    #         kwargs["primaryjoin"] = render_join(relationship.primaryjoin)
+    #
+    #     if relationship.secondaryjoin:
+    #         kwargs["secondaryjoin"] = render_join(relationship.secondaryjoin)
+    #
+    #     if relationship.backref:
+    #         kwargs["back_populates"] = repr(relationship.backref.name)
+    #
+    #     rendered_relationship = render_callable(
+    #         "relationship", repr(relationship.target.name), kwargs=kwargs
+    #     )
+    #     return f"{relationship.name} = {rendered_relationship}"
 
 
 class DataclassGenerator(DeclarativeGenerator):
