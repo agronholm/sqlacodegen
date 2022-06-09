@@ -1032,7 +1032,9 @@ class DeclarativeGenerator(TablesGenerator):
 
     def render_class(self, model: ModelClass) -> str:
         sections: list[str] = []
-
+        comments = self.render_table_comment(model)
+        if comments:
+            sections.append(comments)
         # Render class variables / special declarations
         class_vars: str = self.render_class_variables(model)
         if class_vars:
@@ -1070,6 +1072,10 @@ class DeclarativeGenerator(TablesGenerator):
             model.parent_class.name if model.parent_class else self.base_class_name
         )
         return f"class {model.name}({parent_class_name}):"
+
+    def render_table_comment(self, model: ModelClass) -> str:
+        if model.table.comment:
+            return f'"""{model.table.comment}"""'
 
     def render_class_variables(self, model: ModelClass) -> str:
         variables = [f"__tablename__ = {model.table.name!r}"]
