@@ -1822,6 +1822,174 @@ class Singular(Base):
             """,
         )
 
+    @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+    def test_use_inflect_plural_s(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("manufacturer_id", INTEGER),
+            ForeignKeyConstraint(["manufacturer_id"], ["manufacturers.id"]),
+            UniqueConstraint("manufacturer_id"),
+        )
+        Table(
+            "manufacturers", generator.metadata, Column("id", INTEGER, primary_key=True)
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+class Manufacturer(Base):
+    __tablename__ = 'manufacturers'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_item = relationship('SimpleItem', uselist=False, \
+back_populates='manufacturer')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    manufacturer_id = Column(ForeignKey('manufacturers.id'), unique=True)
+
+    manufacturer = relationship('Manufacturer', back_populates='simple_item')
+            """,
+        )
+
+    @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+    def test_use_inflect_plural_es(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("status_id", INTEGER),
+            ForeignKeyConstraint(["status_id"], ["statuses.id"]),
+            UniqueConstraint("status_id"),
+        )
+        Table(
+            "statuses", generator.metadata, Column("id", INTEGER, primary_key=True)
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+class Status(Base):
+    __tablename__ = 'statuses'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_item = relationship('SimpleItem', uselist=False, \
+back_populates='status')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    status_id = Column(ForeignKey('statuses.id'), unique=True)
+
+    status = relationship('Status', back_populates='simple_item')
+            """,
+        )
+
+    @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+    def test_use_inflect_plural_ies(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("study_id", INTEGER),
+            ForeignKeyConstraint(["study_id"], ["studies.id"]),
+            UniqueConstraint("study_id"),
+        )
+        Table(
+            "studies", generator.metadata, Column("id", INTEGER, primary_key=True)
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+class Study(Base):
+    __tablename__ = 'studies'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_item = relationship('SimpleItem', uselist=False, \
+back_populates='study')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    study_id = Column(ForeignKey('studies.id'), unique=True)
+
+    study = relationship('Study', back_populates='simple_item')
+            """,
+        )
+
+    @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+    def test_use_inflect_singular(self, generator: CodeGenerator) -> None:
+        Table(
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("moose_id", INTEGER),
+            ForeignKeyConstraint(["moose_id"], ["moose.id"]),
+            UniqueConstraint("moose_id"),
+        )
+        Table(
+            "moose", generator.metadata, Column("id", INTEGER, primary_key=True)
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+class Moose(Base):
+    __tablename__ = 'moose'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_item = relationship('SimpleItem', uselist=False, \
+back_populates='moose')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    moose_id = Column(ForeignKey('moose.id'), unique=True)
+
+    moose = relationship('Moose', back_populates='simple_item')
+            """,
+        )
+
     def test_table_kwargs(self, generator: CodeGenerator) -> None:
         Table(
             "simple_items",
