@@ -1874,9 +1874,7 @@ class SimpleItem(Base):
             ForeignKeyConstraint(["status_id"], ["statuses.id"]),
             UniqueConstraint("status_id"),
         )
-        Table(
-            "statuses", generator.metadata, Column("id", INTEGER, primary_key=True)
-        )
+        Table("statuses", generator.metadata, Column("id", INTEGER, primary_key=True))
 
         validate_code(
             generator.generate(),
@@ -1916,9 +1914,7 @@ class SimpleItem(Base):
             ForeignKeyConstraint(["study_id"], ["studies.id"]),
             UniqueConstraint("study_id"),
         )
-        Table(
-            "studies", generator.metadata, Column("id", INTEGER, primary_key=True)
-        )
+        Table("studies", generator.metadata, Column("id", INTEGER, primary_key=True))
 
         validate_code(
             generator.generate(),
@@ -1958,9 +1954,7 @@ class SimpleItem(Base):
             ForeignKeyConstraint(["moose_id"], ["moose.id"]),
             UniqueConstraint("moose_id"),
         )
-        Table(
-            "moose", generator.metadata, Column("id", INTEGER, primary_key=True)
-        )
+        Table("moose", generator.metadata, Column("id", INTEGER, primary_key=True))
 
         validate_code(
             generator.generate(),
