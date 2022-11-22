@@ -1824,11 +1824,7 @@ class Singular(Base):
 
     @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
     @pytest.mark.parametrize(
-        argnames=(
-            "table_name",
-            "class_name",
-            "relationship_name"
-        ),
+        argnames=("table_name", "class_name", "relationship_name"),
         argvalues=[
             ("manufacturers", "manufacturer", "manufacturer"),
             ("statuses", "status", "status"),
@@ -1836,11 +1832,12 @@ class Singular(Base):
             ("moose", "moose", "moose"),
         ],
         ids=[
-            'test_inflect_manufacturer',
-            'test_inflect_status',
-            'test_inflect_study',
-            'test_inflect_moose'
-        ])
+            "test_inflect_manufacturer",
+            "test_inflect_status",
+            "test_inflect_study",
+            "test_inflect_moose",
+        ],
+    )
     def test_use_inflect_plural(
         self, generator: CodeGenerator, table_name, class_name, relationship_name
     ) -> None:
