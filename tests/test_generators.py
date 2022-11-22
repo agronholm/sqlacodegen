@@ -1822,7 +1822,9 @@ class Singular(Base):
             """,
         )
 
-    def use_inflect_pluralization(self, generator: CodeGenerator, singular: str, plural: str) -> None:
+    def use_inflect_pluralization(
+        self, generator: CodeGenerator, singular: str, plural: str
+    ) -> None:
         Table(
             "simple_items",
             generator.metadata,
@@ -1863,19 +1865,19 @@ class SimpleItem(Base):
 
     @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
     def test_use_inflect_plural_s(self, generator: CodeGenerator) -> None:
-        self.use_inflect_pluralization(generator, 'manufacturer', 'manufacturers')
-        
+        self.use_inflect_pluralization(generator, "manufacturer", "manufacturers")
+
     @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
     def test_use_inflect_plural_es(self, generator: CodeGenerator) -> None:
-        self.use_inflect_pluralization(generator, 'status', 'statuses')
+        self.use_inflect_pluralization(generator, "status", "statuses")
 
     @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
     def test_use_inflect_plural_ies(self, generator: CodeGenerator) -> None:
-        self.use_inflect_pluralization(generator, 'study', 'studies')
-    
+        self.use_inflect_pluralization(generator, "study", "studies")
+
     @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
     def test_use_inflect_singular(self, generator: CodeGenerator) -> None:
-        self.use_inflect_pluralization(generator, 'moose', 'moose')
+        self.use_inflect_pluralization(generator, "moose", "moose")
 
     def test_table_kwargs(self, generator: CodeGenerator) -> None:
         Table(
