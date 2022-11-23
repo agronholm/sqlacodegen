@@ -1843,7 +1843,7 @@ class Singular(Base):
         generator: CodeGenerator,
         table_name: str,
         class_name: str,
-        relationship_name: str
+        relationship_name: str,
     ) -> None:
         Table(
             "simple_items",
