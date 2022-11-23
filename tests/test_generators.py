@@ -1839,7 +1839,11 @@ class Singular(Base):
         ],
     )
     def test_use_inflect_plural(
-        self, generator: CodeGenerator, table_name, class_name, relationship_name
+        self,
+        generator: CodeGenerator,
+        table_name: str,
+        class_name: str,
+        relationship_name: str
     ) -> None:
         Table(
             "simple_items",
@@ -1875,7 +1879,8 @@ class SimpleItem(Base):
     id = Column(Integer, primary_key=True)
     {relationship_name}_id = Column(ForeignKey('{table_name}.id'), unique=True)
 
-    {relationship_name} = relationship('{class_name.capitalize()}', back_populates='simple_item')
+    {relationship_name} = relationship('{class_name.capitalize()}', \
+back_populates='simple_item')
             """,
         )
 
