@@ -44,6 +44,8 @@ test = [
     "pytest-cov",
     "psycopg2-binary",
     "mysql-connector-python",
+]
+sqlmodel = [
     "sqlmodel",
 ]
 citext = ["sqlalchemy-citext >= 1.7.0"]
@@ -75,7 +77,8 @@ strict = true
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [tool.pytest.ini_options]
-addopts = "-rsx --tb=short"
+pythonpath = "src/sqlacodegen"
+addopts = "-rsx --tb=short --import-mode=importlib"
 testpaths = ["tests"]
 
 [coverage.run]

@@ -10,7 +10,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.10"]
+        python-version: ["3.7", "3.11"]
+        sqlalchemy-version: ["1.4.*", "2.0.*"]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -21,9 +22,13 @@ jobs:
     - uses: actions/cache@v2
       with:
         path: ~/.cache/pip
-        key: pip-test-${{ matrix.python-version }}-${{ matrix.os }}
+        key: pip-test-${{ matrix.python-version }}-${{ matrix.sqlalchemy-version }}-${{ matrix.os }}
     - name: Install dependencies
-      run: pip install .[test] coveralls
+      run:  | 
+        python -m pip install .[test] coveralls SQLAlchemy==${{ matrix.sqlalchemy-version }}
+    - name: List Python environment
+      run:  | 
+        python -m pip freeze
     - name: Test with pytest
       run: coverage run -m pytest
     - name: Upload Coverage
