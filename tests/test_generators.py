@@ -1822,6 +1822,68 @@ class Singular(Base):
             """,
         )
 
+    @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+    @pytest.mark.parametrize(
+        argnames=("table_name", "class_name", "relationship_name"),
+        argvalues=[
+            ("manufacturers", "manufacturer", "manufacturer"),
+            ("statuses", "status", "status"),
+            ("studies", "study", "study"),
+            ("moose", "moose", "moose"),
+        ],
+        ids=[
+            "test_inflect_manufacturer",
+            "test_inflect_status",
+            "test_inflect_study",
+            "test_inflect_moose",
+        ],
+    )
+    def test_use_inflect_plural(
+        self,
+        generator: CodeGenerator,
+        table_name: str,
+        class_name: str,
+        relationship_name: str,
+    ) -> None:
+        Table(
+            "simple_items",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column(f"{relationship_name}_id", INTEGER),
+            ForeignKeyConstraint([f"{relationship_name}_id"], [f"{table_name}.id"]),
+            UniqueConstraint(f"{relationship_name}_id"),
+        )
+        Table(table_name, generator.metadata, Column("id", INTEGER, primary_key=True))
+
+        validate_code(
+            generator.generate(),
+            f"""\
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+class {class_name.capitalize()}(Base):
+    __tablename__ = '{table_name}'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_item = relationship('SimpleItem', uselist=False, \
+back_populates='{relationship_name}')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id = Column(Integer, primary_key=True)
+    {relationship_name}_id = Column(ForeignKey('{table_name}.id'), unique=True)
+
+    {relationship_name} = relationship('{class_name.capitalize()}', \
+back_populates='simple_item')
+            """,
+        )
+
     def test_table_kwargs(self, generator: CodeGenerator) -> None:
         Table(
             "simple_items",
