@@ -181,10 +181,9 @@ For examples, you can look at sqlacodegen's own entry points in its `pyproject.t
 Getting help
 ============
 
-If you have problems or other questions, you can either:
+If you have problems or other questions, you should start a discussion on the
+`sqlacodegen discussion forum`_. As an alternative, you could also try your luck on the
+sqlalchemy_ room on Gitter.
 
-* Ask on the `SQLAlchemy Google group`_, or
-* Ask on the sqlalchemy_ room on Gitter
-
-.. _SQLAlchemy Google group: http://groups.google.com/group/sqlalchemy
-.. _sqlalchemy: https://gitter.im/sqlalchemy/community
+.. _sqlacodegen discussion forum: https://github.com/agronholm/sqlacodegen/discussions/categories/q-a
+.. _sqlalchemy: https://app.gitter.im/#/room/#sqlalchemy_community:gitter.im
