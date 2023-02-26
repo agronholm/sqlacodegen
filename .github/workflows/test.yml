@@ -13,17 +13,15 @@ jobs:
         python-version: ["3.7", "3.10"]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - uses: actions/cache@v2
-      with:
-        path: ~/.cache/pip
-        key: pip-test-${{ matrix.python-version }}-${{ matrix.os }}
+        cache: pip
+        cache-dependency-path: pyproject.toml
     - name: Install dependencies
-      run: pip install .[test] coveralls
+      run: pip install -e .[test] coveralls
     - name: Test with pytest
       run: coverage run -m pytest
     - name: Upload Coverage
