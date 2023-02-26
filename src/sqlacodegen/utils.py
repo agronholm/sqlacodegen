@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
+from typing import Any
 
 from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
-from sqlalchemy.engine import Connectable
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.schema import (
@@ -33,7 +34,7 @@ def get_constraint_sort_key(constraint: Constraint) -> str:
         return str(constraint)
 
 
-def get_compiled_expression(statement: ClauseElement, bind: Connectable) -> str:
+def get_compiled_expression(statement: ClauseElement, bind: Engine | Connection) -> str:
     """Return the statement in a form where any placeholders have been filled in."""
     return str(statement.compile(bind, compile_kwargs={"literal_binds": True}))
 
@@ -63,7 +64,10 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
         return True
 
     table = constraint.table
-    values = {"table_name": table.name, "constraint_name": constraint.name}
+    values: dict[str, Any] = {
+        "table_name": table.name,
+        "constraint_name": constraint.name,
+    }
     if isinstance(constraint, (Index, ColumnCollectionConstraint)):
         values.update(
             {
@@ -76,21 +80,20 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
                     col.label(col.name).name for col in constraint.columns
                 ),
                 "column_0N_key": "".join(
-                    col.key for col in constraint.columns  # type: ignore[misc]
+                    col.key for col in constraint.columns if col.key
                 ),
                 "column_0_N_key": "_".join(
-                    col.key for col in constraint.columns  # type: ignore[misc]
+                    col.key for col in constraint.columns if col.key
                 ),
             }
         )
         if constraint.columns:
+            columns = constraint.columns.values()
             values.update(
                 {
-                    "column_0_name": constraint.columns[0].name,  # type: ignore[index]
-                    "column_0_label": constraint.columns[0]  # type: ignore[index]
-                    .label(constraint.columns[0].name)  # type: ignore[index]
-                    .name,
-                    "column_0_key": constraint.columns[0].key,  # type: ignore[index]
+                    "column_0_name": columns[0].name,
+                    "column_0_label": columns[0].label(columns[0].name).name,
+                    "column_0_key": columns[0].key,
                 }
             )
 
@@ -125,10 +128,10 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
                 ),
                 "referred_fk.column_0_key": constraint.elements[0].column.key,
                 "referred_fk.column_0N_key": "".join(
-                    fk.column.key for fk in constraint.elements  # type: ignore[misc]
+                    fk.column.key for fk in constraint.elements if fk.column.key
                 ),
                 "referred_fk.column_0_N_key": "_".join(
-                    fk.column.key for fk in constraint.elements  # type: ignore[misc]
+                    fk.column.key for fk in constraint.elements if fk.column.key
                 ),
             }
         )
