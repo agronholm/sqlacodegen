@@ -76,8 +76,8 @@ class Simple(Base):
     __tablename__ = 'simple'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[Optional[str]] = mapped_column(String(20), server_default=text('foo'))
     age: Mapped[int] = mapped_column(Integer)
+    name: Mapped[Optional[str]] = mapped_column(String(20), server_default=text('foo'))
             """,
         )
 
