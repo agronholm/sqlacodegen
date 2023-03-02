@@ -19,10 +19,11 @@ from sqlalchemy.types import INTEGER, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, DeclarativeGenerator
 
-from .conftest import validate_code, requires_sqlalchemy_2_0
+from .conftest import validate_code, requires_sqlalchemy_2_0, requires_python_3_9
 
 
 @requires_sqlalchemy_2_0
+@requires_python_3_9
 class TestDeclarativeGenerator2:
     """Test declarative mapping generation vor SQLAlchemy 2.0"""
 
