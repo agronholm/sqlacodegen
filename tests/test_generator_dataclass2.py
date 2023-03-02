@@ -10,10 +10,11 @@ from sqlalchemy.types import INTEGER, VARCHAR
 
 from sqlacodegen.generators import CodeGenerator, DataclassGenerator
 
-from .conftest import validate_code, requires_sqlalchemy_2_0
+from .conftest import validate_code, requires_sqlalchemy_2_0, requires_python_3_9
 
 
 @requires_sqlalchemy_2_0
+@requires_python_3_9
 class TestDataclassGenerator:
     @pytest.fixture
     def generator(
