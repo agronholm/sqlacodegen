@@ -7,8 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from .conftest import requires_sqlalchemy_1_4
 from sqlacodegen.generators import _sqla_version
+
+from .conftest import requires_sqlalchemy_1_4
 
 if sys.version_info < (3, 8):
     from importlib_metadata import version
@@ -82,8 +83,8 @@ def test_cli_declarative(db_path: Path, tmp_path: Path) -> None:
 
     if _sqla_version < (2, 0):
         assert (
-        output_path.read_text()
-        == f"""\
+            output_path.read_text()
+            == f"""\
 from sqlalchemy import Column, Integer, Text
 from {declarative_package} import declarative_base
 
@@ -98,9 +99,9 @@ class Foo(Base):
 """
         )
     else:
-         assert (
-        output_path.read_text()
-        == f"""\
+        assert (
+            output_path.read_text()
+            == f"""\
 from sqlalchemy import Integer, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -114,7 +115,7 @@ class Foo(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(Text)
 """
-        )       
+        )
 
 
 def test_cli_dataclass(db_path: Path, tmp_path: Path) -> None:
@@ -169,7 +170,9 @@ class Foo(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(Text)
-""")
+"""
+        )
+
 
 @requires_sqlalchemy_1_4
 def test_cli_sqlmodels(db_path: Path, tmp_path: Path) -> None:

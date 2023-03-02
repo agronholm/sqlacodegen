@@ -19,7 +19,7 @@ from sqlalchemy.types import INTEGER, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, DeclarativeGenerator
 
-from .conftest import validate_code, requires_sqlalchemy_2_0, requires_python_3_9
+from .conftest import requires_python_3_9, requires_sqlalchemy_2_0, validate_code
 
 
 @requires_sqlalchemy_2_0
@@ -634,7 +634,7 @@ class SimpleItems(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    
+
 t_container_items = Table(
     'container_items', Base.metadata,
     Column('item_id', ForeignKey('simple_items.id')),
@@ -675,7 +675,7 @@ class SimpleItems(Base):
     parent: Mapped[list['SimpleItems']] = relationship('SimpleItems', secondary='otherschema.child_items', primaryjoin=lambda: SimpleItems.id == t_child_items.c.child_id, secondaryjoin=lambda: SimpleItems.id == t_child_items.c.parent_id, back_populates='child')
     child: Mapped[list['SimpleItems']] = relationship('SimpleItems', secondary='otherschema.child_items', primaryjoin=lambda: SimpleItems.id == t_child_items.c.parent_id, secondaryjoin=lambda: SimpleItems.id == t_child_items.c.child_id, back_populates='parent')
 
-    
+
 t_child_items = Table(
     'child_items', Base.metadata,
     Column('parent_id', ForeignKey('simple_items.id')),
@@ -787,21 +787,21 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-    
+
 class SimpleSuperItems(Base):
     __tablename__ = 'simple_super_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     data1: Mapped[Optional[int]] = mapped_column(Integer)
 
-    
+
 class SimpleItems(SimpleSuperItems):
     __tablename__ = 'simple_items'
 
     super_item_id: Mapped[int] = mapped_column(ForeignKey('simple_super_items.id'), primary_key=True)
     data2: Mapped[Optional[int]] = mapped_column(Integer)
 
-    
+
 class SimpleSubItems(SimpleItems):
     __tablename__ = 'simple_sub_items'
 
@@ -832,13 +832,13 @@ class SimpleSubItems(SimpleItems):
     class Base(DeclarativeBase):
         pass
 
-        
+
     class Simple(Base):
         __tablename__ = 'simple'
 
         id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-        
+
     class Simple_(Simple):
         __tablename__ = 'simple'
         __table_args__ = {'schema': 'altschema'}
@@ -864,13 +864,13 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-    
+
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    
+
 class Singular(Base):
     __tablename__ = 'singular'
 
@@ -922,7 +922,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 class Base(DeclarativeBase):
     pass
 
-    
+
 class {class_name.capitalize()}(Base):
     __tablename__ = '{table_name}'
 
@@ -958,7 +958,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-    
+
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
     __table_args__ = {'schema': 'testschema'}
@@ -983,14 +983,14 @@ class SimpleItems(Base):
             generator.generate(),
             """\
 from typing import Optional
-            
+
 from sqlalchemy import Index, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
     pass
 
-    
+
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
     __table_args__ = (
@@ -1029,7 +1029,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 class Base(DeclarativeBase):
     pass
 
-    
+
 class OtherItems(Base):
     __tablename__ = 'other_items'
     __table_args__ = {'schema': 'otherschema'}
@@ -1038,7 +1038,7 @@ class OtherItems(Base):
 
     simple_items: Mapped[list['SimpleItems']] = relationship('SimpleItems', back_populates='other_item')
 
-    
+
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
@@ -1070,7 +1070,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-    
+
 class SimpleItems(Base):
     __tablename__ = 'simple-items'
 
@@ -1097,7 +1097,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-    
+
 class CustomerAPIPreference(Base):
     __tablename__ = 'CustomerAPIPreference'
 
@@ -1121,7 +1121,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-    
+
 class CustomerApiPreference(Base):
     __tablename__ = 'customer_api_preference'
 
@@ -1169,7 +1169,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-    
+
 class CustomerAPIPreference(Base):
     __tablename__ = 'customer_API__Preference'
 
@@ -1224,7 +1224,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-    
+
 class Simple(Base):
     __tablename__ = 'simple'
     __table_args__ = {'comment': "this is a 'comment'"}
@@ -1252,7 +1252,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-    
+
 class Simple(Base):
     __tablename__ = 'simple'
 
@@ -1325,7 +1325,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-    
+
 class Simple(Base):
     __tablename__ = 'simple'
     __table_args__ = (

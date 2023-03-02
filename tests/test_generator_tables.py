@@ -5,6 +5,7 @@ from textwrap import dedent
 import pytest
 from _pytest.fixtures import FixtureRequest
 from sqlalchemy.dialects import mysql, postgresql
+from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
     CheckConstraint,
     Column,
@@ -19,13 +20,10 @@ from sqlalchemy.schema import (
 from sqlalchemy.sql.expression import text
 from sqlalchemy.sql.sqltypes import NullType
 from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
-from sqlalchemy.engine import Engine
 
-from sqlacodegen.generators import (
-    CodeGenerator,
-    TablesGenerator,
-)
-from .conftest import validate_code, requires_sqlalchemy_1_4
+from sqlacodegen.generators import CodeGenerator, TablesGenerator
+
+from .conftest import requires_sqlalchemy_1_4, validate_code
 
 
 @requires_sqlalchemy_1_4

@@ -88,8 +88,8 @@ class Base:
     literal_imports: list[LiteralImport]
     declarations: list[str]
     metadata_ref: str
-    decorator: Optional[str] = None
-    table_metadata_declaration: Optional[str] = None
+    decorator: str | None = None
+    table_metadata_declaration: str | None = None
 
 
 class CodeGenerator(metaclass=ABCMeta):

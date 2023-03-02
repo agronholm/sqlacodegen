@@ -10,7 +10,7 @@ from sqlalchemy.types import INTEGER, VARCHAR
 
 from sqlacodegen.generators import CodeGenerator, DataclassGenerator
 
-from .conftest import validate_code, requires_sqlalchemy_2_0, requires_python_3_9
+from .conftest import requires_python_3_9, requires_sqlalchemy_2_0, validate_code
 
 
 @requires_sqlalchemy_2_0
@@ -99,7 +99,7 @@ class Simple(Base):
             generator.generate(),
             """\
 from typing import Optional
- 
+
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
 
