@@ -89,6 +89,7 @@ class Base:
     declarations: list[str]
     metadata_ref: str
     decorator: Optional[str] = None
+    table_metadata_declaration: Optional[str] = None
 
 
 class CodeGenerator(metaclass=ABCMeta):
@@ -336,6 +337,11 @@ class TablesGenerator(CodeGenerator):
 
     def render_module_variables(self, models: list[Model]) -> str:
         declarations = self.base.declarations
+
+        if any(not isinstance(model, ModelClass) for model in models):
+            if self.base.table_metadata_declaration is not None:
+                declarations.append(self.base.table_metadata_declaration)
+
         return "\n".join(declarations)
 
     def render_models(self, models: list[Model]) -> str:
@@ -386,6 +392,7 @@ class TablesGenerator(CodeGenerator):
 
         return render_callable("Index", repr(index.name), *extra_args, kwargs=kwargs)
 
+    # TODO find better solution for is_table
     def render_column(
         self, column: Column[Any], show_name: bool, is_table: bool = False
     ) -> str:
@@ -480,7 +487,6 @@ class TablesGenerator(CodeGenerator):
         if comment:
             kwargs["comment"] = repr(comment)
 
-        # TODO find better solution for is_table
         if _sqla_version < (2, 0) or is_table:
             self.add_import(Column)
             return render_callable("Column", *args, kwargs=kwargs)
@@ -735,12 +741,14 @@ class DeclarativeGenerator(TablesGenerator):
                 ],
                 declarations=[f"{self.base_class_name} = declarative_base()"],
                 metadata_ref=self.base_class_name,
+                table_metadata_declaration=f"metadata = {self.base_class_name}.metadata",
             )
         elif (1, 4) <= _sqla_version < (2, 0):
             self.base = Base(
                 literal_imports=[LiteralImport("sqlalchemy.orm", "declarative_base")],
                 declarations=[f"{self.base_class_name} = declarative_base()"],
-                metadata_ref=self.base_class_name,
+                metadata_ref="metadata",
+                table_metadata_declaration=f"metadata = {self.base_class_name}.metadata",
             )
         else:
             self.base = Base(
@@ -1112,8 +1120,12 @@ class DeclarativeGenerator(TablesGenerator):
 
         # Render column attributes
         rendered_column_attributes: list[str] = []
-        for column_attr in model.columns:
-            rendered_column_attributes.append(self.render_column_attribute(column_attr))
+        for nullable in (False, True):
+            for column_attr in model.columns:
+                if column_attr.column.nullable is nullable:
+                    rendered_column_attributes.append(
+                        self.render_column_attribute(column_attr)
+                    )
 
         if rendered_column_attributes:
             sections.append("\n".join(rendered_column_attributes))
@@ -1415,10 +1427,10 @@ class DataclassGenerator(DeclarativeGenerator):
         if _sqla_version >= (2, 0):
             return super().render_class_declaration(model)
         else:
-            superclass_part = f"({model.parent_class.name})" if model.parent_class else ""
-            return (
-                f"@mapper_registry.mapped\n@dataclass\nclass {model.name}{superclass_part}:"
+            superclass_part = (
+                f"({model.parent_class.name})" if model.parent_class else ""
             )
+            return f"@mapper_registry.mapped\n@dataclass\nclass {model.name}{superclass_part}:"
 
     def render_class_variables(self, model: ModelClass) -> str:
         if _sqla_version >= (2, 0):
@@ -1450,7 +1462,9 @@ class DataclassGenerator(DeclarativeGenerator):
                 kwargs["default"] = None
                 python_type_name = f"Optional[{python_type_name}]"
 
-            rendered_column = self.render_column(column, column_attr.name != column.name)
+            rendered_column = self.render_column(
+                column, column_attr.name != column.name
+            )
             kwargs["metadata"] = f"{{{self.metadata_key!r}: {rendered_column}}}"
             rendered_field = render_callable("field", kwargs=kwargs)
             return f"{column_attr.name}: {python_type_name} = {rendered_field}"
@@ -1501,6 +1515,13 @@ class SQLModelGenerator(DeclarativeGenerator):
             base_class_name=base_class_name,
         )
 
+    def generate_base(self) -> None:
+        self.base = Base(
+            literal_imports=[],
+            declarations=[],
+            metadata_ref="",
+        )
+
     def collect_imports(self, models: Iterable[Model]) -> None:
         super(DeclarativeGenerator, self).collect_imports(models)
         if any(isinstance(model, ModelClass) for model in models):
@@ -1538,7 +1559,8 @@ class SQLModelGenerator(DeclarativeGenerator):
     def render_module_variables(self, models: list[Model]) -> str:
         declarations: list[str] = []
         if any(not isinstance(model, ModelClass) for model in models):
-            declarations.append(f"metadata = {self.base_class_name}.metadata")
+            if self.base.table_metadata_declaration is not None:
+                declarations.append(self.base.table_metadata_declaration)
 
         return "\n".join(declarations)
 

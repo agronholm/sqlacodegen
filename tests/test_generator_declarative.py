@@ -1296,7 +1296,7 @@ PrimaryKeyConstraint, String, UniqueConstraint
                     UniqueConstraint('text', name='uniquetest')
                 )
 
-                id = Column(Integer)
+                id = Column(Integer, primary_key=True)
                 text = Column(String)
             """,
         )
