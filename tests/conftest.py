@@ -1,4 +1,3 @@
-import sys
 from textwrap import dedent
 
 import pytest
@@ -54,8 +53,4 @@ requires_sqlalchemy_1_4 = pytest.mark.skipif(
 
 requires_sqlalchemy_2_0 = pytest.mark.skipif(
     _sqla_version < (2, 0), reason="Test requires SQLAlchemy 2.0.x or newer"
-)
-
-requires_python_3_9 = pytest.mark.skipif(
-    sys.version_info < (3, 9), reason="Test requires Python 3.9 or newer"
 )

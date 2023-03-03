@@ -13,7 +13,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import inflect
 import sqlalchemy
@@ -1313,15 +1313,18 @@ class DeclarativeGenerator(TablesGenerator):
         else:
             relationship_type: str
             if relationship.type == RelationshipType.ONE_TO_MANY:
-                relationship_type = f"list['{relationship.target.name}']"
+                self.add_literal_import("typing", "List")
+                relationship_type = f"List['{relationship.target.name}']"
             elif relationship.type in (
                 RelationshipType.ONE_TO_ONE,
                 RelationshipType.MANY_TO_ONE,
             ):
                 relationship_type = f"'{relationship.target.name}'"
             elif relationship.type == RelationshipType.MANY_TO_MANY:
-                relationship_type = f"list['{relationship.target.name}']"
+                self.add_literal_import("typing", "List")
+                relationship_type = f"List['{relationship.target.name}']"
             else:
+                self.add_literal_import("typing", "Any")
                 relationship_type = "Any"
             return f"{relationship.name}: Mapped[{relationship_type}] = {rendered_relationship}"
 

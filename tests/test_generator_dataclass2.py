@@ -10,11 +10,10 @@ from sqlalchemy.types import INTEGER, VARCHAR
 
 from sqlacodegen.generators import CodeGenerator, DataclassGenerator
 
-from .conftest import requires_python_3_9, requires_sqlalchemy_2_0, validate_code
+from .conftest import requires_sqlalchemy_2_0, validate_code
 
 
 @requires_sqlalchemy_2_0
-@requires_python_3_9
 class TestDataclassGenerator:
     @pytest.fixture
     def generator(
@@ -98,7 +97,7 @@ class Simple(Base):
         validate_code(
             generator.generate(),
             """\
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
@@ -112,7 +111,7 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[list['SimpleItems']] = relationship('SimpleItems', back_populates='container')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', back_populates='container')
 
 
 class SimpleItems(Base):
@@ -146,6 +145,8 @@ class SimpleItems(Base):
         validate_code(
             generator.generate(),
             """\
+from typing import List
+
 from sqlalchemy import Column, ForeignKey, Integer, Table
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
 
@@ -158,7 +159,7 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    item: Mapped[list['SimpleItems']] = relationship('SimpleItems', secondary='container_items', back_populates='container')
+    item: Mapped[List['SimpleItems']] = relationship('SimpleItems', secondary='container_items', back_populates='container')
 
 
 class SimpleItems(Base):
@@ -166,7 +167,7 @@ class SimpleItems(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    container: Mapped[list['SimpleContainers']] = relationship('SimpleContainers', secondary='container_items', back_populates='item')
+    container: Mapped[List['SimpleContainers']] = relationship('SimpleContainers', secondary='container_items', back_populates='item')
 
 
 t_container_items = Table(
@@ -196,7 +197,7 @@ t_container_items = Table(
         validate_code(
             generator.generate(),
             """\
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import ForeignKeyConstraint, Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
@@ -210,7 +211,7 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[list['SimpleItems']] = relationship('SimpleItems', back_populates='container')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', back_populates='container')
 
 
 class SimpleItems(Base):
