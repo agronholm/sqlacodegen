@@ -22,7 +22,7 @@ jobs:
         cache: pip
         cache-dependency-path: pyproject.toml
     - name: Install dependencies
-      run: pip install -e .[test] coveralls SQLAlchemy==${{ matrix.sqlalchemy-version }}
+      run: pip install -e .[test,sqlmodel] coveralls SQLAlchemy==${{ matrix.sqlalchemy-version }}
     - name: Test with pytest
       run: coverage run -m pytest
     - name: Upload Coverage
