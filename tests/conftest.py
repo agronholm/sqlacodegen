@@ -36,7 +36,7 @@ def metadata() -> MetaData:
 
 
 try:
-    import sqlmodel
+    import sqlmodel  # noqa: F401
 
     sqlmodel_installed = True
 except ImportError:

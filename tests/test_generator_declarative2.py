@@ -138,16 +138,19 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', back_populates='container')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='container')
 
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    container_id: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_containers.id'))
+    container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
 
-    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', back_populates='simple_items')
+    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+back_populates='simple_items')
         """,
         )
 
@@ -176,10 +179,13 @@ class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    parent_item_id: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_items.id'))
+    parent_item_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_items.id'))
 
-    parent_item: Mapped['SimpleItems'] = relationship('SimpleItems', remote_side=[id], back_populates='parent_item_reverse')
-    parent_item_reverse: Mapped[List['SimpleItems']] = relationship('SimpleItems', remote_side=[parent_item_id], back_populates='parent_item')
+    parent_item: Mapped['SimpleItems'] = relationship('SimpleItems', \
+remote_side=[id], back_populates='parent_item_reverse')
+    parent_item_reverse: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+remote_side=[parent_item_id], back_populates='parent_item')
 """,
         )
 
@@ -210,13 +216,19 @@ class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    parent_item_id: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_items.id'))
+    parent_item_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_items.id'))
     top_item_id: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_items.id'))
 
-    parent_item: Mapped['SimpleItems'] = relationship('SimpleItems', remote_side=[id], foreign_keys=[parent_item_id], back_populates='parent_item_reverse')
-    parent_item_reverse: Mapped[List['SimpleItems']] = relationship('SimpleItems', remote_side=[parent_item_id], foreign_keys=[parent_item_id], back_populates='parent_item')
-    top_item: Mapped['SimpleItems'] = relationship('SimpleItems', remote_side=[id], foreign_keys=[top_item_id], back_populates='top_item_reverse')
-    top_item_reverse: Mapped[List['SimpleItems']] = relationship('SimpleItems', remote_side=[top_item_id], foreign_keys=[top_item_id], back_populates='top_item')
+    parent_item: Mapped['SimpleItems'] = relationship('SimpleItems', \
+remote_side=[id], foreign_keys=[parent_item_id], back_populates='parent_item_reverse')
+    parent_item_reverse: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+remote_side=[parent_item_id], foreign_keys=[parent_item_id], \
+back_populates='parent_item')
+    top_item: Mapped['SimpleItems'] = relationship('SimpleItems', remote_side=[id], \
+foreign_keys=[top_item_id], back_populates='top_item_reverse')
+    top_item_reverse: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+remote_side=[top_item_id], foreign_keys=[top_item_id], back_populates='top_item')
             """,
         )
 
@@ -259,20 +271,24 @@ class SimpleContainers(Base):
     id1: Mapped[int] = mapped_column(Integer, primary_key=True)
     id2: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', back_populates='simple_containers')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='simple_containers')
 
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
     __table_args__ = (
-        ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', 'simple_containers.id2'], ondelete='CASCADE', onupdate='CASCADE'),
+        ForeignKeyConstraint(['container_id1', 'container_id2'], \
+['simple_containers.id1', 'simple_containers.id2'], ondelete='CASCADE', \
+onupdate='CASCADE'),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     container_id1: Mapped[Optional[int]] = mapped_column(Integer)
     container_id2: Mapped[Optional[int]] = mapped_column(Integer)
 
-    simple_containers: Mapped['SimpleContainers'] = relationship('SimpleContainers', back_populates='simple_items')
+    simple_containers: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+back_populates='simple_items')
             """,
         )
 
@@ -309,19 +325,25 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', foreign_keys='[SimpleItems.parent_container_id]', back_populates='parent_container')
-    simple_items_: Mapped[List['SimpleItems']] = relationship('SimpleItems', foreign_keys='[SimpleItems.top_container_id]', back_populates='top_container')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+foreign_keys='[SimpleItems.parent_container_id]', back_populates='parent_container')
+    simple_items_: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+foreign_keys='[SimpleItems.top_container_id]', back_populates='top_container')
 
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    parent_container_id: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_containers.id'))
-    top_container_id: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_containers.id'))
+    parent_container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
+    top_container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
 
-    parent_container: Mapped['SimpleContainers'] = relationship('SimpleContainers', foreign_keys=[parent_container_id], back_populates='simple_items')
-    top_container: Mapped['SimpleContainers'] = relationship('SimpleContainers', foreign_keys=[top_container_id], back_populates='simple_items_')
+    parent_container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+foreign_keys=[parent_container_id], back_populates='simple_items')
+    top_container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+foreign_keys=[top_container_id], back_populates='simple_items_')
             """,
         )
 
@@ -357,16 +379,19 @@ class OtherItems(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped['SimpleItems'] = relationship('SimpleItems', uselist=False, back_populates='other_item')
+    simple_items: Mapped['SimpleItems'] = relationship('SimpleItems', uselist=False, \
+back_populates='other_item')
 
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    other_item_id: Mapped[Optional[int]] = mapped_column(ForeignKey('other_items.id'), unique=True)
+    other_item_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('other_items.id'), unique=True)
 
-    other_item: Mapped['OtherItems'] = relationship('OtherItems', back_populates='simple_items')
+    other_item: Mapped['OtherItems'] = relationship('OtherItems', \
+back_populates='simple_items')
             """,
         )
 
@@ -397,7 +422,8 @@ class Fehwiuhfiw(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    oglkrogk: Mapped[List['Oglkrogk']] = relationship('Oglkrogk', back_populates='fehwiuhfiw')
+    oglkrogk: Mapped[List['Oglkrogk']] = relationship('Oglkrogk', \
+back_populates='fehwiuhfiw')
 
 
 class Oglkrogk(Base):
@@ -406,7 +432,8 @@ class Oglkrogk(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     fehwiuhfiwID: Mapped[Optional[int]] = mapped_column(ForeignKey('fehwiuhfiw.id'))
 
-    fehwiuhfiw: Mapped['Fehwiuhfiw'] = relationship('Fehwiuhfiw', back_populates='oglkrogk')
+    fehwiuhfiw: Mapped['Fehwiuhfiw'] = \
+relationship('Fehwiuhfiw', back_populates='oglkrogk')
             """,
         )
 
@@ -443,16 +470,19 @@ class SimpleContainers(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     relationship_: Mapped[Optional[str]] = mapped_column('relationship', Text)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', back_populates='container')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='container')
 
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    container_id: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_containers.id'))
+    container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
 
-    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', back_populates='simple_items')
+    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+back_populates='simple_items')
             """,
         )
 
@@ -485,16 +515,19 @@ class Relationship(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', back_populates='relationship_')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='relationship_')
 
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    relationship_id: Mapped[Optional[int]] = mapped_column(ForeignKey('relationship.id'))
+    relationship_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('relationship.id'))
 
-    relationship_: Mapped['Relationship'] = relationship('Relationship', back_populates='simple_items')
+    relationship_: Mapped['Relationship'] = relationship('Relationship', \
+back_populates='simple_items')
             """,
         )
 
@@ -535,7 +568,8 @@ class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    container_id: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_containers.id'))
+    container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
 
     container: Mapped['SimpleContainers'] = relationship('SimpleContainers')
 """,
@@ -574,7 +608,8 @@ class LeftTable(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    right: Mapped[List['RightTable']] = relationship('RightTable', secondary='association_table', back_populates='left')
+    right: Mapped[List['RightTable']] = relationship('RightTable', \
+secondary='association_table', back_populates='left')
 
 
 class RightTable(Base):
@@ -582,7 +617,8 @@ class RightTable(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    left: Mapped[List['LeftTable']] = relationship('LeftTable', secondary='association_table', back_populates='right')
+    left: Mapped[List['LeftTable']] = relationship('LeftTable', \
+secondary='association_table', back_populates='right')
 
 
 t_association_table = Table(
@@ -629,7 +665,8 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    item: Mapped[List['SimpleItems']] = relationship('SimpleItems', secondary='container_items')
+    item: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+secondary='container_items')
 
 
 class SimpleItems(Base):
@@ -677,8 +714,16 @@ class SimpleItems(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    parent: Mapped[List['SimpleItems']] = relationship('SimpleItems', secondary='otherschema.child_items', primaryjoin=lambda: SimpleItems.id == t_child_items.c.child_id, secondaryjoin=lambda: SimpleItems.id == t_child_items.c.parent_id, back_populates='child')
-    child: Mapped[List['SimpleItems']] = relationship('SimpleItems', secondary='otherschema.child_items', primaryjoin=lambda: SimpleItems.id == t_child_items.c.parent_id, secondaryjoin=lambda: SimpleItems.id == t_child_items.c.child_id, back_populates='parent')
+    parent: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+secondary='otherschema.child_items', primaryjoin=lambda: SimpleItems.id \
+== t_child_items.c.child_id, \
+secondaryjoin=lambda: SimpleItems.id == \
+t_child_items.c.parent_id, back_populates='child')
+    child: Mapped[List['SimpleItems']] = \
+relationship('SimpleItems', secondary='otherschema.child_items', \
+primaryjoin=lambda: SimpleItems.id == t_child_items.c.parent_id, \
+secondaryjoin=lambda: SimpleItems.id == t_child_items.c.child_id, \
+back_populates='parent')
 
 
 t_child_items = Table(
@@ -737,7 +782,8 @@ class SimpleContainers(Base):
     id1: Mapped[int] = mapped_column(Integer, primary_key=True)
     id2: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', secondary='container_items', back_populates='simple_containers')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+secondary='container_items', back_populates='simple_containers')
 
 
 class SimpleItems(Base):
@@ -746,7 +792,9 @@ class SimpleItems(Base):
     id1: Mapped[int] = mapped_column(Integer, primary_key=True)
     id2: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_containers: Mapped[List['SimpleContainers']] = relationship('SimpleContainers', secondary='container_items', back_populates='simple_items')
+    simple_containers: Mapped[List['SimpleContainers']] = \
+relationship('SimpleContainers', secondary='container_items', \
+back_populates='simple_items')
 
 
 t_container_items = Table(
@@ -755,8 +803,10 @@ t_container_items = Table(
     Column('item_id2', Integer),
     Column('container_id1', Integer),
     Column('container_id2', Integer),
-    ForeignKeyConstraint(['container_id1', 'container_id2'], ['simple_containers.id1', 'simple_containers.id2']),
-    ForeignKeyConstraint(['item_id1', 'item_id2'], ['simple_items.id1', 'simple_items.id2'])
+    ForeignKeyConstraint(['container_id1', 'container_id2'], \
+['simple_containers.id1', 'simple_containers.id2']),
+    ForeignKeyConstraint(['item_id1', 'item_id2'], \
+['simple_items.id1', 'simple_items.id2'])
 )
             """,
         )
@@ -805,14 +855,16 @@ class SimpleSuperItems(Base):
 class SimpleItems(SimpleSuperItems):
     __tablename__ = 'simple_items'
 
-    super_item_id: Mapped[int] = mapped_column(ForeignKey('simple_super_items.id'), primary_key=True)
+    super_item_id: Mapped[int] = mapped_column(ForeignKey('simple_super_items.id'), \
+primary_key=True)
     data2: Mapped[Optional[int]] = mapped_column(Integer)
 
 
 class SimpleSubItems(SimpleItems):
     __tablename__ = 'simple_sub_items'
 
-    simple_items_id: Mapped[int] = mapped_column(ForeignKey('simple_items.super_item_id'), primary_key=True)
+    simple_items_id: Mapped[int] = \
+mapped_column(ForeignKey('simple_items.super_item_id'), primary_key=True)
     data3: Mapped[Optional[int]] = mapped_column(Integer)
             """,
         )
@@ -935,16 +987,19 @@ class {class_name.capitalize()}(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_item: Mapped['SimpleItem'] = relationship('SimpleItem', uselist=False, back_populates='{relationship_name}')
+    simple_item: Mapped['SimpleItem'] = relationship('SimpleItem', uselist=False, \
+back_populates='{relationship_name}')
 
 
 class SimpleItem(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    {relationship_name}_id: Mapped[Optional[int]] = mapped_column(ForeignKey('{table_name}.id'), unique=True)
+    {relationship_name}_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('{table_name}.id'), unique=True)
 
-    {relationship_name}: Mapped['{class_name.capitalize()}'] = relationship('{class_name.capitalize()}', back_populates='simple_item')
+    {relationship_name}: Mapped['{class_name.capitalize()}'] = \
+relationship('{class_name.capitalize()}', back_populates='simple_item')
             """,
         )
 
@@ -1043,16 +1098,19 @@ class OtherItems(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', back_populates='other_item')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='other_item')
 
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    other_item_id: Mapped[Optional[int]] = mapped_column(ForeignKey('otherschema.other_items.id'))
+    other_item_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('otherschema.other_items.id'))
 
-    other_item: Mapped['OtherItems'] = relationship('OtherItems', back_populates='simple_items')
+    other_item: Mapped['OtherItems'] = relationship('OtherItems', \
+back_populates='simple_items')
             """,
         )
 
@@ -1326,7 +1384,8 @@ t_simple = Table(
             """\
 from typing import Optional
 
-from sqlalchemy import CheckConstraint, Integer, PrimaryKeyConstraint, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, Integer, PrimaryKeyConstraint, \
+String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
@@ -1379,19 +1438,22 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', back_populates='container')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='container')
 
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
     __table_args__ = (
-        ForeignKeyConstraint(['container_id'], ['simple_containers.id'], name='foreignkeytest'),
+        ForeignKeyConstraint(['container_id'], ['simple_containers.id'], \
+name='foreignkeytest'),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     container_id: Mapped[Optional[int]] = mapped_column(Integer)
 
-    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', back_populates='simple_items')
+    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+back_populates='simple_items')
 """,
         )
 
@@ -1422,6 +1484,7 @@ class Simple(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     text_: Mapped[Optional[str]] = mapped_column('text', String)
-    textwithdefault: Mapped[Optional[str]] = mapped_column(String, server_default=text("'test'"))
+    textwithdefault: Mapped[Optional[str]] = mapped_column(String, \
+server_default=text("'test'"))
 """,
         )

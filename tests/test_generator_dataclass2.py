@@ -100,7 +100,8 @@ class Simple(Base):
 from typing import List, Optional
 
 from sqlalchemy import ForeignKey, Integer
-from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, \
+relationship
 
 class Base(MappedAsDataclass, DeclarativeBase):
     pass
@@ -111,16 +112,19 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', back_populates='container')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='container')
 
 
 class SimpleItems(Base):
     __tablename__ = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    container_id: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_containers.id'))
+    container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
 
-    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', back_populates='simple_items')
+    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+back_populates='simple_items')
             """,
         )
 
@@ -148,7 +152,8 @@ class SimpleItems(Base):
 from typing import List
 
 from sqlalchemy import Column, ForeignKey, Integer, Table
-from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, \
+relationship
 
 class Base(MappedAsDataclass, DeclarativeBase):
     pass
@@ -159,7 +164,8 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    item: Mapped[List['SimpleItems']] = relationship('SimpleItems', secondary='container_items', back_populates='container')
+    item: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+secondary='container_items', back_populates='container')
 
 
 class SimpleItems(Base):
@@ -167,7 +173,8 @@ class SimpleItems(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    container: Mapped[List['SimpleContainers']] = relationship('SimpleContainers', secondary='container_items', back_populates='item')
+    container: Mapped[List['SimpleContainers']] = relationship('SimpleContainers', \
+secondary='container_items', back_populates='item')
 
 
 t_container_items = Table(
@@ -200,7 +207,8 @@ t_container_items = Table(
 from typing import List, Optional
 
 from sqlalchemy import ForeignKeyConstraint, Integer
-from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, \
+relationship
 
 class Base(MappedAsDataclass, DeclarativeBase):
     pass
@@ -211,7 +219,8 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', back_populates='container')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='container')
 
 
 class SimpleItems(Base):
@@ -224,7 +233,8 @@ name='foreignkeytest'),
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     container_id: Mapped[Optional[int]] = mapped_column(Integer)
 
-    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', back_populates='simple_items')
+    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+back_populates='simple_items')
             """,
         )
 

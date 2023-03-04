@@ -101,7 +101,7 @@ class Foo(Base):
     else:
         assert (
             output_path.read_text()
-            == f"""\
+            == """\
 from sqlalchemy import Integer, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -157,7 +157,7 @@ class Foo:
     else:
         assert (
             output_path.read_text()
-            == f"""\
+            == """\
 from sqlalchemy import Integer, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column
 

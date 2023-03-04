@@ -735,20 +735,22 @@ class DeclarativeGenerator(TablesGenerator):
 
     def generate_base(self) -> None:
         if _sqla_version < (1, 4):
+            table_decoration = f"metadata = {self.base_class_name}.metadata"
             self.base = Base(
                 literal_imports=[
                     LiteralImport("sqlalchemy.ext.declarative", "declarative_base")
                 ],
                 declarations=[f"{self.base_class_name} = declarative_base()"],
                 metadata_ref=self.base_class_name,
-                table_metadata_declaration=f"metadata = {self.base_class_name}.metadata",
+                table_metadata_declaration=table_decoration,
             )
         elif (1, 4) <= _sqla_version < (2, 0):
+            table_decoration = f"metadata = {self.base_class_name}.metadata"
             self.base = Base(
                 literal_imports=[LiteralImport("sqlalchemy.orm", "declarative_base")],
                 declarations=[f"{self.base_class_name} = declarative_base()"],
                 metadata_ref="metadata",
-                table_metadata_declaration=f"metadata = {self.base_class_name}.metadata",
+                table_metadata_declaration=table_decoration,
             )
         else:
             self.base = Base(
@@ -1083,7 +1085,6 @@ class DeclarativeGenerator(TablesGenerator):
                         preferred_name = column_names[0][:-3]
 
             if "use_inflect" in self.options:
-                inflected_name: str | bool
                 if relationship.type in (
                     RelationshipType.ONE_TO_MANY,
                     RelationshipType.MANY_TO_MANY,
@@ -1326,7 +1327,10 @@ class DeclarativeGenerator(TablesGenerator):
             else:
                 self.add_literal_import("typing", "Any")
                 relationship_type = "Any"
-            return f"{relationship.name}: Mapped[{relationship_type}] = {rendered_relationship}"
+            return (
+                f"{relationship.name}: Mapped[{relationship_type}] "
+                f"= {rendered_relationship}"
+            )
 
 
 class DataclassGenerator(DeclarativeGenerator):
@@ -1366,7 +1370,10 @@ class DataclassGenerator(DeclarativeGenerator):
                     LiteralImport("sqlalchemy.orm", "MappedAsDataclass"),
                 ],
                 declarations=[
-                    f"class {self.base_class_name}(MappedAsDataclass, DeclarativeBase):",
+                    (
+                        f"class {self.base_class_name}(MappedAsDataclass, "
+                        "DeclarativeBase):"
+                    ),
                     f"{self.indentation}pass",
                 ],
                 metadata_ref=f"{self.base_class_name}.metadata",
@@ -1433,7 +1440,10 @@ class DataclassGenerator(DeclarativeGenerator):
             superclass_part = (
                 f"({model.parent_class.name})" if model.parent_class else ""
             )
-            return f"@mapper_registry.mapped\n@dataclass\nclass {model.name}{superclass_part}:"
+            return (
+                f"@mapper_registry.mapped\n@dataclass"
+                f"\nclass {model.name}{superclass_part}:"
+            )
 
     def render_class_variables(self, model: ModelClass) -> str:
         if _sqla_version >= (2, 0):
