@@ -1577,13 +1577,17 @@ class SQLModelGenerator(DeclarativeGenerator):
         return f"class {model.name}{superclass_part}:"
 
     def render_class_variables(self, model: ModelClass) -> str:
+        variables = []
+
+        if model.table.name != model.name.lower():
+            variables.append(f"__tablename__ = {model.table.name!r}")
+
         # Render constraints and indexes as __table_args__
         table_args = self.render_table_args(model.table)
         if table_args:
-            variables = [f"__table_args__ = {table_args}"]
-            return "".join(variables)
+            variables.append(f"__table_args__ = {table_args}")
 
-        return ""
+        return "\n".join(variables)
 
     def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
         column = column_attr.column

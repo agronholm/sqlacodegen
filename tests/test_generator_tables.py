@@ -432,7 +432,7 @@ UniqueConstraint
         [(None, ""), (False, ", persisted=False"), (True, ", persisted=True")],
     )
     def test_computed_column(
-        self, generator: CodeGenerator, persisted: bool | None, extra_args: str
+        self, generator: CodeGenerator, persisted: "bool | None", extra_args: str
     ) -> None:
         Table(
             "computed",

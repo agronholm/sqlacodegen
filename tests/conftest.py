@@ -1,7 +1,7 @@
 from textwrap import dedent
 
 import pytest
-from _pytest.fixtures import FixtureRequest
+from pytest import FixtureRequest
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import clear_mappers, configure_mappers
 from sqlalchemy.schema import MetaData
