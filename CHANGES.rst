@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**3.0.0rc2**
 
 - Added support for generating SQLModel classes (PR by Andrii Khirilov)
 - Fixed code generation when a single-column index is unique or does not match the
