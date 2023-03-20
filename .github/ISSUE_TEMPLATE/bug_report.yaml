@@ -38,7 +38,7 @@ body:
       label: RDBMS vendor
       description: >
         What RDBMS (relational database management system) did you run the tool against?
-      choices:
+      options:
         - PostgreSQL
         - MySQL (or compatible)
         - SQLite
