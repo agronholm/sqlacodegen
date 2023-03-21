@@ -79,9 +79,9 @@ Generator-specific options
 ==========================
 
 The following options can be turned on by passing them using the ``--option`` flag.
-Multiple options can be specified at once, space delimited as per argpars``nargs``
+Multiple options can be specified at once, space delimited as per argparse ``nargs``.
 https://docs.python.org/3/library/argparse.html#nargs
-Like ``--option use_inflect nobidi```:
+Like ``--option use_inflect nobidi``:
 
 * ``tables``
 
