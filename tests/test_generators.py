@@ -1275,6 +1275,49 @@ foreign_keys=[top_container_id], back_populates='simple_items_')
             """,
         )
 
+    @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+    def test_onetomany_inflect_singular_table_name(self, generator: CodeGenerator) -> None:
+        Table(
+            # inflect_engine.singular_noun() should not make this name to 'False':
+            "simple_item",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("container_id", INTEGER),
+            ForeignKeyConstraint(["container_id"], ["simple_containers.id"]),
+        )
+        Table(
+            "simple_containers",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+class SimpleContainer(Base):
+    __tablename__ = 'simple_containers'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_item = relationship('SimpleItem', back_populates='container')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_item'
+
+    id = Column(Integer, primary_key=True)
+    container_id = Column(ForeignKey('simple_containers.id'))
+
+    container = relationship('SimpleContainer', back_populates='simple_item')
+    """,
+        )
+
     def test_onetoone(self, generator: CodeGenerator) -> None:
         Table(
             "simple_items",
