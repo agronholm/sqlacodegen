@@ -1276,7 +1276,9 @@ foreign_keys=[top_container_id], back_populates='simple_items_')
         )
 
     @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
-    def test_onetomany_inflect_singular_table_name(self, generator: CodeGenerator) -> None:
+    def test_onetomany_inflect_singular_table_name(
+        self, generator: CodeGenerator
+    ) -> None:
         Table(
             # inflect_engine.singular_noun() should not make this name to 'False':
             "simple_item",
@@ -1926,26 +1928,32 @@ back_populates='simple_item')
         )
 
     @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
-    def test_use_inflect_plural_double_pluralize(self, generator: CodeGenerator) -> None:
+    def test_use_inflect_plural_double_pluralize(
+        self, generator: CodeGenerator
+    ) -> None:
         Table(
             "users",
             generator.metadata,
             Column("users_id", INTEGER),
             Column("groups_id", INTEGER),
-            ForeignKeyConstraint(['groups_id'], ['groups.groups_id'], name='fk_users_groups_id'),
-            PrimaryKeyConstraint('users_id', name='users_pkey'),
+            ForeignKeyConstraint(
+                ["groups_id"], ["groups.groups_id"], name="fk_users_groups_id"
+            ),
+            PrimaryKeyConstraint("users_id", name="users_pkey"),
         )
 
-        Table("groups",
-              generator.metadata,
-              Column("groups_id", INTEGER),
-              Column("group_name", Text(50), nullable=False),
-              PrimaryKeyConstraint('groups_id', name='groups_pkey'),
-              )
+        Table(
+            "groups",
+            generator.metadata,
+            Column("groups_id", INTEGER),
+            Column("group_name", Text(50), nullable=False),
+            PrimaryKeyConstraint("groups_id", name="groups_pkey"),
+        )
 
         validate_code(
             generator.generate(),
-            ("""\
+            (
+                """\
 from sqlalchemy import Column, ForeignKeyConstraint, Integer, PrimaryKeyConstraint, Text
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -1975,7 +1983,8 @@ class User(Base):
     groups_id = Column(Integer)
 
     group = relationship('Group', back_populates='users')
-""")
+"""
+            ),
         )
 
     def test_table_kwargs(self, generator: CodeGenerator) -> None:
