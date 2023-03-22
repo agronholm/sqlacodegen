@@ -1975,7 +1975,8 @@ class Group(Base):
 class User(Base):
     __tablename__ = 'users'
     __table_args__ = (
-        ForeignKeyConstraint(['groups_id'], ['groups.groups_id'], name='fk_users_groups_id'),
+        ForeignKeyConstraint(['groups_id'], ['groups.groups_id'], \
+name='fk_users_groups_id'),
         PrimaryKeyConstraint('users_id', name='users_pkey')
     )
 
