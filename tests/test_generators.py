@@ -1275,6 +1275,51 @@ foreign_keys=[top_container_id], back_populates='simple_items_')
             """,
         )
 
+    @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+    def test_onetomany_inflect_singular_table_name(
+        self, generator: CodeGenerator
+    ) -> None:
+        Table(
+            # inflect_engine.singular_noun() should not make this name to 'False':
+            "simple_item",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            Column("container_id", INTEGER),
+            ForeignKeyConstraint(["container_id"], ["simple_containers.id"]),
+        )
+        Table(
+            "simple_containers",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+        )
+
+        validate_code(
+            generator.generate(),
+            """\
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+class SimpleContainer(Base):
+    __tablename__ = 'simple_containers'
+
+    id = Column(Integer, primary_key=True)
+
+    simple_item = relationship('SimpleItem', back_populates='container')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_item'
+
+    id = Column(Integer, primary_key=True)
+    container_id = Column(ForeignKey('simple_containers.id'))
+
+    container = relationship('SimpleContainer', back_populates='simple_item')
+    """,
+        )
+
     def test_onetoone(self, generator: CodeGenerator) -> None:
         Table(
             "simple_items",
@@ -1880,6 +1925,67 @@ class SimpleItem(Base):
     {relationship_name} = relationship('{class_name.capitalize()}', \
 back_populates='simple_item')
             """,
+        )
+
+    @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+    def test_use_inflect_plural_double_pluralize(
+        self, generator: CodeGenerator
+    ) -> None:
+        Table(
+            "users",
+            generator.metadata,
+            Column("users_id", INTEGER),
+            Column("groups_id", INTEGER),
+            ForeignKeyConstraint(
+                ["groups_id"], ["groups.groups_id"], name="fk_users_groups_id"
+            ),
+            PrimaryKeyConstraint("users_id", name="users_pkey"),
+        )
+
+        Table(
+            "groups",
+            generator.metadata,
+            Column("groups_id", INTEGER),
+            Column("group_name", Text(50), nullable=False),
+            PrimaryKeyConstraint("groups_id", name="groups_pkey"),
+        )
+
+        validate_code(
+            generator.generate(),
+            (
+                """\
+from sqlalchemy import Column, ForeignKeyConstraint, Integer, PrimaryKeyConstraint, Text
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+class Group(Base):
+    __tablename__ = 'groups'
+    __table_args__ = (
+        PrimaryKeyConstraint('groups_id', name='groups_pkey'),
+    )
+
+    groups_id = Column(Integer)
+    group_name = Column(Text(50), nullable=False)
+
+    users = relationship('User', back_populates='group')
+
+
+class User(Base):
+    __tablename__ = 'users'
+    __table_args__ = (
+        ForeignKeyConstraint(['groups_id'], ['groups.groups_id'], \
+name='fk_users_groups_id'),
+        PrimaryKeyConstraint('users_id', name='users_pkey')
+    )
+
+    users_id = Column(Integer)
+    groups_id = Column(Integer)
+
+    group = relationship('Group', back_populates='users')
+"""
+            ),
         )
 
     def test_table_kwargs(self, generator: CodeGenerator) -> None:
