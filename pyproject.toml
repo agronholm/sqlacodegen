@@ -78,8 +78,7 @@ strict = true
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [tool.pytest.ini_options]
-pythonpath = "src/sqlacodegen"
-addopts = "-rsx --tb=short --import-mode=importlib"
+addopts = "-rsx --tb=short"
 testpaths = ["tests"]
 
 [coverage.run]
