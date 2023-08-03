@@ -9,6 +9,8 @@ import pytest
 
 from sqlacodegen.generators import _sqla_version
 
+from .conftest import requires_sqlalchemy_1_4
+
 if sys.version_info < (3, 8):
     from importlib_metadata import version
 else:
@@ -79,9 +81,10 @@ def test_cli_declarative(db_path: Path, tmp_path: Path) -> None:
         check=True,
     )
 
-    assert (
-        output_path.read_text()
-        == f"""\
+    if _sqla_version < (2, 0):
+        assert (
+            output_path.read_text()
+            == f"""\
 from sqlalchemy import Column, Integer, Text
 from {declarative_package} import declarative_base
 
@@ -94,7 +97,25 @@ class Foo(Base):
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False)
 """
-    )
+        )
+    else:
+        assert (
+            output_path.read_text()
+            == """\
+from sqlalchemy import Integer, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Foo(Base):
+    __tablename__ = 'foo'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text)
+"""
+        )
 
 
 def test_cli_dataclass(db_path: Path, tmp_path: Path) -> None:
@@ -111,9 +132,10 @@ def test_cli_dataclass(db_path: Path, tmp_path: Path) -> None:
         check=True,
     )
 
-    assert (
-        output_path.read_text()
-        == f"""\
+    if _sqla_version < (2, 0):
+        assert (
+            output_path.read_text()
+            == f"""\
 {future_imports}from dataclasses import dataclass, field
 
 from sqlalchemy import Column, Integer, Text
@@ -131,9 +153,28 @@ class Foo:
     id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
     name: str = field(metadata={{'sa': Column(Text, nullable=False)}})
 """
-    )
+        )
+    else:
+        assert (
+            output_path.read_text()
+            == """\
+from sqlalchemy import Integer, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column
+
+class Base(MappedAsDataclass, DeclarativeBase):
+    pass
 
 
+class Foo(Base):
+    __tablename__ = 'foo'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text)
+"""
+        )
+
+
+@requires_sqlalchemy_1_4
 def test_cli_sqlmodels(db_path: Path, tmp_path: Path) -> None:
     output_path = tmp_path / "outfile"
     subprocess.run(

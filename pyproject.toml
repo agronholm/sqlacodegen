@@ -25,12 +25,14 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
 ]
 requires-python = ">=3.7"
 dependencies = [
-    "SQLAlchemy >= 1.4.36, < 2.0",
+    "SQLAlchemy >= 1.4.36",
     "inflect >= 4.0.0",
     "importlib_metadata; python_version < '3.10'",
+    "greenlet >= 3.0.0a1; python_version >= '3.12'",
 ]
 dynamic = ["version"]
 
@@ -44,6 +46,8 @@ test = [
     "pytest-cov",
     "psycopg2-binary",
     "mysql-connector-python",
+]
+sqlmodel = [
     "sqlmodel",
 ]
 citext = ["sqlalchemy-citext >= 1.7.0"]
@@ -88,7 +92,7 @@ show_missing = true
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py37, py38, py39, py310
+envlist = py37, py38, py39, py310, py311, py312
 skip_missing_interpreters = true
 isolated_build = true
 

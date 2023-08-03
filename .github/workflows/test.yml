@@ -10,7 +10,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.9", "3.11"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        sqlalchemy-version: ["1.4", "2.0"]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -18,10 +19,15 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+        allow-prereleases: true
         cache: pip
         cache-dependency-path: pyproject.toml
-    - name: Install dependencies
-      run: pip install -e .[test] coveralls
+    - name: Install dependencies SQLAlchemy 1.4
+      if: matrix.sqlalchemy-version == 1.4
+      run: pip install -e .[test,sqlmodel] coveralls SQLAlchemy==1.4.*
+    - name: Install dependencies SQLAlchemy 2.0
+      if: matrix.sqlalchemy-version == 2.0
+      run: pip install -e .[test] coveralls SQLAlchemy==2.0.*
     - name: Test with pytest
       run: coverage run -m pytest
     - name: Upload Coverage

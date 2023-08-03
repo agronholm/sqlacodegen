@@ -1,6 +1,10 @@
 Version history
 ===============
 
+**3.0.0rc3**
+
+- Added support for SQLAlchemy 2 (PR by rbuffat with help from mhauru)
+
 **3.0.0rc2**
 
 - Added support for generating SQLModel classes (PR by Andrii Khirilov)
