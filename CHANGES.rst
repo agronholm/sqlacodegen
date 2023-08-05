@@ -4,6 +4,7 @@ Version history
 **3.0.0rc3**
 
 - Added support for SQLAlchemy 2 (PR by rbuffat with help from mhauru)
+- Renamed ``--option`` to ``--options`` and made its values delimited by commas
 
 **3.0.0rc2**
 

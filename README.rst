@@ -78,8 +78,8 @@ The following built-in generators are available:
 Generator-specific options
 ==========================
 
-The following options can be turned on by passing them using ``--option`` (can be used
-multiple times):
+The following options can be turned on by passing them using ``--options`` (multiple
+values must be delimited by commas, e.g. ``--options noconstraints,nobidi``):
 
 * ``tables``
 
