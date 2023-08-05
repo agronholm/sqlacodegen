@@ -10,7 +10,7 @@ from sqlalchemy.types import INTEGER, VARCHAR
 
 from sqlacodegen.generators import CodeGenerator, DataclassGenerator
 
-from .utils import requires_sqlalchemy_2_0, validate_code
+from .conftest import requires_sqlalchemy_2_0, validate_code
 
 pytestmark = requires_sqlalchemy_2_0
 

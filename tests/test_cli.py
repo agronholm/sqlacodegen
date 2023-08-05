@@ -9,7 +9,7 @@ import pytest
 
 from sqlacodegen.generators import _sqla_version
 
-from .utils import requires_sqlalchemy_1_4
+from .conftest import requires_sqlalchemy_1_4
 
 if sys.version_info < (3, 8):
     from importlib_metadata import version

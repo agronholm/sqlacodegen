@@ -19,7 +19,7 @@ from sqlalchemy.types import INTEGER, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, DeclarativeGenerator
 
-from .utils import requires_sqlalchemy_2_0, validate_code
+from .conftest import requires_sqlalchemy_2_0, validate_code
 
 pytestmark = requires_sqlalchemy_2_0
 

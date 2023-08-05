@@ -16,7 +16,7 @@ from sqlalchemy.types import INTEGER, VARCHAR
 
 from sqlacodegen.generators import CodeGenerator, SQLModelGenerator
 
-from .utils import validate_code
+from .conftest import validate_code
 
 pytest.importorskip("sqlmodel", reason="Requires the sqlmodel package")
 
