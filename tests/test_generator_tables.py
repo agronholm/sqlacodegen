@@ -23,7 +23,7 @@ from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, TablesGenerator
 
-from .conftest import requires_sqlalchemy_1_4, validate_code
+from .utils import requires_sqlalchemy_1_4, validate_code
 
 
 @requires_sqlalchemy_1_4
