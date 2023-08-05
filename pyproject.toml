@@ -68,7 +68,6 @@ local_scheme = "dirty-tag"
 [tool.ruff]
 select = [
     "E", "F", "W",  # default Flake8
-    "G",            # flake8-logging-format
     "I",            # isort
     "ISC",          # flake8-implicit-str-concat
     "PGH",          # pygrep-hooks
