@@ -51,6 +51,7 @@ sqlmodel = [
     "sqlmodel",
 ]
 citext = ["sqlalchemy-citext >= 1.7.0"]
+geoalchemy2 = ["geoalchemy2 >= 0.11.1"]
 
 [project.entry-points."sqlacodegen.generators"]
 tables = "sqlacodegen.generators:TablesGenerator"

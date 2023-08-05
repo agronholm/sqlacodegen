@@ -41,6 +41,12 @@ considered as tested only under a few environments) specify the ``citext`` extra
     pip install sqlacodegen[citext]
 
 
+To include support for the PostgreSQL ``GEOMETRY``, ``GEOGRAPHY``, and ``RASTER`` types (which should be
+considered as tested only under a few environments) specify the ``geoalchemy2`` extra::
+    pip install sqlacodegen[geoalchemy2]
+
+
+
 Quickstart
 ==========
 
