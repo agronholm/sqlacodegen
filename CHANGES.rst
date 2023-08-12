@@ -5,6 +5,7 @@ Version history
 
 - Added support for SQLAlchemy 2 (PR by rbuffat with help from mhauru)
 - Renamed ``--option`` to ``--options`` and made its values delimited by commas
+- Restored CIText and GeoAlchemy2 support (PR by stavvy-rotte)
 
 **3.0.0rc2**
 
