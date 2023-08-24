@@ -33,3 +33,10 @@ repos:
         additional_dependencies:
           - pytest
           - "sqlalchemy[mypy] < 2.0"
+
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+    - id: rst-backticks
+    - id: rst-directive-colons
+    - id: rst-inline-touching-normal
