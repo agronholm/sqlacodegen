@@ -71,7 +71,7 @@ def main() -> None:
     metadata = MetaData()
     tables = args.tables.split(",") if args.tables else None
     schemas = args.schemas.split(",") if args.schemas else [None]
-    options = set(args.option.split(",")) if args.options else set()
+    options = set(args.options.split(",")) if args.options else set()
     for schema in schemas:
         metadata.reflect(engine, schema, not args.noviews, tables)
 
