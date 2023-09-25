@@ -37,6 +37,7 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    CHAR,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection, Engine
@@ -538,6 +539,14 @@ class TablesGenerator(CodeGenerator):
                 and coltype.astext_type.length is None
             ):
                 del kwargs["astext_type"]
+
+        if isinstance(coltype, CHAR):
+            # If the column type is CHAR and it has a non-None collation,
+            # include the collation argument in the kwargs dictionary
+            # and remove any corresponding argument from the args list.
+            if coltype.collation is not None:
+                kwargs["collation"] = repr(coltype.collation)
+                args.pop()
 
         if args or kwargs:
             return render_callable(coltype.__class__.__name__, *args, kwargs=kwargs)
