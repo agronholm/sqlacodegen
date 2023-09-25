@@ -251,21 +251,21 @@ def test_mysql_char_collation(generator: CodeGenerator) -> None:
         "simple_items",
         generator.metadata,
         Column("id", mysql.INTEGER),
-        Column("name", mysql.CHAR(10, collation="utf8mb4_unicode_ci")),
+        Column("name", mysql.CHAR(10, collation="utf8mb3_bin")),
     )
 
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer, MetaData, String, Table, CHAR
-
+        from sqlalchemy import CHAR, Column, Integer, MetaData, Table
+        
         metadata = MetaData()
-
-
+        
+        
         t_simple_items = Table(
             'simple_items', metadata,
             Column('id', Integer),
-            Column('name', CHAR(10, collation='utf8mb4_unicode_ci'))
+            Column('name', CHAR(10, collation='utf8mb3_bin'))
         )
         """,
     )
