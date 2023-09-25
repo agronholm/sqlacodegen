@@ -258,10 +258,10 @@ def test_mysql_char_collation(generator: CodeGenerator) -> None:
         generator.generate(),
         """\
         from sqlalchemy import CHAR, Column, Integer, MetaData, Table
-        
+
         metadata = MetaData()
-        
-        
+
+
         t_simple_items = Table(
             'simple_items', metadata,
             Column('id', Integer),

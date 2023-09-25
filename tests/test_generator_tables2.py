@@ -19,7 +19,7 @@ from sqlalchemy.schema import (
 )
 from sqlalchemy.sql.expression import text
 from sqlalchemy.sql.sqltypes import NullType
-from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text, CHAR
+from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, TablesGenerator
 
@@ -258,10 +258,10 @@ def test_mysql_char_collation(generator: CodeGenerator) -> None:
         generator.generate(),
         """\
         from sqlalchemy import CHAR, Column, Integer, MetaData, Table
-        
+
         metadata = MetaData()
-        
-        
+
+
         t_simple_items = Table(
             'simple_items', metadata,
             Column('id', Integer),
