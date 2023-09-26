@@ -71,9 +71,11 @@ def main() -> None:
 
     # Build the connection arguments for SSL options.
     connect_args = {
-        "ssl_ca": args.ssl_ca,
-        "ssl_cert": args.ssl_cert,
-        "ssl_key": args.ssl_key,
+        "ssl": {   
+            "ca": args.ssl_ca,
+            "cert": args.ssl_cert,
+            "key": args.ssl_key
+        }
     }
 
     # Use reflection to fill in the metadata
