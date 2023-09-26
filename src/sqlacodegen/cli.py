@@ -39,15 +39,9 @@ def main() -> None:
     parser.add_argument(
         "--schemas", help="load tables from the given schemas (comma-delimited)"
     )
-    parser.add_argument(
-        "--ssl-ca", help="Use CA certificate for the connection"
-    )
-    parser.add_argument(
-        "--ssl-cert", help="Use SSL certificate for the connection"
-    )
-    parser.add_argument(
-        "--ssl-key", help="Use SSL key for the connection"
-    )
+    parser.add_argument("--ssl-ca", help="Use CA certificate for the connection")
+    parser.add_argument("--ssl-cert", help="Use SSL certificate for the connection")
+    parser.add_argument("--ssl-key", help="Use SSL key for the connection")
     parser.add_argument(
         "--generator",
         choices=generators,
@@ -77,15 +71,15 @@ def main() -> None:
 
     # Build the connection arguments for SSL options.
     connect_args = {
-            'ssl': {
-                'ssl_ca': args.ssl_ca,
-                'ssl_cert': args.ssl_cert,
-                'ssl_key': args.ssl_key, 
-                }
-            }
+        "ssl": {
+            "ssl_ca": args.ssl_ca,
+            "ssl_cert": args.ssl_cert,
+            "ssl_key": args.ssl_key,
+        }
+    }
 
     # Use reflection to fill in the metadata
-    engine = create_engine(args.url, connect_args=connect_args)  
+    engine = create_engine(args.url, connect_args=connect_args)
     metadata = MetaData()
     tables = args.tables.split(",") if args.tables else None
     schemas = args.schemas.split(",") if args.schemas else [None]
