@@ -245,6 +245,32 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
     )
 
 
+@pytest.mark.parametrize("engine", ["mysql"], indirect=["engine"])
+def test_mysql_char_collation(generator: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", mysql.INTEGER),
+        Column("name", mysql.CHAR(10, collation="utf8mb3_bin")),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import CHAR, Column, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('id', Integer),
+            Column('name', CHAR(10, collation='utf8mb3_bin'))
+        )
+        """,
+    )
+
+
 def test_constraints(generator: CodeGenerator) -> None:
     Table(
         "simple_items",

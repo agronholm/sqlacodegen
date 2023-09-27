@@ -19,6 +19,7 @@ import inflect
 import sqlalchemy
 from sqlalchemy import (
     ARRAY,
+    CHAR,
     Boolean,
     CheckConstraint,
     Column,
@@ -37,7 +38,6 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
-    CHAR,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection, Engine
