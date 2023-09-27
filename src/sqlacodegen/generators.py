@@ -293,9 +293,15 @@ class TablesGenerator(CodeGenerator):
         future_imports: list[str] = []
         stdlib_imports: list[str] = []
         thirdparty_imports: list[str] = []
+        duplicate_imports = set()
 
         for package in sorted(self.imports):
-            imports = ", ".join(sorted(self.imports[package]))
+            imports = sorted(self.imports[package])
+            unique_imports = [
+                import_ for import_ in imports if import_ not in duplicate_imports
+            ]
+            duplicate_imports.update(imports)
+            imports_str = ", ".join(unique_imports)
             collection = thirdparty_imports
             if package == "__future__":
                 collection = future_imports
@@ -305,7 +311,7 @@ class TablesGenerator(CodeGenerator):
                 if "site-packages" not in (sys.modules[package].__file__ or ""):
                     collection = stdlib_imports
 
-            collection.append(f"from {package} import {imports}")
+            collection.append(f"from {package} import {imports_str}")
 
         for module in sorted(self.module_imports):
             thirdparty_imports.append(f"import {module}")
