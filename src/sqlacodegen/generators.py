@@ -68,9 +68,9 @@ else:
     from importlib.metadata import version
 
 _sqla_version = tuple(int(x) for x in version("sqlalchemy").split(".")[:2])
-_re_boolean_check_constraint = re.compile(r"(?:.*?\.)?(.*?)\s+IN\s*\(0, 1\)")   
+_re_boolean_check_constraint = re.compile(r"(?:.*?\.)?(.*?)\s+IN\s*\(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?).*\1\.)?(["`]?)(.*)\2')
-_re_enum_check_constraint = re.compile(r"(?:.*?\.)?(.*?)\s+IN\s*\((.+)\)")      
+_re_enum_check_constraint = re.compile(r"(?:.*?\.)?(.*?)\s+IN\s*\((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 _re_invalid_identifier = re.compile(r"(?u)\W")
 
