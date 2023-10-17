@@ -81,7 +81,7 @@ def main() -> None:
     except AttributeError:
         # sa 2.0
         inspection = inspect(engine)
-        tables = inspection.get_tables_names()
+        tables = inspection.get_table_names()
 
     if args.tables:
         # only keep the tables defined in args.tables
