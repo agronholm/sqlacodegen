@@ -6,7 +6,7 @@ import sys
 from contextlib import ExitStack
 from typing import TextIO
 
-from sqlalchemy.engine import create_engine
+from sqlalchemy.engine import create_engine, inspect
 from sqlalchemy.schema import MetaData
 
 try:
@@ -75,7 +75,14 @@ def main() -> None:
     # Use reflection to fill in the metadata
     engine = create_engine(args.url)
     metadata = MetaData()
-    tables = engine.table_names()
+    try:
+        # sa 1.4
+        tables = engine.table_names()
+    except AttributeError:
+        # sa 2.0
+        inspection = inspect(engine)
+        tables = inspection.get_tables_names()
+
     if args.tables:
         # only keep the tables defined in args.tables
         filter = re.compile(args.tables.replace(",", "|"))
