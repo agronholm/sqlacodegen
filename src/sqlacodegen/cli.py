@@ -47,10 +47,12 @@ def main() -> None:
         help="generator class to use",
     )
     parser.add_argument(
-        "--tables", help="tables to process (comma-delimited strings or regexp, default: all)"
+        "--tables",
+        help="tables to process (comma-delimited strings or regexp, default: all)",
     )
     parser.add_argument(
-        "--exclude-tables", help="tables to exclude (comma-delimited strings or regexp, default: none)"
+        "--exclude-tables",
+        help="tables to exclude (comma-delimited strings or regexp, default: none)",
     )
     parser.add_argument("--noviews", action="store_true", help="ignore views")
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
@@ -76,11 +78,11 @@ def main() -> None:
     tables = engine.table_names()
     if args.tables:
         # only keep the tables defined in args.tables
-        filter = re.compile(args.tables.replace(",","|"))
+        filter = re.compile(args.tables.replace(",", "|"))
         tables = [t for t in tables if filter.match(t)]
     if args.exclude_tables:
         # exclude the tables defined in args.exclude_tables
-        filter = re.compile(args.exclude_tables.replace(",","|"))
+        filter = re.compile(args.exclude_tables.replace(",", "|"))
         tables = [t for t in tables if not filter.match(t)]
     tables = args.tables.split(",") if args.tables else None
     schemas = args.schemas.split(",") if args.schemas else [None]
