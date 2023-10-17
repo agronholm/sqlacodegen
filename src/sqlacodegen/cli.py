@@ -6,7 +6,7 @@ import sys
 from contextlib import ExitStack
 from typing import TextIO
 
-from sqlalchemy.engine import create_engine, inspect
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.schema import MetaData
 
 try:
