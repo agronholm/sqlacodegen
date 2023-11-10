@@ -18,6 +18,11 @@ try:
 except ImportError:
     geoalchemy2 = None
 
+try:
+    import pgvector
+except ImportError:
+    pgvector = None
+
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points, version
 else:
@@ -65,6 +70,9 @@ def main() -> None:
 
     if geoalchemy2:
         print(f"Using geoalchemy2 {geoalchemy2.__version__}")
+
+    if pgvector:
+        print(f"Using pgvector {pgvector.__version__}")
 
     # Use reflection to fill in the metadata
     engine = create_engine(args.url)
