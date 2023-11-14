@@ -2,7 +2,7 @@ Version history
 ===============
 
 **3.0.0rc4**
-- Added support for pgvector extension
+- Added support for the ``pgvector`` extension
 
 **3.0.0rc3**
 
