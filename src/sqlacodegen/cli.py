@@ -19,9 +19,10 @@ except ImportError:
     geoalchemy2 = None
 
 try:
-    import pgvector
+    import pgvector.sqlalchemy
 except ImportError:
     pgvector = None
+    print("Import error")
 
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points, version

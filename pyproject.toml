@@ -40,6 +40,8 @@ dynamic = ["version"]
 "Bug Tracker" = "https://github.com/agronholm/sqlacodegen/issues"
 "Source Code" = "https://github.com/agronholm/sqlacodegen"
 
+
+
 [project.optional-dependencies]
 test = [
     "pytest",
@@ -52,7 +54,7 @@ sqlmodel = [
 ]
 citext = ["sqlalchemy-citext >= 1.7.0"]
 geoalchemy2 = ["geoalchemy2 >= 0.11.1"]
-pgvector = ["pgvector >= 0.1.4"]
+pgvector = ["pgvector >= 0.2.4"]
 
 [project.entry-points."sqlacodegen.generators"]
 tables = "sqlacodegen.generators:TablesGenerator"
