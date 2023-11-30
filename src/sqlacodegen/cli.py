@@ -18,6 +18,11 @@ try:
 except ImportError:
     geoalchemy2 = None
 
+try:
+    import pgvector
+except ImportError:
+    pgvector = None
+
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points, version
 else:
@@ -61,10 +66,13 @@ def main() -> None:
         return
 
     if citext:
-        print(f"Using sqlalchemy-citext {citext.__version__}")
+        print(f"Using sqlalchemy-citext {version('citext')}")
 
     if geoalchemy2:
-        print(f"Using geoalchemy2 {geoalchemy2.__version__}")
+        print(f"Using geoalchemy2 {version('geoalchemy2')}")
+
+    if pgvector:
+        print(f"Using pgvector {version('pgvector')}")
 
     # Use reflection to fill in the metadata
     engine = create_engine(args.url)

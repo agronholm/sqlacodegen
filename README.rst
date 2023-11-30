@@ -45,6 +45,11 @@ To include support for the PostgreSQL ``GEOMETRY``, ``GEOGRAPHY``, and ``RASTER`
 (which should be considered as tested only under a few environments) specify the
 ``geoalchemy2`` extra:
 
+To include support for the PostgreSQL ``PGVECTOR`` extension type, specify the
+``pgvector`` extra::
+
+    pip install sqlacodegen[pgvector]
+
 .. code-block:: bash
 
     pip install sqlacodegen[geoalchemy2]
