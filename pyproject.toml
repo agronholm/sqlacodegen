@@ -97,7 +97,7 @@ legacy_tox_ini = """
 [tox]
 envlist = py38, py39, py310, py311, py312
 skip_missing_interpreters = true
-isolated_build = true
+minversion = 4.0.0
 
 [testenv]
 extras = test
