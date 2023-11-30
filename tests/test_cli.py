@@ -8,16 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from sqlacodegen.generators import _sqla_version
-
-from .conftest import requires_sqlalchemy_1_4
-
 future_imports = "from __future__ import annotations\n\n"
-
-if _sqla_version < (1, 4):
-    declarative_package = "sqlalchemy.ext.declarative"
-else:
-    declarative_package = "sqlalchemy.orm"
 
 
 @pytest.fixture
@@ -77,27 +68,9 @@ def test_cli_declarative(db_path: Path, tmp_path: Path) -> None:
         check=True,
     )
 
-    if _sqla_version < (2, 0):
-        assert (
-            output_path.read_text()
-            == f"""\
-from sqlalchemy import Column, Integer, Text
-from {declarative_package} import declarative_base
-
-Base = declarative_base()
-
-
-class Foo(Base):
-    __tablename__ = 'foo'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False)
-"""
-        )
-    else:
-        assert (
-            output_path.read_text()
-            == """\
+    assert (
+        output_path.read_text()
+        == """\
 from sqlalchemy import Integer, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -111,7 +84,7 @@ class Foo(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(Text)
 """
-        )
+    )
 
 
 def test_cli_dataclass(db_path: Path, tmp_path: Path) -> None:
@@ -128,32 +101,9 @@ def test_cli_dataclass(db_path: Path, tmp_path: Path) -> None:
         check=True,
     )
 
-    if _sqla_version < (2, 0):
-        assert (
-            output_path.read_text()
-            == f"""\
-{future_imports}from dataclasses import dataclass, field
-
-from sqlalchemy import Column, Integer, Text
-from sqlalchemy.orm import registry
-
-mapper_registry = registry()
-
-
-@mapper_registry.mapped
-@dataclass
-class Foo:
-    __tablename__ = 'foo'
-    __sa_dataclass_metadata_key__ = 'sa'
-
-    id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
-    name: str = field(metadata={{'sa': Column(Text, nullable=False)}})
-"""
-        )
-    else:
-        assert (
-            output_path.read_text()
-            == """\
+    assert (
+        output_path.read_text()
+        == """\
 from sqlalchemy import Integer, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column
 
@@ -167,10 +117,9 @@ class Foo(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(Text)
 """
-        )
+    )
 
 
-@requires_sqlalchemy_1_4
 def test_cli_sqlmodels(db_path: Path, tmp_path: Path) -> None:
     output_path = tmp_path / "outfile"
     subprocess.run(

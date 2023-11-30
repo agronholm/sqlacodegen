@@ -18,7 +18,7 @@ latest SQLAlchemy version).
 Features
 ========
 
-* Supports SQLAlchemy 1.4.x and 2
+* Supports SQLAlchemy 2.x
 * Produces declarative code that almost looks like it was hand written
 * Produces `PEP 8`_ compliant code
 * Accurately determines relationships, including many-to-many, one-to-one

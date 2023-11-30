@@ -4,6 +4,7 @@ Version history
 **UNRELEASED**
 
 - Dropped support for Python 3.7
+- Dropped support for SQLAlchemy 1.x
 - Added support for the ``pgvector`` extension (with help from KellyRousselHoomano)
 
 **3.0.0rc3**

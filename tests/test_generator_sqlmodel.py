@@ -18,8 +18,6 @@ from sqlacodegen.generators import CodeGenerator, SQLModelGenerator
 
 from .conftest import validate_code
 
-pytest.importorskip("sqlmodel", reason="Requires the sqlmodel package")
-
 
 @pytest.fixture
 def generator(

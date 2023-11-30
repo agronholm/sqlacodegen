@@ -10,9 +10,7 @@ from sqlalchemy.types import INTEGER, VARCHAR
 
 from sqlacodegen.generators import CodeGenerator, DataclassGenerator
 
-from .conftest import requires_sqlalchemy_1_4, validate_code
-
-pytestmark = requires_sqlalchemy_1_4
+from .conftest import validate_code
 
 
 @pytest.fixture
@@ -34,27 +32,21 @@ def test_basic_class(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from __future__ import annotations
-
-        from dataclasses import dataclass, field
         from typing import Optional
 
-        from sqlalchemy import Column, Integer, String
-        from sqlalchemy.orm import registry
+        from sqlalchemy import Integer, String
+        from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, \
+mapped_column
 
-        mapper_registry = registry()
+        class Base(MappedAsDataclass, DeclarativeBase):
+            pass
 
 
-        @mapper_registry.mapped
-        @dataclass
-        class Simple:
+        class Simple(Base):
             __tablename__ = 'simple'
-            __sa_dataclass_metadata_key__ = 'sa'
 
-            id: int = field(init=False, metadata={'sa': Column(Integer, \
-primary_key=True)})
-            name: Optional[str] = field(default=None, metadata={'sa': \
-Column(String(20))})
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            name: Mapped[Optional[str]] = mapped_column(String(20))
         """,
     )
 
@@ -71,28 +63,23 @@ def test_mandatory_field_last(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from __future__ import annotations
-
-        from dataclasses import dataclass, field
         from typing import Optional
 
-        from sqlalchemy import Column, Integer, String, text
-        from sqlalchemy.orm import registry
+        from sqlalchemy import Integer, String, text
+        from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, \
+mapped_column
 
-        mapper_registry = registry()
+        class Base(MappedAsDataclass, DeclarativeBase):
+            pass
 
 
-        @mapper_registry.mapped
-        @dataclass
-        class Simple:
+        class Simple(Base):
             __tablename__ = 'simple'
-            __sa_dataclass_metadata_key__ = 'sa'
 
-            id: int = field(init=False, metadata={'sa': Column(Integer, \
-primary_key=True)})
-            age: int = field(metadata={'sa': Column(Integer, nullable=False)})
-            name: Optional[str] = field(default=None, metadata={'sa': \
-Column(String(20), server_default=text('foo'))})
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            age: Mapped[int] = mapped_column(Integer)
+            name: Mapped[Optional[str]] = mapped_column(String(20), \
+server_default=text('foo'))
         """,
     )
 
@@ -114,43 +101,34 @@ def test_onetomany_optional(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from __future__ import annotations
-
-        from dataclasses import dataclass, field
         from typing import List, Optional
 
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import registry, relationship
+        from sqlalchemy import ForeignKey, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, \
+mapped_column, relationship
 
-        mapper_registry = registry()
+        class Base(MappedAsDataclass, DeclarativeBase):
+            pass
 
 
-        @mapper_registry.mapped
-        @dataclass
-        class SimpleContainers:
+        class SimpleContainers(Base):
             __tablename__ = 'simple_containers'
-            __sa_dataclass_metadata_key__ = 'sa'
 
-            id: int = field(init=False, metadata={'sa': Column(Integer, \
-primary_key=True)})
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            simple_items: List[SimpleItems] = field(default_factory=list, \
-metadata={'sa': relationship('SimpleItems', back_populates='container')})
+            simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='container')
 
 
-        @mapper_registry.mapped
-        @dataclass
-        class SimpleItems:
+        class SimpleItems(Base):
             __tablename__ = 'simple_items'
-            __sa_dataclass_metadata_key__ = 'sa'
 
-            id: int = field(init=False, metadata={'sa': Column(Integer, \
-primary_key=True)})
-            container_id: Optional[int] = field(default=None, \
-metadata={'sa': Column(ForeignKey('simple_containers.id'))})
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
 
-            container: Optional[SimpleContainers] = field(default=None, \
-metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')})
+            container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+back_populates='simple_items')
         """,
     )
 
@@ -174,48 +152,36 @@ def test_manytomany(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from __future__ import annotations
-
-        from dataclasses import dataclass, field
         from typing import List
 
         from sqlalchemy import Column, ForeignKey, Integer, Table
-        from sqlalchemy.orm import registry, relationship
+        from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, \
+mapped_column, relationship
 
-        mapper_registry = registry()
-        metadata = mapper_registry.metadata
+        class Base(MappedAsDataclass, DeclarativeBase):
+            pass
 
 
-        @mapper_registry.mapped
-        @dataclass
-        class SimpleContainers:
+        class SimpleContainers(Base):
             __tablename__ = 'simple_containers'
-            __sa_dataclass_metadata_key__ = 'sa'
 
-            id: int = field(init=False, metadata={'sa': Column(Integer, \
-primary_key=True)})
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            item: List[SimpleItems] = field(default_factory=list, metadata=\
-{'sa': relationship('SimpleItems', secondary='container_items', \
-back_populates='container')})
+            item: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+secondary='container_items', back_populates='container')
 
 
-        @mapper_registry.mapped
-        @dataclass
-        class SimpleItems:
+        class SimpleItems(Base):
             __tablename__ = 'simple_items'
-            __sa_dataclass_metadata_key__ = 'sa'
 
-            id: int = field(init=False, metadata={'sa': Column(Integer, \
-primary_key=True)})
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            container: List[SimpleContainers] = \
-field(default_factory=list, metadata={'sa': relationship('SimpleContainers', \
-secondary='container_items', back_populates='item')})
+            container: Mapped[List['SimpleContainers']] = \
+relationship('SimpleContainers', secondary='container_items', back_populates='item')
 
 
         t_container_items = Table(
-            'container_items', metadata,
+            'container_items', Base.metadata,
             Column('item_id', ForeignKey('simple_items.id')),
             Column('container_id', ForeignKey('simple_containers.id'))
         )
@@ -242,47 +208,37 @@ def test_named_foreign_key_constraints(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from __future__ import annotations
-
-        from dataclasses import dataclass, field
         from typing import List, Optional
 
-        from sqlalchemy import Column, ForeignKeyConstraint, Integer
-        from sqlalchemy.orm import registry, relationship
+        from sqlalchemy import ForeignKeyConstraint, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, \
+mapped_column, relationship
 
-        mapper_registry = registry()
+        class Base(MappedAsDataclass, DeclarativeBase):
+            pass
 
 
-        @mapper_registry.mapped
-        @dataclass
-        class SimpleContainers:
+        class SimpleContainers(Base):
             __tablename__ = 'simple_containers'
-            __sa_dataclass_metadata_key__ = 'sa'
 
-            id: int = field(init=False, metadata={'sa': Column(Integer, \
-primary_key=True)})
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            simple_items: List[SimpleItems] = field(default_factory=list, \
-metadata={'sa': relationship('SimpleItems', back_populates='container')})
+            simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='container')
 
 
-        @mapper_registry.mapped
-        @dataclass
-        class SimpleItems:
+        class SimpleItems(Base):
             __tablename__ = 'simple_items'
             __table_args__ = (
                 ForeignKeyConstraint(['container_id'], ['simple_containers.id'], \
 name='foreignkeytest'),
             )
-            __sa_dataclass_metadata_key__ = 'sa'
 
-            id: int = field(init=False, metadata={'sa': Column(Integer, \
-primary_key=True)})
-            container_id: Optional[int] = field(default=None, metadata={'sa': \
-Column(Integer)})
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            container_id: Mapped[Optional[int]] = mapped_column(Integer)
 
-            container: Optional[SimpleContainers] = field(default=None, \
-metadata={'sa': relationship('SimpleContainers', back_populates='simple_items')})
+            container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+back_populates='simple_items')
         """,
     )
 
@@ -297,24 +253,18 @@ def test_uuid_type_annotation(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from __future__ import annotations
+        from sqlalchemy import UUID
+        from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, \
+mapped_column
+        import uuid
 
-        from dataclasses import dataclass, field
-
-        from sqlalchemy import Column
-        from sqlalchemy.dialects.postgresql import UUID
-        from sqlalchemy.orm import registry
-
-        mapper_registry = registry()
+        class Base(MappedAsDataclass, DeclarativeBase):
+            pass
 
 
-        @mapper_registry.mapped
-        @dataclass
-        class Simple:
+        class Simple(Base):
             __tablename__ = 'simple'
-            __sa_dataclass_metadata_key__ = 'sa'
 
-            id: str = field(init=False, metadata={'sa': \
-Column(UUID, primary_key=True)})
+            id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True)
         """,
     )

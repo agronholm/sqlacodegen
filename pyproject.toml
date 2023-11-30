@@ -29,7 +29,7 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "SQLAlchemy >= 1.4.36",
+    "SQLAlchemy >= 2.0.23",
     "inflect >= 4.0.0",
     "importlib_metadata; python_version < '3.10'",
 ]
@@ -46,9 +46,7 @@ test = [
     "psycopg2-binary",
     "mysql-connector-python",
 ]
-sqlmodel = [
-    "sqlmodel",
-]
+sqlmodel = ["sqlmodel >= 0.0.12"]
 citext = ["sqlalchemy-citext >= 1.7.0"]
 geoalchemy2 = ["geoalchemy2 >= 0.11.1"]
 pgvector = ["pgvector >= 0.2.4"]
@@ -79,7 +77,6 @@ src = ["src"]
 
 [tool.mypy]
 strict = true
-plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [tool.pytest.ini_options]
 addopts = "-rsx --tb=short"
@@ -101,7 +98,5 @@ minversion = 4.0.0
 
 [testenv]
 extras = test
-setenv =
-  SQLALCHEMY_WARN_20 = true
 commands = python -m pytest {posargs}
 """
