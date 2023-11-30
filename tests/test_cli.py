@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 import subprocess
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 import pytest
@@ -10,11 +11,6 @@ import pytest
 from sqlacodegen.generators import _sqla_version
 
 from .conftest import requires_sqlalchemy_1_4
-
-if sys.version_info < (3, 8):
-    from importlib_metadata import version
-else:
-    from importlib.metadata import version
 
 future_imports = "from __future__ import annotations\n\n"
 

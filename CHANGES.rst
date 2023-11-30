@@ -1,6 +1,10 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Dropped support for Python 3.7
+
 **3.0.0rc3**
 
 - Added support for SQLAlchemy 2 (PR by rbuffat with help from mhauru)

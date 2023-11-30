@@ -21,14 +21,13 @@ classifiers = [
     "Topic :: Software Development :: Code Generators",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 dependencies = [
     "SQLAlchemy >= 1.4.36",
     "inflect >= 4.0.0",
@@ -95,7 +94,7 @@ show_missing = true
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py37, py38, py39, py310, py311, py312
+envlist = py38, py39, py310, py311, py312
 skip_missing_interpreters = true
 isolated_build = true
 
