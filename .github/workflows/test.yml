@@ -14,7 +14,7 @@ jobs:
         sqlalchemy-version: ["1.4", "2.0"]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
@@ -31,22 +31,16 @@ jobs:
     - name: Test with pytest
       run: coverage run -m pytest
     - name: Upload Coverage
-      run: coveralls --service=github
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        COVERALLS_FLAG_NAME: ${{ matrix.test-name }}
-        COVERALLS_PARALLEL: true
-        SQLALCHEMY_WARN_20: "true"
+      uses: coverallsapp/github-action@v2
+      with:
+        parallel: true
 
   coveralls:
     name: Finish Coveralls
-    needs: [test]
+    needs: test
     runs-on: ubuntu-latest
-    container: python:3-slim
     steps:
     - name: Finished
-      run: |
-        pip install coveralls
-        coveralls --service=github --finish
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: coverallsapp/github-action@v2
+      with:
+        parallel-finished: true
