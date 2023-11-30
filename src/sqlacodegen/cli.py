@@ -60,6 +60,7 @@ def main() -> None:
     if args.version:
         print(version("sqlacodegen"))
         return
+
     if not args.url:
         print("You must supply a url\n", file=sys.stderr)
         parser.print_help()
