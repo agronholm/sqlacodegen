@@ -1616,7 +1616,7 @@ class SQLModelGenerator(DeclarativeGenerator):
             kwargs["default"] = None
             python_type_name = f"Optional[{python_type_name}]"
 
-        rendered_column = self.render_column(column, True)
+        rendered_column = self.render_column(column, True, is_table=True)
         kwargs["sa_column"] = f"{rendered_column}"
         rendered_field = render_callable("Field", kwargs=kwargs)
         return f"{column_attr.name}: {python_type_name} = {rendered_field}"
