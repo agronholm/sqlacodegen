@@ -1426,10 +1426,16 @@ class SQLModelGenerator(DeclarativeGenerator):
             kwargs["default"] = None
             python_type_name = f"Optional[{python_type_name}]"
 
+        column_name = column_attr.name
+        if column_name.startswith("_"):
+            print(f"aliasing {column_name}")
+            kwargs["alias"] = f"'{column_name}'"
+            column_name = column_name.lstrip("_")
+
         rendered_column = self.render_column(column, True)
         kwargs["sa_column"] = f"{rendered_column}"
         rendered_field = render_callable("Field", kwargs=kwargs)
-        return f"{column_attr.name}: {python_type_name} = {rendered_field}"
+        return f"{column_name}: {python_type_name} = {rendered_field}"
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
         rendered = super().render_relationship(relationship).partition(" = ")[2]
