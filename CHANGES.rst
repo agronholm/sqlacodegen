@@ -1,6 +1,10 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Fixed pgvector support not working
+
 **3.0.0rc4**
 
 - Dropped support for Python 3.7

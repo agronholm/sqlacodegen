@@ -19,7 +19,7 @@ except ImportError:
     geoalchemy2 = None
 
 try:
-    import pgvector
+    import pgvector.sqlalchemy
 except ImportError:
     pgvector = None
 
