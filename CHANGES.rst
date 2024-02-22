@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**3.0.0rc5**
 
 - Fixed pgvector support not working
 
