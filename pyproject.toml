@@ -41,8 +41,8 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
-    "pytest",
-    "pytest-cov",
+    "pytest >= 7.4",
+    "coverage >= 7",
     "psycopg2-binary",
     "mysql-connector-python",
 ]
