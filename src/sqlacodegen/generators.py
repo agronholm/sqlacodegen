@@ -13,9 +13,10 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Optional
 
 import inflect
+import pydantic
 import sqlalchemy
 from sqlalchemy import (
     ARRAY,
@@ -1299,6 +1300,232 @@ class DeclarativeGenerator(TablesGenerator):
             f"{relationship.name}: Mapped[{relationship_type}] "
             f"= {rendered_relationship}"
         )
+
+
+class PydanticGenerator(DeclarativeGenerator):
+    def __init__(
+        self,
+        metadata: MetaData,
+        bind: Connection | Engine,
+        options: Sequence[str],
+        *,
+        indentation: str = "    ",
+        base_class_name: str = "BaseModel",
+    ):
+        super().__init__(
+            metadata,
+            bind,
+            options,
+            indentation=indentation,
+            base_class_name=base_class_name,
+        )
+
+    def generate_base(self) -> None:
+        self.base = Base(
+            literal_imports=[
+                LiteralImport("pydantic", "BaseModel"),
+                LiteralImport("pydantic", "ConfigDict"),
+            ],
+            declarations=[],
+            metadata_ref="",
+        )
+
+    def generate_models(self) -> list[Model]:
+        models_by_table_name: dict[str, Model] = {}
+
+        # Pick association tables from the metadata into their own set, don't process
+        # them normally
+        links: defaultdict[str, list[Model]] = defaultdict(lambda: [])
+        for table in self.metadata.sorted_tables:
+            qualified_name = qualified_table_name(table)
+
+            # Link tables have exactly two foreign key constraints and all columns are
+            # involved in them
+            fk_constraints = sorted(
+                table.foreign_key_constraints, key=get_constraint_sort_key
+            )
+            if len(fk_constraints) == 2 and all(
+                col.foreign_keys for col in table.columns
+            ):
+                model = models_by_table_name[qualified_name] = Model(table)
+                tablename = fk_constraints[0].elements[0].column.table.name
+                links[tablename].append(model)
+                continue
+
+            # Only difference from DeclarativeGenerator.generate_models
+            model = ModelClass(table)
+            models_by_table_name[qualified_name] = model
+
+            # Fill in the columns
+            for column in table.c:
+                column_attr = ColumnAttribute(model, column)
+                model.columns.append(column_attr)
+            # difference end
+
+        # Add relationships
+        for model in models_by_table_name.values():
+            if isinstance(model, ModelClass):
+                self.generate_relationships(
+                    model, models_by_table_name, links[model.table.name]
+                )
+
+        # Nest inherited classes in their superclasses to ensure proper ordering
+        if "nojoined" not in self.options:
+            for model in list(models_by_table_name.values()):
+                if not isinstance(model, ModelClass):
+                    continue
+
+                pk_column_names = {col.name for col in model.table.primary_key.columns}
+                for constraint in model.table.foreign_key_constraints:
+                    if set(get_column_names(constraint)) == pk_column_names:
+                        target = models_by_table_name[
+                            qualified_table_name(constraint.elements[0].column.table)
+                        ]
+                        if isinstance(target, ModelClass):
+                            model.parent_class = target
+                            target.children.append(model)
+
+        # Change base if we only have tables
+        if not any(
+            isinstance(model, ModelClass) for model in models_by_table_name.values()
+        ):
+            super().generate_base()
+
+        # Collect the imports
+        self.collect_imports(models_by_table_name.values())
+
+        # Rename models and their attributes that conflict with imports or other
+        # attributes
+        global_names = {
+            name for namespace in self.imports.values() for name in namespace
+        }
+        for model in models_by_table_name.values():
+            self.generate_model_name(model, global_names)
+            global_names.add(model.name)
+
+        return list(models_by_table_name.values())
+
+    def collect_imports(self, models: Iterable[Model]) -> None:
+        # call TablesGenerator collect_imports bypassing DeclarativeGenerator
+        super(DeclarativeGenerator, self).collect_imports(models)
+
+    def collect_imports_for_model(self, model: Model) -> None:
+        for column in model.table.c:
+            self.collect_imports_for_column(column)
+
+        # for constraint in model.table.constraints:
+        #     self.collect_imports_for_constraint(constraint)
+
+        # for index in model.table.indexes:
+        #     self.collect_imports_for_constraint(index)
+
+    def collect_imports_for_column(self, column: Column[Any]) -> None:
+        self.add_import(column.type.python_type)
+
+        if isinstance(column.type, ARRAY):
+            # self.add_import(column.type.item_type.__class__)
+            print(
+                "collect_imports_for_column ARRAY",
+                column.type.item_type,
+                column.type.item_type.__class__,
+            )
+            ...
+        elif isinstance(column.type, JSONB):
+            if (
+                not isinstance(column.type.astext_type, Text)
+                or column.type.astext_type.length is not None
+            ):
+                print("collect_imports_for_column JSONB", column.type.astext_type)
+                # self.add_import(column.type.astext_type)
+                ...
+
+    def add_import(self, obj: Any) -> None:
+        # Don't store builtin imports
+        if getattr(obj, "__module__", "builtins") == "builtins":
+            return
+
+        type_ = type(obj) if not isinstance(obj, type) else obj
+        pkgname: Optional[str] = None  # noqa: UP007
+
+        if type_.__module__.startswith("sqlalchemy.dialects."):
+            pkgname = None
+        elif type_.__name__ in dir(sqlalchemy):
+            pkgname = None
+        elif type_.__name__ in dir(pydantic):
+            pkgname = "pydantic"
+        else:
+            pkgname = type_.__module__
+
+        if pkgname:
+            self.add_literal_import(pkgname, type_.__name__)
+
+    def render_class(self, model: ModelClass) -> str:
+        sections: list[str] = []
+
+        sections.append("model_config = ConfigDict(from_attributes=True)")
+
+        # Render column attributes
+        rendered_column_attributes: list[str] = []
+
+        for column_attr in model.columns:
+            rendered_column_attributes.append(self.render_column_attribute(column_attr))
+
+        if rendered_column_attributes:
+            sections.append("\n".join(rendered_column_attributes))
+
+        # Render relationship attributes
+        # rendered_relationship_attributes: list[str] = [
+        #     self.render_relationship(relationship)
+        #     for relationship in model.relationships
+        # ]
+
+        # if rendered_relationship_attributes:
+        #     sections.append("\n".join(rendered_relationship_attributes))
+
+        declaration = self.render_class_declaration(model)
+        rendered_sections = "\n\n".join(
+            indent(section, self.indentation) for section in sections
+        )
+        return f"{declaration}\n{rendered_sections}"
+
+    def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
+        column = column_attr.column
+
+        try:
+            python_type = column.type.python_type
+            python_type_name = python_type.__name__
+            if python_type.__module__ == "builtins":
+                if python_type_name == "str" and column.type.length is not None:
+                    column_python_type = self.render_column_type_str_length(
+                        column.type.length
+                    )
+                else:
+                    column_python_type = python_type_name
+            else:
+                python_type_module = python_type.__module__
+                column_python_type = f"{python_type_module}.{python_type_name}"
+                self.add_module_import(python_type_module)
+        except NotImplementedError:
+            self.add_literal_import("typing", "Any")
+            column_python_type = "Any"
+
+        if column.nullable:
+            self.add_literal_import("typing", "Optional")
+            column_python_type = f"Optional[{column_python_type}]"
+            return f"{column_attr.name}: {column_python_type} = None"
+        else:
+            return f"{column_attr.name}: {column_python_type}"
+
+    def render_column_type_str_length(self, length: int) -> str:
+        self.add_literal_import("typing_extensions", "Annotated")
+        self.add_literal_import("pydantic", "StringConstraints")
+
+        return f"Annotated[str, StringConstraints(max_length={length})]"
+
+    def render_column(
+        self, column: Column[Any], show_name: bool, is_table: bool = False
+    ) -> str:
+        return super().render_column(column, show_name, is_table)
 
 
 class DataclassGenerator(DeclarativeGenerator):

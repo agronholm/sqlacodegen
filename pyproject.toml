@@ -32,6 +32,7 @@ dependencies = [
     "SQLAlchemy >= 2.0.23",
     "inflect >= 4.0.0",
     "importlib_metadata; python_version < '3.10'",
+    "pydantic >= 2.0",
 ]
 dynamic = ["version"]
 
@@ -55,6 +56,7 @@ pgvector = ["pgvector >= 0.2.4"]
 tables = "sqlacodegen.generators:TablesGenerator"
 declarative = "sqlacodegen.generators:DeclarativeGenerator"
 dataclasses = "sqlacodegen.generators:DataclassGenerator"
+pydanticmodels = "sqlacodegen.generators:PydanticGenerator"
 sqlmodels = "sqlacodegen.generators:SQLModelGenerator"
 
 [project.scripts]
@@ -65,7 +67,7 @@ version_scheme = "post-release"
 local_scheme = "dirty-tag"
 
 [tool.ruff]
-select = [
+lint.select = [
     "E", "F", "W",  # default Flake8
     "I",            # isort
     "ISC",          # flake8-implicit-str-concat
@@ -97,6 +99,9 @@ skip_missing_interpreters = true
 minversion = 4.0.0
 
 [testenv]
-extras = test
+extras =
+    test
+    sqlmodel
+    pydantic
 commands = python -m pytest {posargs}
 """

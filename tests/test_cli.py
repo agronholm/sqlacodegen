@@ -150,6 +150,34 @@ primary_key=True))
     )
 
 
+def test_cli_pydanticmodels(db_path: Path, tmp_path: Path) -> None:
+    output_path = tmp_path / "outfile"
+    subprocess.run(
+        [
+            "sqlacodegen",
+            f"sqlite:///{db_path}",
+            "--generator",
+            "pydanticmodels",
+            "--outfile",
+            str(output_path),
+        ],
+        check=True,
+    )
+
+    assert (
+        output_path.read_text()
+        == """\
+from pydantic import BaseModel, ConfigDict
+
+class Foo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+"""
+    )
+
+
 def test_main() -> None:
     expected_version = version("sqlacodegen")
     completed = subprocess.run(
