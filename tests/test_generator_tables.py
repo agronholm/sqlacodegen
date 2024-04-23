@@ -4,8 +4,8 @@ from textwrap import dedent
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from sqlalchemy import Dialect
 from sqlalchemy.dialects import mysql, postgresql
-from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
     CheckConstraint,
     Column,
@@ -28,13 +28,13 @@ from .conftest import validate_code
 
 @pytest.fixture
 def generator(
-    request: FixtureRequest, metadata: MetaData, engine: Engine
+    request: FixtureRequest, metadata: MetaData, dialect: Dialect
 ) -> CodeGenerator:
     options = getattr(request, "param", [])
-    return TablesGenerator(metadata, engine, options)
+    return TablesGenerator(metadata, dialect, options)
 
 
-@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["postgresql"], indirect=["dialect"])
 def test_fancy_coltypes(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -92,7 +92,7 @@ def test_boolean_detection(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["postgresql"], indirect=["dialect"])
 def test_arrays(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -118,7 +118,7 @@ def test_arrays(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["postgresql"], indirect=["dialect"])
 def test_jsonb(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -143,7 +143,7 @@ def test_jsonb(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["postgresql"], indirect=["dialect"])
 def test_jsonb_default(generator: CodeGenerator) -> None:
     Table("simple_items", generator.metadata, Column("jsonb", postgresql.JSONB))
 
@@ -188,7 +188,7 @@ def test_enum_detection(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["postgresql"], indirect=["dialect"])
 def test_column_adaptation(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -214,7 +214,7 @@ def test_column_adaptation(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["mysql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["mysql"], indirect=["dialect"])
 def test_mysql_column_types(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -558,7 +558,7 @@ server_default=text('uuid_generate_v4()'))
     )
 
 
-@pytest.mark.parametrize("engine", ["mysql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["mysql"], indirect=["dialect"])
 def test_mysql_timestamp(generator: CodeGenerator) -> None:
     Table(
         "simple",
@@ -584,7 +584,7 @@ def test_mysql_timestamp(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["mysql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["mysql"], indirect=["dialect"])
 def test_mysql_integer_display_width(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -611,7 +611,7 @@ def test_mysql_integer_display_width(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["mysql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["mysql"], indirect=["dialect"])
 def test_mysql_tinytext(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -638,7 +638,7 @@ def test_mysql_tinytext(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["mysql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["mysql"], indirect=["dialect"])
 def test_mysql_mediumtext(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -665,7 +665,7 @@ def test_mysql_mediumtext(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["mysql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["mysql"], indirect=["dialect"])
 def test_mysql_longtext(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -877,7 +877,7 @@ def test_multiline_table_comment(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["postgresql"], indirect=["dialect"])
 def test_postgresql_sequence_standard_name(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -906,7 +906,7 @@ def test_postgresql_sequence_standard_name(generator: CodeGenerator) -> None:
     )
 
 
-@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["postgresql"], indirect=["dialect"])
 def test_postgresql_sequence_nonstandard_name(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -944,7 +944,7 @@ def test_postgresql_sequence_nonstandard_name(generator: CodeGenerator) -> None:
         pytest.param('"my.schema"', '"test_seq"'),
     ],
 )
-@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+@pytest.mark.parametrize("dialect", ["postgresql"], indirect=["dialect"])
 def test_postgresql_sequence_with_schema(
     generator: CodeGenerator, schemaname: str, seqname: str
 ) -> None:

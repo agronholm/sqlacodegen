@@ -2,20 +2,21 @@ from textwrap import dedent
 
 import pytest
 from pytest import FixtureRequest
-from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy import Dialect
+from sqlalchemy.dialects import mysql, postgresql, sqlite
 from sqlalchemy.orm import clear_mappers, configure_mappers
 from sqlalchemy.schema import MetaData
 
 
 @pytest.fixture
-def engine(request: FixtureRequest) -> Engine:
-    dialect = getattr(request, "param", None)
-    if dialect == "postgresql":
-        return create_engine("postgresql:///testdb")
-    elif dialect == "mysql":
-        return create_engine("mysql+mysqlconnector://testdb")
+def dialect(request: FixtureRequest) -> Dialect:
+    dialect_name = getattr(request, "param", None)
+    if dialect_name == "postgresql":
+        return postgresql.dialect()
+    elif dialect_name == "mysql":
+        return mysql.mysqlconnector.dialect()
     else:
-        return create_engine("sqlite:///:memory:")
+        return sqlite.dialect()
 
 
 @pytest.fixture
