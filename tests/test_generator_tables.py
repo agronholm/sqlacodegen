@@ -206,6 +206,41 @@ def test_enum_detection(generator: CodeGenerator) -> None:
 
 
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_domain(generator: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column(
+            'postal_code',
+            postgresql.DOMAIN(
+                'us_postal_code',
+                Text,
+                constraint_name='valid_us_postal_code',
+                not_null=False,
+                check=text("VALUE ~ '^\\d{5}$' OR VALUE ~ '^\\d{5}-\\d{4}$'"),
+            ),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, MetaData, Table, Text, text
+        from sqlalchemy.dialects.postgresql import DOMAIN
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('postal_code', DOMAIN('us_postal_code', Text(), constraint_name='valid_us_postal_code', not_null=False, check=text("VALUE ~ '^\\\\d{5}$' OR VALUE ~ '^\\\\d{5}-\\\\d{4}$'")), nullable=False)
+        )
+        """,
+    )
+
+
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_column_adaptation(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
