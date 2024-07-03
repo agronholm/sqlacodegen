@@ -234,7 +234,9 @@ def test_domain(generator: CodeGenerator) -> None:
 
         t_simple_items = Table(
             'simple_items', metadata,
-            Column('postal_code', DOMAIN('us_postal_code', Text(), constraint_name='valid_us_postal_code', not_null=False, check=text("VALUE ~ '^\\\\d{5}$' OR VALUE ~ '^\\\\d{5}-\\\\d{4}$'")), nullable=False)
+            Column('postal_code', DOMAIN('us_postal_code', Text(), \
+constraint_name='valid_us_postal_code', not_null=False, \
+check=text("VALUE ~ '^\\\\d{5}$' OR VALUE ~ '^\\\\d{5}-\\\\d{4}$'")), nullable=False)
         )
         """,
     )
