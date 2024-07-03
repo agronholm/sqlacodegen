@@ -230,9 +230,8 @@ class TablesGenerator(CodeGenerator):
                 self.add_import(column.type.astext_type)
         elif isinstance(column.type, DOMAIN):
             self.add_import(column.type.data_type.__class__)
-            if (
-                isinstance(column.type.default, TextClause)
-                or isinstance(column.type.check, TextClause)
+            if isinstance(column.type.default, TextClause) or isinstance(
+                column.type.check, TextClause
             ):
                 self.add_literal_import("sqlalchemy", "text")
 

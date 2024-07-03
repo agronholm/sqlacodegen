@@ -211,11 +211,11 @@ def test_domain(generator: CodeGenerator) -> None:
         "simple_items",
         generator.metadata,
         Column(
-            'postal_code',
+            "postal_code",
             postgresql.DOMAIN(
-                'us_postal_code',
+                "us_postal_code",
                 Text,
-                constraint_name='valid_us_postal_code',
+                constraint_name="valid_us_postal_code",
                 not_null=False,
                 check=text("VALUE ~ '^\\d{5}$' OR VALUE ~ '^\\d{5}-\\d{4}$'"),
             ),
