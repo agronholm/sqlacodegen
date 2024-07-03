@@ -38,7 +38,7 @@ from sqlalchemy import (
     TypeDecorator,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import DOMAIN, JSONB
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
@@ -228,6 +228,13 @@ class TablesGenerator(CodeGenerator):
                 or column.type.astext_type.length is not None
             ):
                 self.add_import(column.type.astext_type)
+        elif isinstance(column.type, DOMAIN):
+            self.add_import(column.type.data_type.__class__)
+            if (
+                isinstance(column.type.default, TextClause)
+                or isinstance(column.type.check, TextClause)
+            ):
+                self.add_literal_import("sqlalchemy", "text")
 
         if column.default:
             self.add_import(column.default)
@@ -546,6 +553,12 @@ class TablesGenerator(CodeGenerator):
                 and coltype.astext_type.length is None
             ):
                 del kwargs["astext_type"]
+
+        if isinstance(coltype, DOMAIN):
+            if isinstance(coltype.default, TextClause):
+                kwargs["default"] = render_callable("text", repr(coltype.default.text))
+            if isinstance(coltype.check, TextClause):
+                kwargs["check"] = render_callable("text", repr(coltype.check.text))
 
         if args or kwargs:
             return render_callable(coltype.__class__.__name__, *args, kwargs=kwargs)
