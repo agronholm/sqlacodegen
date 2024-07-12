@@ -719,8 +719,9 @@ class TablesGenerator(CodeGenerator):
                     # If the adapted column type can't be compiled, don't substitute it
                     break
 
-                # Stop on the first valid non-uppercase column type class
                 adapted_type = new_coltype
+
+                # Stop on the first valid non-uppercase column type class
                 if supercls.__name__ != supercls.__name__.upper():
                     break
 
