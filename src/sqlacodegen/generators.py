@@ -13,7 +13,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Dict
 
 import inflect
 import sqlalchemy
@@ -89,6 +89,7 @@ class CodeGenerator(metaclass=ABCMeta):
         invalid_options = {opt for opt in options if opt not in self.valid_options}
         if invalid_options:
             raise ValueError("Unrecognized options: " + ", ".join(invalid_options))
+        self.target_version = 1
 
     @abstractmethod
     def generate(self) -> str:
@@ -117,7 +118,7 @@ class TablesGenerator(CodeGenerator):
         self.indentation: str = indentation
         self.imports: dict[str, set[str]] = defaultdict(set)
 
-    def generate(self) -> str:
+    def generate(self, multi_file=False) -> str | Dict[str, str]:
         sections: list[str] = []
 
         # Remove unwanted elements from the metadata
@@ -146,6 +147,37 @@ class TablesGenerator(CodeGenerator):
 
         # Generate the models
         models: list[Model] = self.generate_models()
+
+        if multi_file:
+            sections_dict = {}
+            # create base_model.py and __init__.py
+            sections_dict["base_model"] = """import sqlalchemy as sa
+
+if sa.__version__.split('.')[0] == '1':
+    from sqlalchemy.orm import declarative_base # type: ignore
+else:
+    from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass
+    class DataBase(MappedAsDataclass, DeclarativeBase):
+        pass
+        
+    def declarative_base():
+        return DataBase"""
+            sections_dict["__init__"] = f""
+            
+            for model in models:
+                # clean imports
+                self.imports: dict[str, set[str]] = defaultdict(set)
+                self.collect_imports([model])
+                if "sqlalchemy.orm" in self.imports and "declarative_base" in self.imports["sqlalchemy.orm"]:
+                    self.remove_literal_import("sqlalchemy.orm", "declarative_base")
+                self.add_literal_import(".base_model", "declarative_base")
+                sections_dict[model.name] = self.render_all([model])
+            return sections_dict
+        else:
+            return self.render_all(models)
+        
+    def render_all(self, models: Iterable[Model]) -> str:
+        sections: list[str] = []
 
         # Render module level variables
         variables = self.render_module_variables(models)
@@ -241,7 +273,7 @@ class TablesGenerator(CodeGenerator):
 
             if type_.__name__ in dialect_pkg.__all__:
                 pkgname = dialect_pkgname
-        elif type_.__name__ in sqlalchemy.__all__:  # type: ignore[attr-defined]
+        elif type_.__name__ in sqlalchemy.__dict__:  # type: ignore[attr-defined]
             pkgname = "sqlalchemy"
         else:
             pkgname = type_.__module__
@@ -351,7 +383,7 @@ class TablesGenerator(CodeGenerator):
 
         return render_callable("Index", repr(index.name), *extra_args, kwargs=kwargs)
 
-    def render_column(self, column: Column[Any], show_name: bool) -> str:
+    def render_column(self, column: Column[Any], show_name: bool, col_cls="Column") -> str:
         args = []
         kwargs: dict[str, Any] = {}
         kwarg = []
@@ -436,7 +468,7 @@ class TablesGenerator(CodeGenerator):
         if comment:
             kwargs["comment"] = repr(comment)
 
-        return render_callable("Column", *args, kwargs=kwargs)
+        return render_callable(col_cls, *args, kwargs=kwargs)
 
     def render_column_type(self, coltype: object) -> str:
         args = []
@@ -663,6 +695,7 @@ class DeclarativeGenerator(TablesGenerator):
         "use_inflect",
         "nojoined",
         "nobidi",
+        "column_docstring",
     }
 
     def __init__(
@@ -688,12 +721,25 @@ class DeclarativeGenerator(TablesGenerator):
                 )
             else:
                 self.add_literal_import("sqlalchemy.orm", "declarative_base")
+                self.add_literal_import("sqlalchemy.orm", "Mapped")
+                if self.target_version > 1:
+                    self.add_literal_import("sqlalchemy.orm", "mapped_column")
 
     def collect_imports_for_model(self, model: Model) -> None:
         super().collect_imports_for_model(model)
         if isinstance(model, ModelClass):
             if model.relationships:
                 self.add_literal_import("sqlalchemy.orm", "relationship")
+                self.add_literal_import("sqlalchemy", "ForeignKey")
+
+    def collect_imports_for_column(self, column: Column[Any]) -> None:
+        super().collect_imports_for_column(column)
+        try:
+            python_type = column.type.python_type
+        except NotImplementedError:
+            pass
+        else:
+            self.add_import(python_type)
 
     def generate_models(self) -> list[Model]:
         models_by_table_name: dict[str, Model] = {}
@@ -1135,10 +1181,44 @@ class DeclarativeGenerator(TablesGenerator):
         else:
             return ""
 
+    def get_column_python_type(self, column: Column[Any]) -> str:
+        try:
+            python_type = column.type.python_type
+        except NotImplementedError:
+            python_type_name = "Any"
+        else:
+            python_type_name = python_type.__name__
+
+        if column.nullable:
+            self.add_literal_import("typing", "Optional")
+            python_type_name = f"Optional[{python_type_name}]"
+        return python_type_name
+
     def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
         column = column_attr.column
-        rendered_column = self.render_column(column, column_attr.name != column.name)
-        return f"{column_attr.name} = {rendered_column}"
+        python_type_name = self.get_column_python_type(column)
+        colargs = {}
+        if self.target_version > 1:
+            colargs.update({"col_cls" : "mapped_column"})
+        rendered_column = self.render_column(column, column_attr.name != column.name, **colargs)
+        # kwargs["metadata"] = f"{{{self.metadata_key!r}: {rendered_column}}}"
+        # rendered_field = render_callable("field", kwargs=kwargs)
+        col_line = f"{column_attr.name}: Mapped[{python_type_name}] = {rendered_column}"
+        if "column_docstring" in self.options:
+            docstring = self.render_column_docstring(column)
+            if docstring:
+                return f"{col_line}\n{docstring}"
+        return col_line
+
+    def render_column_docstring(self, column: Column[Any]) -> str:
+        if isinstance(column.comment, str):
+            column.comment = column.comment.replace("\\", "/")
+            comment_line = repr(column.comment)
+            return comment_line
+        else:
+            return ""
+
+
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
         def render_column_attrs(column_attrs: list[ColumnAttribute]) -> str:
@@ -1266,15 +1346,6 @@ class DataclassGenerator(DeclarativeGenerator):
                 ):
                     self.add_literal_import("typing", "List")
 
-    def collect_imports_for_column(self, column: Column[Any]) -> None:
-        super().collect_imports_for_column(column)
-        try:
-            python_type = column.type.python_type
-        except NotImplementedError:
-            pass
-        else:
-            self.add_import(python_type)
-
     def render_module_variables(self, models: list[Model]) -> str:
         if not any(isinstance(model, ModelClass) for model in models):
             return super().render_module_variables(models)
@@ -1317,8 +1388,12 @@ class DataclassGenerator(DeclarativeGenerator):
             self.add_literal_import("typing", "Optional")
             kwargs["default"] = None
             python_type_name = f"Optional[{python_type_name}]"
-
-        rendered_column = self.render_column(column, column_attr.name != column.name)
+        
+        if self.target_version > 1:
+            colargs = {"col_cls" : "mapped_column"}
+        else:
+            colargs = {}
+        rendered_column = self.render_column(column, column_attr.name != column.name, **colargs)
         kwargs["metadata"] = f"{{{self.metadata_key!r}: {rendered_column}}}"
         rendered_field = render_callable("field", kwargs=kwargs)
         return f"{column_attr.name}: {python_type_name} = {rendered_field}"
