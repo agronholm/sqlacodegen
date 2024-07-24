@@ -662,10 +662,17 @@ class TablesGenerator(CodeGenerator):
 
     def get_adapted_type(self, coltype: Any) -> Any:
         compiled_type = coltype.compile(self.bind.engine.dialect)
+        adapted_type: Any = None
         for supercls in coltype.__class__.__mro__:
             if not supercls.__name__.startswith("_") and hasattr(
                 supercls, "__visit_name__"
             ):
+                if (
+                    supercls.__visit_name__ == "user_defined"
+                    and adapted_type is not None
+                ):
+                    continue
+
                 # Hack to fix adaptation of the Enum class which is broken since
                 # SQLAlchemy 1.2
                 kw = {}
@@ -700,12 +707,13 @@ class TablesGenerator(CodeGenerator):
                     # If the adapted column type can't be compiled, don't substitute it
                     break
 
+                adapted_type = new_coltype
+
                 # Stop on the first valid non-uppercase column type class
-                coltype = new_coltype
                 if supercls.__name__ != supercls.__name__.upper():
                     break
 
-        return coltype
+        return adapted_type
 
 
 class DeclarativeGenerator(TablesGenerator):
