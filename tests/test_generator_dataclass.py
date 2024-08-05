@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from sqlalchemy import Dialect
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.engine import Engine
 from sqlalchemy.schema import Column, ForeignKeyConstraint, MetaData, Table
 from sqlalchemy.sql.expression import text
 from sqlalchemy.types import INTEGER, VARCHAR
@@ -15,10 +15,10 @@ from .conftest import validate_code
 
 @pytest.fixture
 def generator(
-    request: FixtureRequest, metadata: MetaData, engine: Engine
+    request: FixtureRequest, metadata: MetaData, dialect: Dialect
 ) -> CodeGenerator:
     options = getattr(request, "param", [])
-    return DataclassGenerator(metadata, engine, options)
+    return DataclassGenerator(metadata, dialect, options)
 
 
 def test_basic_class(generator: CodeGenerator) -> None:

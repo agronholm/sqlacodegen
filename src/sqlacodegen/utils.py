@@ -4,8 +4,7 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
-from sqlalchemy.engine import Connection, Engine
+from sqlalchemy import Dialect, PrimaryKeyConstraint, UniqueConstraint
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.schema import (
@@ -34,9 +33,11 @@ def get_constraint_sort_key(constraint: Constraint) -> str:
         return str(constraint)
 
 
-def get_compiled_expression(statement: ClauseElement, bind: Engine | Connection) -> str:
+def get_compiled_expression(statement: ClauseElement, dialect: Dialect) -> str:
     """Return the statement in a form where any placeholders have been filled in."""
-    return str(statement.compile(bind, compile_kwargs={"literal_binds": True}))
+    return str(
+        statement.compile(dialect=dialect, compile_kwargs={"literal_binds": True})
+    )
 
 
 def get_common_fk_constraints(

@@ -86,7 +86,7 @@ def main() -> None:
 
     # Instantiate the generator
     generator_class = generators[args.generator].load()
-    generator = generator_class(metadata, engine, options)
+    generator = generator_class(metadata, engine.dialect, options)
 
     # Open the target file (if given)
     with ExitStack() as stack:
