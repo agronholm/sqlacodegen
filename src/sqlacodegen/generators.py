@@ -713,6 +713,7 @@ class DeclarativeGenerator(TablesGenerator):
         "use_inflect",
         "nojoined",
         "nobidi",
+        "force_class"
     }
 
     def __init__(
@@ -774,9 +775,7 @@ class DeclarativeGenerator(TablesGenerator):
 
             # Only form model classes for tables that have a primary key and are not
             # association tables
-            if not table.primary_key:
-                models_by_table_name[qualified_name] = Model(table)
-            else:
+            if table.primary_key or "force_class" in self.options:
                 model = ModelClass(table)
                 models_by_table_name[qualified_name] = model
 
@@ -784,6 +783,8 @@ class DeclarativeGenerator(TablesGenerator):
                 for column in table.c:
                     column_attr = ColumnAttribute(model, column)
                     model.columns.append(column_attr)
+            else:
+                models_by_table_name[qualified_name] = Model(table)
 
         # Add relationships
         for model in models_by_table_name.values():

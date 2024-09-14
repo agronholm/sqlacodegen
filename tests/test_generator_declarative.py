@@ -1509,3 +1509,33 @@ class Simple(Base):
 server_default=text("'test'"))
 """,
     )
+
+
+def test_force_class(
+    metadata: MetaData, engine: Engine
+) -> None:
+    generator = DeclarativeGenerator(metadata, engine, options = ["force_class"])
+    Table(
+        "simple",
+        generator.metadata,
+        Column("a", INTEGER),
+        Column("b", VARCHAR),
+    )
+
+
+    assert generator.generate() == """\
+from typing import Optional
+
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+
+    a: Mapped[Optional[int]] = mapped_column(Integer)
+    b: Mapped[Optional[str]] = mapped_column(String)
+"""
