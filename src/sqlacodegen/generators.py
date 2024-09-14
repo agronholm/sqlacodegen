@@ -713,7 +713,7 @@ class DeclarativeGenerator(TablesGenerator):
         "use_inflect",
         "nojoined",
         "nobidi",
-        "force_class"
+        "force_class",
     }
 
     def __init__(

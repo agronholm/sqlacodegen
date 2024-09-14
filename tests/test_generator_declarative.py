@@ -1511,10 +1511,8 @@ server_default=text("'test'"))
     )
 
 
-def test_force_class(
-    metadata: MetaData, engine: Engine
-) -> None:
-    generator = DeclarativeGenerator(metadata, engine, options = ["force_class"])
+def test_force_class(metadata: MetaData, engine: Engine) -> None:
+    generator = DeclarativeGenerator(metadata, engine, options=["force_class"])
     Table(
         "simple",
         generator.metadata,
@@ -1522,8 +1520,9 @@ def test_force_class(
         Column("b", VARCHAR),
     )
 
-
-    assert generator.generate() == """\
+    assert (
+        generator.generate()
+        == """\
 from typing import Optional
 
 from sqlalchemy import Integer, String
@@ -1539,3 +1538,4 @@ class Simple(Base):
     a: Mapped[Optional[int]] = mapped_column(Integer)
     b: Mapped[Optional[str]] = mapped_column(String)
 """
+    )
