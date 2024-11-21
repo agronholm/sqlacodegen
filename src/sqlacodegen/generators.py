@@ -72,7 +72,7 @@ _re_column_name = re.compile(r'(?:(["`]?).*\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \((.+)\)")
 _re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 _re_invalid_identifier = re.compile(r"(?u)\W")
-
+POSTGRES_LIKE_NAMES = ("postgresql", "timescaledb",)
 
 @dataclass
 class LiteralImport:
@@ -646,7 +646,7 @@ class TablesGenerator(CodeGenerator):
                 pass
 
             # PostgreSQL specific fix: detect sequences from server_default
-            if column.server_default and self.bind.dialect.name == "postgresql":
+            if column.server_default and self.bind.dialect.name in POSTGRES_LIKE_NAMES:
                 if isinstance(column.server_default, DefaultClause) and isinstance(
                     column.server_default.arg, TextClause
                 ):
