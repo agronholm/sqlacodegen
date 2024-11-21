@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from textwrap import dedent
 
 import pytest
@@ -31,3 +32,12 @@ def validate_code(generated_code: str, expected_code: str) -> None:
         configure_mappers()
     finally:
         clear_mappers()
+
+
+@dataclass
+class SchemaObject:
+    name: str
+
+
+# NB: not a fixture on purpose
+schema_obj = SchemaObject(name="best_schema")

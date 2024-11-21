@@ -128,9 +128,14 @@ class TablesGenerator(CodeGenerator):
         options: Sequence[str],
         *,
         indentation: str = "    ",
+        dynamic_schema_import_path: str | None = None,
+        dynamic_schema_value: str | None = None,
     ):
         super().__init__(metadata, bind, options)
         self.indentation: str = indentation
+        # TODO add check if there is a "." in the value if set?
+        self.dynamic_schema_import_path: str | None = dynamic_schema_import_path
+        self.dynamic_schema_value: str | None = dynamic_schema_value
         self.imports: dict[str, set[str]] = defaultdict(set)
         self.module_imports: set[str] = set()
 
@@ -197,6 +202,8 @@ class TablesGenerator(CodeGenerator):
 
         for model in models:
             self.collect_imports_for_model(model)
+        if self.dynamic_schema_import_path:
+            self.add_literal_import(*self.dynamic_schema_import_path.rsplit(".", 1))
 
     def collect_imports_for_model(self, model: Model) -> None:
         if model.__class__ is Model:
@@ -374,7 +381,9 @@ class TablesGenerator(CodeGenerator):
             if len(index.columns) > 1 or not uses_default_name(index):
                 args.append(self.render_index(index))
 
-        if table.schema:
+        if self.dynamic_schema_value:
+            kwargs["schema"] = self.dynamic_schema_value
+        elif table.schema:
             kwargs["schema"] = repr(table.schema)
 
         table_comment = getattr(table, "comment", None)
@@ -722,9 +731,18 @@ class DeclarativeGenerator(TablesGenerator):
         options: Sequence[str],
         *,
         indentation: str = "    ",
+        dynamic_schema_import_path: str | None = None,
+        dynamic_schema_value: str | None = None,
         base_class_name: str = "Base",
     ):
-        super().__init__(metadata, bind, options, indentation=indentation)
+        super().__init__(
+            metadata,
+            bind,
+            options,
+            indentation=indentation,
+            dynamic_schema_import_path=dynamic_schema_import_path,
+            dynamic_schema_value=dynamic_schema_value,
+        )
         self.base_class_name: str = base_class_name
         self.inflect_engine = inflect.engine()
 
@@ -1159,14 +1177,23 @@ class DeclarativeGenerator(TablesGenerator):
             if len(index.columns) > 1 or not uses_default_name(index):
                 args.append(self.render_index(index))
 
-        if table.schema:
+        if self.dynamic_schema_value:
+            kwargs["schema"] = self.dynamic_schema_value
+        elif table.schema:
             kwargs["schema"] = table.schema
 
         if table.comment:
             kwargs["comment"] = table.comment
 
         if kwargs:
-            formatted_kwargs = pformat(kwargs)
+            # NB: using pformat on the dict turns schema value (python code) to a string
+            formatted_kwargs = f",\n{self.indentation}".join(
+                f"'{k}': {pformat(v)}"
+                if v != self.dynamic_schema_value
+                else f"'{k}': {v}"
+                for k, v in kwargs.items()
+            )
+            formatted_kwargs = f"{{{formatted_kwargs}}}"
             if not args:
                 return formatted_kwargs
             else:
@@ -1309,6 +1336,8 @@ class DataclassGenerator(DeclarativeGenerator):
         options: Sequence[str],
         *,
         indentation: str = "    ",
+        dynamic_schema_import_path: str | None = None,
+        dynamic_schema_value: str | None = None,
         base_class_name: str = "Base",
         quote_annotations: bool = False,
         metadata_key: str = "sa",
@@ -1318,6 +1347,8 @@ class DataclassGenerator(DeclarativeGenerator):
             bind,
             options,
             indentation=indentation,
+            dynamic_schema_import_path=dynamic_schema_import_path,
+            dynamic_schema_value=dynamic_schema_value,
             base_class_name=base_class_name,
         )
         self.metadata_key: str = metadata_key
@@ -1348,6 +1379,8 @@ class SQLModelGenerator(DeclarativeGenerator):
         options: Sequence[str],
         *,
         indentation: str = "    ",
+        dynamic_schema_import_path: str | None = None,
+        dynamic_schema_value: str | None = None,
         base_class_name: str = "SQLModel",
     ):
         super().__init__(
@@ -1355,6 +1388,8 @@ class SQLModelGenerator(DeclarativeGenerator):
             bind,
             options,
             indentation=indentation,
+            dynamic_schema_import_path=dynamic_schema_import_path,
+            dynamic_schema_value=dynamic_schema_value,
             base_class_name=base_class_name,
         )
 
