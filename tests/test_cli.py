@@ -3,23 +3,12 @@ from __future__ import annotations
 import sqlite3
 import subprocess
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 import pytest
 
-from sqlacodegen.generators import _sqla_version
-
-if sys.version_info < (3, 8):
-    from importlib_metadata import version
-else:
-    from importlib.metadata import version
-
 future_imports = "from __future__ import annotations\n\n"
-
-if _sqla_version < (1, 4):
-    declarative_package = "sqlalchemy.ext.declarative"
-else:
-    declarative_package = "sqlalchemy.orm"
 
 
 @pytest.fixture
@@ -81,18 +70,19 @@ def test_cli_declarative(db_path: Path, tmp_path: Path) -> None:
 
     assert (
         output_path.read_text()
-        == f"""\
-from sqlalchemy import Column, Integer, Text
-from {declarative_package} import declarative_base
+        == """\
+from sqlalchemy import Integer, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
 class Foo(Base):
     __tablename__ = 'foo'
 
-    id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text)
 """
     )
 
@@ -113,23 +103,19 @@ def test_cli_dataclass(db_path: Path, tmp_path: Path) -> None:
 
     assert (
         output_path.read_text()
-        == f"""\
-{future_imports}from dataclasses import dataclass, field
+        == """\
+from sqlalchemy import Integer, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column
 
-from sqlalchemy import Column, Integer, Text
-from sqlalchemy.orm import registry
-
-mapper_registry = registry()
+class Base(MappedAsDataclass, DeclarativeBase):
+    pass
 
 
-@mapper_registry.mapped
-@dataclass
-class Foo:
+class Foo(Base):
     __tablename__ = 'foo'
-    __sa_dataclass_metadata_key__ = 'sa'
 
-    id: int = field(init=False, metadata={{'sa': Column(Integer, primary_key=True)}})
-    name: str = field(metadata={{'sa': Column(Text, nullable=False)}})
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text)
 """
     )
 

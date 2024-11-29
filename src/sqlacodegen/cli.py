@@ -8,6 +8,21 @@ from typing import TextIO
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
+try:
+    import citext
+except ImportError:
+    citext = None
+
+try:
+    import geoalchemy2
+except ImportError:
+    geoalchemy2 = None
+
+try:
+    import pgvector.sqlalchemy
+except ImportError:
+    pgvector = None
+
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points, version
 else:
@@ -21,13 +36,13 @@ def main() -> None:
     )
     parser.add_argument("url", nargs="?", help="SQLAlchemy url to the database")
     parser.add_argument(
-        "--option", nargs="*", help="options passed to the generator class"
+        "--options", help="options (comma-delimited) passed to the generator class"
     )
     parser.add_argument(
         "--version", action="store_true", help="print the version number and exit"
     )
     parser.add_argument(
-        "--schemas", help="load tables from the given schemas (comma separated)"
+        "--schemas", help="load tables from the given schemas (comma-delimited)"
     )
     parser.add_argument(
         "--generator",
@@ -36,7 +51,7 @@ def main() -> None:
         help="generator class to use",
     )
     parser.add_argument(
-        "--tables", help="tables to process (comma-separated, default: all)"
+        "--tables", help="tables to process (comma-delimited, default: all)"
     )
     parser.add_argument("--noviews", action="store_true", help="ignore views")
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
@@ -45,22 +60,33 @@ def main() -> None:
     if args.version:
         print(version("sqlacodegen"))
         return
+
     if not args.url:
         print("You must supply a url\n", file=sys.stderr)
         parser.print_help()
         return
+
+    if citext:
+        print(f"Using sqlalchemy-citext {version('citext')}")
+
+    if geoalchemy2:
+        print(f"Using geoalchemy2 {version('geoalchemy2')}")
+
+    if pgvector:
+        print(f"Using pgvector {version('pgvector')}")
 
     # Use reflection to fill in the metadata
     engine = create_engine(args.url)
     metadata = MetaData()
     tables = args.tables.split(",") if args.tables else None
     schemas = args.schemas.split(",") if args.schemas else [None]
+    options = set(args.options.split(",")) if args.options else set()
     for schema in schemas:
         metadata.reflect(engine, schema, not args.noviews, tables)
 
     # Instantiate the generator
     generator_class = generators[args.generator].load()
-    generator = generator_class(metadata, engine, set(args.option or ()))
+    generator = generator_class(metadata, engine, options)
 
     # Open the target file (if given)
     with ExitStack() as stack:

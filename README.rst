@@ -18,7 +18,7 @@ latest SQLAlchemy version).
 Features
 ========
 
-* Supports SQLAlchemy 1.4.x
+* Supports SQLAlchemy 2.x
 * Produces declarative code that almost looks like it was hand written
 * Produces `PEP 8`_ compliant code
 * Accurately determines relationships, including many-to-many, one-to-one
@@ -39,6 +39,20 @@ To include support for the PostgreSQL ``CITEXT`` extension type (which should be
 considered as tested only under a few environments) specify the ``citext`` extra::
 
     pip install sqlacodegen[citext]
+
+
+To include support for the PostgreSQL ``GEOMETRY``, ``GEOGRAPHY``, and ``RASTER`` types
+(which should be considered as tested only under a few environments) specify the
+``geoalchemy2`` extra:
+
+To include support for the PostgreSQL ``PGVECTOR`` extension type, specify the
+``pgvector`` extra::
+
+    pip install sqlacodegen[pgvector]
+
+.. code-block:: bash
+
+    pip install sqlacodegen[geoalchemy2]
 
 
 Quickstart
@@ -78,8 +92,8 @@ The following built-in generators are available:
 Generator-specific options
 ==========================
 
-The following options can be turned on by passing them using ``--option`` (can be used
-multiple times):
+The following options can be turned on by passing them using ``--options`` (multiple
+values must be delimited by commas, e.g. ``--options noconstraints,nobidi``):
 
 * ``tables``
 

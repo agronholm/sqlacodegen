@@ -1,6 +1,22 @@
 Version history
 ===============
 
+**3.0.0rc5**
+
+- Fixed pgvector support not working
+
+**3.0.0rc4**
+
+- Dropped support for Python 3.7
+- Dropped support for SQLAlchemy 1.x
+- Added support for the ``pgvector`` extension (with help from KellyRousselHoomano)
+
+**3.0.0rc3**
+
+- Added support for SQLAlchemy 2 (PR by rbuffat with help from mhauru)
+- Renamed ``--option`` to ``--options`` and made its values delimited by commas
+- Restored CIText and GeoAlchemy2 support (PR by stavvy-rotte)
+
 **3.0.0rc2**
 
 - Added support for generating SQLModel classes (PR by Andrii Khirilov)
