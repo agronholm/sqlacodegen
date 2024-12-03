@@ -21,7 +21,9 @@ jobs:
         allow-prereleases: true
         cache: pip
         cache-dependency-path: pyproject.toml
-    - name: Install dependencies
+    - name: Install basic dependencies
+      run: pip install -e .
+    - name: Install test dependencies
       run: pip install -e .[test]
     - name: Test with pytest
       run: coverage run -m pytest
