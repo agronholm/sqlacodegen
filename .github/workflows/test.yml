@@ -23,6 +23,8 @@ jobs:
         cache-dependency-path: pyproject.toml
     - name: Install dependencies
       run: pip install -e .[test]
+    - name: Install sqlmodel dependency
+      run: pip install -e .[sqlmodel]
     - name: Test with pytest
       run: coverage run -m pytest
     - name: Upload Coverage
