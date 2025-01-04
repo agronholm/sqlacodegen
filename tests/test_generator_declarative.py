@@ -1471,7 +1471,9 @@ back_populates='simple_items')
 
 
 @pytest.mark.parametrize("generator", [["noidsuffix"]], indirect=True)
-def test_named_foreign_key_constraints_with_noidsuffix(generator: CodeGenerator) -> None:
+def test_named_foreign_key_constraints_with_noidsuffix(
+    generator: CodeGenerator,
+) -> None:
     Table(
         "simple_items",
         generator.metadata,
@@ -1522,6 +1524,7 @@ name='foreignkeytest'),
 back_populates='simple_items')
 """,
     )
+
 
 # @pytest.mark.xfail(strict=True)
 def test_colname_import_conflict(generator: CodeGenerator) -> None:
