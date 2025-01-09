@@ -106,11 +106,6 @@ class CodeGenerator(metaclass=ABCMeta):
         if invalid_options:
             raise ValueError("Unrecognized options: " + ", ".join(invalid_options))
 
-    @property
-    @abstractmethod
-    def views_supported(self) -> bool:
-        pass
-
     @abstractmethod
     def generate(self) -> str:
         """
@@ -140,8 +135,8 @@ class TablesGenerator(CodeGenerator):
         self.module_imports: set[str] = set()
 
     @property
-    def views_supported(self) -> bool:
-        return True
+    def mapped_columns_supported(self) -> bool:
+        return False
 
     def generate_base(self) -> None:
         self.base = Base(
@@ -491,10 +486,7 @@ class TablesGenerator(CodeGenerator):
         if comment:
             kwargs["comment"] = repr(comment)
 
-        return self.render_column_callable(is_table, *args, **kwargs)
-
-    def render_column_callable(self, is_table: bool, *args: Any, **kwargs: Any) -> str:
-        if is_table:
+        if is_table or not self.mapped_columns_supported:
             self.add_import(Column)
             return render_callable("Column", *args, kwargs=kwargs)
         else:
@@ -740,6 +732,10 @@ class DeclarativeGenerator(TablesGenerator):
         self.base_class_name: str = base_class_name
         self.inflect_engine = inflect.engine()
 
+    @property
+    def mapped_columns_supported(self) -> bool:
+        return True
+
     def generate_base(self) -> None:
         self.base = Base(
             literal_imports=[LiteralImport("sqlalchemy.orm", "DeclarativeBase")],
@@ -752,7 +748,10 @@ class DeclarativeGenerator(TablesGenerator):
 
     def collect_imports(self, models: Iterable[Model]) -> None:
         super().collect_imports(models)
-        if any(isinstance(model, ModelClass) for model in models):
+        if (
+            any(isinstance(model, ModelClass) for model in models)
+            and self.mapped_columns_supported
+        ):
             self.add_literal_import("sqlalchemy.orm", "Mapped")
             self.add_literal_import("sqlalchemy.orm", "mapped_column")
 
@@ -1342,7 +1341,10 @@ class DataclassGenerator(DeclarativeGenerator):
                 LiteralImport("sqlalchemy.orm", "MappedAsDataclass"),
             ],
             declarations=[
-                (f"class {self.base_class_name}(MappedAsDataclass, DeclarativeBase):"),
+                (
+                    f"class {self.base_class_name}(MappedAsDataclass, "
+                    "DeclarativeBase):"
+                ),
                 f"{self.indentation}pass",
             ],
             metadata_ref=f"{self.base_class_name}.metadata",
@@ -1368,12 +1370,8 @@ class SQLModelGenerator(DeclarativeGenerator):
         )
 
     @property
-    def views_supported(self) -> bool:
+    def mapped_columns_supported(self) -> bool:
         return False
-
-    def render_column_callable(self, is_table: bool, *args: Any, **kwargs: Any) -> str:
-        self.add_import(Column)
-        return render_callable("Column", *args, kwargs=kwargs)
 
     def generate_base(self) -> None:
         self.base = Base(
@@ -1390,7 +1388,6 @@ class SQLModelGenerator(DeclarativeGenerator):
         if any(isinstance(model, ModelClass) for model in models):
             self.add_literal_import("sqlmodel", "SQLModel")
             self.add_literal_import("sqlmodel", "Field")
-            self.add_literal_import("sqlalchemy.orm", "mapped_column")
 
     def collect_imports_for_model(self, model: Model) -> None:
         super(DeclarativeGenerator, self).collect_imports_for_model(model)
