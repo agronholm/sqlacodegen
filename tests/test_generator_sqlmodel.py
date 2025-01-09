@@ -81,8 +81,7 @@ def test_constraints(generator: CodeGenerator) -> None:
         """\
             from typing import Optional
 
-            from sqlalchemy import CheckConstraint, Column, Integer, MetaData,\
-                UniqueConstraint
+            from sqlalchemy import CheckConstraint, Column, Integer, MetaData, UniqueConstraint
             from sqlmodel import Field, SQLModel
 
             class SimpleConstraints(SQLModel, table=True):
@@ -96,7 +95,7 @@ def test_constraints(generator: CodeGenerator) -> None:
 'id', Integer, primary_key=True))
                 number: Optional[int] = Field(default=None, sa_column=Column(\
 'number', Integer))
-        """,
+        """,  # noqa: E501
     )
 
 
