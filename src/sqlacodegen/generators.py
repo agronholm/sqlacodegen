@@ -134,6 +134,10 @@ class TablesGenerator(CodeGenerator):
         self.imports: dict[str, set[str]] = defaultdict(set)
         self.module_imports: set[str] = set()
 
+    @property
+    def mapped_columns_supported(self) -> bool:
+        return False
+
     def generate_base(self) -> None:
         self.base = Base(
             literal_imports=[LiteralImport("sqlalchemy", "MetaData")],
@@ -482,7 +486,7 @@ class TablesGenerator(CodeGenerator):
         if comment:
             kwargs["comment"] = repr(comment)
 
-        if is_table:
+        if is_table or not self.mapped_columns_supported:
             self.add_import(Column)
             return render_callable("Column", *args, kwargs=kwargs)
         else:
@@ -728,6 +732,10 @@ class DeclarativeGenerator(TablesGenerator):
         self.base_class_name: str = base_class_name
         self.inflect_engine = inflect.engine()
 
+    @property
+    def mapped_columns_supported(self) -> bool:
+        return True
+
     def generate_base(self) -> None:
         self.base = Base(
             literal_imports=[LiteralImport("sqlalchemy.orm", "DeclarativeBase")],
@@ -740,7 +748,10 @@ class DeclarativeGenerator(TablesGenerator):
 
     def collect_imports(self, models: Iterable[Model]) -> None:
         super().collect_imports(models)
-        if any(isinstance(model, ModelClass) for model in models):
+        if (
+            any(isinstance(model, ModelClass) for model in models)
+            and self.mapped_columns_supported
+        ):
             self.add_literal_import("sqlalchemy.orm", "Mapped")
             self.add_literal_import("sqlalchemy.orm", "mapped_column")
 
@@ -1358,6 +1369,10 @@ class SQLModelGenerator(DeclarativeGenerator):
             base_class_name=base_class_name,
         )
 
+    @property
+    def mapped_columns_supported(self) -> bool:
+        return False
+
     def generate_base(self) -> None:
         self.base = Base(
             literal_imports=[],
@@ -1373,7 +1388,6 @@ class SQLModelGenerator(DeclarativeGenerator):
         if any(isinstance(model, ModelClass) for model in models):
             self.add_literal_import("sqlmodel", "SQLModel")
             self.add_literal_import("sqlmodel", "Field")
-            self.add_literal_import("sqlalchemy.orm", "mapped_column")
 
     def collect_imports_for_model(self, model: Model) -> None:
         super(DeclarativeGenerator, self).collect_imports_for_model(model)
