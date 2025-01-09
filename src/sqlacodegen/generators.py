@@ -1362,15 +1362,18 @@ class SQLModelGenerator(DeclarativeGenerator):
         self.base = Base(
             literal_imports=[],
             declarations=[],
-            metadata_ref="",
+            metadata_ref="metadata",
+            table_metadata_declaration="metadata = MetaData()",
         )
 
     def collect_imports(self, models: Iterable[Model]) -> None:
         super(DeclarativeGenerator, self).collect_imports(models)
+        if any(isinstance(model, Model) for model in models):
+            self.add_literal_import("sqlalchemy", "MetaData")
         if any(isinstance(model, ModelClass) for model in models):
-            self.remove_literal_import("sqlalchemy", "MetaData")
             self.add_literal_import("sqlmodel", "SQLModel")
             self.add_literal_import("sqlmodel", "Field")
+            self.add_literal_import("sqlalchemy.orm", "mapped_column")
 
     def collect_imports_for_model(self, model: Model) -> None:
         super(DeclarativeGenerator, self).collect_imports_for_model(model)
