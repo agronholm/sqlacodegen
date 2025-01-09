@@ -139,13 +139,14 @@ def test_cli_sqlmodels(db_path: Path, tmp_path: Path) -> None:
         == """\
 from typing import Optional
 
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Integer, MetaData, Text
+from sqlalchemy.orm import mapped_column
 from sqlmodel import Field, SQLModel
 
 class Foo(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
+    id: Optional[int] = Field(default=None, sa_column=mapped_column('id', Integer, \
 primary_key=True))
-    name: str = Field(sa_column=Column('name', Text))
+    name: str = Field(sa_column=mapped_column('name', Text))
 """
     )
 
