@@ -41,6 +41,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
+    "sqlacodegen[sqlmodel]",
     "pytest >= 7.4",
     "coverage >= 7",
     "psycopg2-binary",
