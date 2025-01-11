@@ -1385,6 +1385,7 @@ class SQLModelGenerator(DeclarativeGenerator):
         super(DeclarativeGenerator, self).collect_imports(models)
         if any(isinstance(model, Model) for model in models):
             self.add_literal_import("sqlalchemy", "MetaData")
+
         if any(isinstance(model, ModelClass) for model in models):
             self.add_literal_import("sqlmodel", "SQLModel")
             self.add_literal_import("sqlmodel", "Field")
