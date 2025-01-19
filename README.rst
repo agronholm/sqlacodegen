@@ -115,7 +115,7 @@ values must be delimited by commas, e.g. ``--options noconstraints,nobidi``):
 
   * all the options from ``declarative``
 
-* ``sqlmodel``
+* ``sqlmodels``
 
   * all the options from ``declarative``
 
