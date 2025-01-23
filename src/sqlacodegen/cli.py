@@ -53,7 +53,11 @@ def main() -> None:
     parser.add_argument(
         "--tables", help="tables to process (comma-delimited, default: all)"
     )
-    parser.add_argument("--noviews", action="store_true", help="ignore views")
+    parser.add_argument(
+        "--noviews",
+        action="store_true",
+        help="ignore views (always true for sqlmodel generator)",
+    )
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
     args = parser.parse_args()
 
@@ -82,7 +86,9 @@ def main() -> None:
     schemas = args.schemas.split(",") if args.schemas else [None]
     options = set(args.options.split(",")) if args.options else set()
     for schema in schemas:
-        metadata.reflect(engine, schema, not args.noviews, tables)
+        metadata.reflect(
+            engine, schema, (args.generator != "sqlmodels" and not args.noviews), tables
+        )
 
     # Instantiate the generator
     generator_class = generators[args.generator].load()
