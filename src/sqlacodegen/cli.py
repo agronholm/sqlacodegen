@@ -63,8 +63,8 @@ def main() -> None:
 
     if args.generator == "sqlmodels":
         print(
-            "NOTICE: VIEW models will not be generated when using the 'sqlmodels' "
-            "generator"
+            "VIEW models will not be generated when using the 'sqlmodels' generator",
+            file=sys.stderr,
         )
 
     if args.version:
