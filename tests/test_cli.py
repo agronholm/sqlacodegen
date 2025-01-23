@@ -145,7 +145,7 @@ from sqlmodel import Field, SQLModel
 class Foo(SQLModel, table=True):
     id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
 primary_key=True))
-    name: str = Field(sa_column=Column('name', Text, nullable=False))
+    name: str = Field(sa_column=Column('name', Text))
 """
     )
 
