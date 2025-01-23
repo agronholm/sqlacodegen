@@ -21,13 +21,13 @@ classifiers = [
     "Topic :: Software Development :: Code Generators",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "SQLAlchemy >= 2.0.23",
     "inflect >= 4.0.0",
@@ -66,13 +66,16 @@ version_scheme = "post-release"
 local_scheme = "dirty-tag"
 
 [tool.ruff]
-select = [
-    "E", "F", "W",  # default Flake8
+src = ["src"]
+
+[tool.ruff.lint]
+extend-select = [
     "I",            # isort
     "ISC",          # flake8-implicit-str-concat
     "PGH",          # pygrep-hooks
     "RUF100",       # unused noqa (yesqa)
     "UP",           # pyupgrade
+    "W",            # pycodestyle warnings
 ]
 src = ["src"]
 
@@ -80,7 +83,7 @@ src = ["src"]
 strict = true
 
 [tool.pytest.ini_options]
-addopts = "-rsx --tb=short"
+addopts = "-rsfE --tb=short"
 testpaths = ["tests"]
 
 [coverage.run]
@@ -91,13 +94,10 @@ relative_files = true
 show_missing = true
 
 [tool.tox]
-legacy_tox_ini = """
-[tox]
-envlist = py38, py39, py310, py311, py312
+env_list = ["py39", "py310", "py311", "py312", "py313"]
 skip_missing_interpreters = true
-minversion = 4.0.0
 
-[testenv]
-extras = test
-commands = python -m pytest {posargs}
-"""
+[tool.tox.env_run_base]
+package = "editable"
+commands = [["python", "-m", "pytest", { replace = "posargs", extend = true }]]
+extras = ["test"]
