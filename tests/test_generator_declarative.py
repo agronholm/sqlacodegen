@@ -19,9 +19,7 @@ from sqlalchemy.types import INTEGER, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, DeclarativeGenerator
 
-from .conftest import requires_sqlalchemy_1_4, validate_code
-
-pytestmark = requires_sqlalchemy_1_4
+from .conftest import validate_code
 
 
 @pytest.fixture
@@ -49,23 +47,26 @@ def test_indexes(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Index, Integer, String
-        from sqlalchemy.orm import declarative_base
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import Index, Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
-            __table_args__ = (
-                Index('idx_number', 'number'),
-                Index('idx_text', 'text', unique=True),
-                Index('idx_text_number', 'text', 'number')
-            )
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        Index('idx_number', 'number'),
+        Index('idx_text', 'text', unique=True),
+        Index('idx_text_number', 'text', 'number')
+    )
 
-            id = Column(Integer, primary_key=True)
-            number = Column(Integer)
-            text = Column(String)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    number: Mapped[Optional[int]] = mapped_column(Integer)
+    text: Mapped[Optional[str]] = mapped_column(String)
         """,
     )
 
@@ -83,21 +84,24 @@ def test_constraints(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import CheckConstraint, Column, Integer, UniqueConstraint
-        from sqlalchemy.orm import declarative_base
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import CheckConstraint, Integer, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
-            __table_args__ = (
-                CheckConstraint('number > 0'),
-                UniqueConstraint('id', 'number')
-            )
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        CheckConstraint('number > 0'),
+        UniqueConstraint('id', 'number')
+    )
 
-            id = Column(Integer, primary_key=True)
-            number = Column(Integer)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    number: Mapped[Optional[int]] = mapped_column(Integer)
         """,
     )
 
@@ -119,29 +123,34 @@ def test_onetomany(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List, Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-        class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
-
-            id = Column(Integer, primary_key=True)
-
-            simple_items = relationship('SimpleItems', back_populates='container')
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
 
-            id = Column(Integer, primary_key=True)
-            container_id = Column(ForeignKey('simple_containers.id'))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            container = relationship('SimpleContainers', \
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='container')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
+
+    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
 back_populates='simple_items')
-        """,
+    """,
     )
 
 
@@ -157,23 +166,27 @@ def test_onetomany_selfref(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List, Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
 
-            id = Column(Integer, primary_key=True)
-            parent_item_id = Column(ForeignKey('simple_items.id'))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    parent_item_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_items.id'))
 
-            parent_item = relationship('SimpleItems', remote_side=[id], \
-back_populates='parent_item_reverse')
-            parent_item_reverse = relationship('SimpleItems', \
+    parent_item: Mapped['SimpleItems'] = relationship('SimpleItems', \
+remote_side=[id], back_populates='parent_item_reverse')
+    parent_item_reverse: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
 remote_side=[parent_item_id], back_populates='parent_item')
-    """,
+""",
     )
 
 
@@ -191,27 +204,31 @@ def test_onetomany_selfref_multi(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List, Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
 
-            id = Column(Integer, primary_key=True)
-            parent_item_id = Column(ForeignKey('simple_items.id'))
-            top_item_id = Column(ForeignKey('simple_items.id'))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    parent_item_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_items.id'))
+    top_item_id: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_items.id'))
 
-            parent_item = relationship('SimpleItems', remote_side=[id], \
-foreign_keys=[parent_item_id], back_populates='parent_item_reverse')
-            parent_item_reverse = relationship('SimpleItems', \
+    parent_item: Mapped['SimpleItems'] = relationship('SimpleItems', \
+remote_side=[id], foreign_keys=[parent_item_id], back_populates='parent_item_reverse')
+    parent_item_reverse: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
 remote_side=[parent_item_id], foreign_keys=[parent_item_id], \
 back_populates='parent_item')
-            top_item = relationship('SimpleItems', remote_side=[id], \
+    top_item: Mapped['SimpleItems'] = relationship('SimpleItems', remote_side=[id], \
 foreign_keys=[top_item_id], back_populates='top_item_reverse')
-            top_item_reverse = relationship('SimpleItems', \
+    top_item_reverse: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
 remote_side=[top_item_id], foreign_keys=[top_item_id], back_populates='top_item')
         """,
     )
@@ -241,35 +258,38 @@ def test_onetomany_composite(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKeyConstraint, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List, Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKeyConstraint, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
 
-            id1 = Column(Integer, primary_key=True, nullable=False)
-            id2 = Column(Integer, primary_key=True, nullable=False)
+    id1: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id2: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            simple_items = relationship('SimpleItems', \
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
 back_populates='simple_containers')
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
-            __table_args__ = (
-                ForeignKeyConstraint(['container_id1', 'container_id2'], \
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        ForeignKeyConstraint(['container_id1', 'container_id2'], \
 ['simple_containers.id1', 'simple_containers.id2'], ondelete='CASCADE', \
 onupdate='CASCADE'),
-            )
+    )
 
-            id = Column(Integer, primary_key=True)
-            container_id1 = Column(Integer)
-            container_id2 = Column(Integer)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    container_id1: Mapped[Optional[int]] = mapped_column(Integer)
+    container_id2: Mapped[Optional[int]] = mapped_column(Integer)
 
-            simple_containers = relationship('SimpleContainers', \
+    simple_containers: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
 back_populates='simple_items')
         """,
     )
@@ -294,33 +314,38 @@ def test_onetomany_multiref(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List, Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            simple_items = relationship('SimpleItems', \
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
 foreign_keys='[SimpleItems.parent_container_id]', back_populates='parent_container')
-            simple_items_ = relationship('SimpleItems', \
+    simple_items_: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
 foreign_keys='[SimpleItems.top_container_id]', back_populates='top_container')
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
 
-            id = Column(Integer, primary_key=True)
-            parent_container_id = Column(ForeignKey('simple_containers.id'))
-            top_container_id = Column(ForeignKey('simple_containers.id'))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    parent_container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
+    top_container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
 
-            parent_container = relationship('SimpleContainers', \
+    parent_container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
 foreign_keys=[parent_container_id], back_populates='simple_items')
-            top_container = relationship('SimpleContainers', \
+    top_container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
 foreign_keys=[top_container_id], back_populates='simple_items_')
         """,
     )
@@ -335,33 +360,42 @@ def test_onetoone(generator: CodeGenerator) -> None:
         ForeignKeyConstraint(["other_item_id"], ["other_items.id"]),
         UniqueConstraint("other_item_id"),
     )
-    Table("other_items", generator.metadata, Column("id", INTEGER, primary_key=True))
+    Table(
+        "other_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+    )
 
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class OtherItems(Base):
-            __tablename__ = 'other_items'
+class OtherItems(Base):
+    __tablename__ = 'other_items'
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            simple_items = relationship('SimpleItems', uselist=False, \
+    simple_items: Mapped['SimpleItems'] = relationship('SimpleItems', uselist=False, \
 back_populates='other_item')
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
 
-            id = Column(Integer, primary_key=True)
-            other_item_id = Column(ForeignKey('other_items.id'), unique=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    other_item_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('other_items.id'), unique=True)
 
-            other_item = relationship('OtherItems', back_populates='simple_items')
+    other_item: Mapped['OtherItems'] = relationship('OtherItems', \
+back_populates='simple_items')
         """,
     )
 
@@ -379,27 +413,32 @@ def test_onetomany_noinflect(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-    from sqlalchemy import Column, ForeignKey, Integer
-    from sqlalchemy.orm import declarative_base, relationship
+from typing import List, Optional
 
-    Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-    class Fehwiuhfiw(Base):
-        __tablename__ = 'fehwiuhfiw'
-
-        id = Column(Integer, primary_key=True)
-
-        oglkrogk = relationship('Oglkrogk', back_populates='fehwiuhfiw')
+class Base(DeclarativeBase):
+    pass
 
 
-    class Oglkrogk(Base):
-        __tablename__ = 'oglkrogk'
+class Fehwiuhfiw(Base):
+    __tablename__ = 'fehwiuhfiw'
 
-        id = Column(Integer, primary_key=True)
-        fehwiuhfiwID = Column(ForeignKey('fehwiuhfiw.id'))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-        fehwiuhfiw = relationship('Fehwiuhfiw', back_populates='oglkrogk')
+    oglkrogk: Mapped[List['Oglkrogk']] = relationship('Oglkrogk', \
+back_populates='fehwiuhfiw')
+
+
+class Oglkrogk(Base):
+    __tablename__ = 'oglkrogk'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    fehwiuhfiwID: Mapped[Optional[int]] = mapped_column(ForeignKey('fehwiuhfiw.id'))
+
+    fehwiuhfiw: Mapped['Fehwiuhfiw'] = \
+relationship('Fehwiuhfiw', back_populates='oglkrogk')
         """,
     )
 
@@ -422,28 +461,34 @@ def test_onetomany_conflicting_column(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer, Text
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List, Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-        class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
-
-            id = Column(Integer, primary_key=True)
-            relationship_ = Column('relationship', Text)
-
-            simple_items = relationship('SimpleItems', back_populates='container')
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
 
-            id = Column(Integer, primary_key=True)
-            container_id = Column(ForeignKey('simple_containers.id'))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    relationship_: Mapped[Optional[str]] = mapped_column('relationship', Text)
 
-            container = relationship('SimpleContainers', back_populates='simple_items')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='container')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
+
+    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+back_populates='simple_items')
         """,
     )
 
@@ -461,27 +506,33 @@ def test_onetomany_conflicting_relationship(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List, Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-        class Relationship(Base):
-            __tablename__ = 'relationship'
-
-            id = Column(Integer, primary_key=True)
-
-            simple_items = relationship('SimpleItems', back_populates='relationship_')
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class Relationship(Base):
+    __tablename__ = 'relationship'
 
-            id = Column(Integer, primary_key=True)
-            relationship_id = Column(ForeignKey('relationship.id'))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            relationship_ = relationship('Relationship', back_populates='simple_items')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='relationship_')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    relationship_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('relationship.id'))
+
+    relationship_: Mapped['Relationship'] = relationship('Relationship', \
+back_populates='simple_items')
         """,
     )
 
@@ -504,78 +555,84 @@ def test_manytoone_nobidi(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-        class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
-
-            id = Column(Integer, primary_key=True)
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
 
-            id = Column(Integer, primary_key=True)
-            container_id = Column(ForeignKey('simple_containers.id'))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            container = relationship('SimpleContainers')
-        """,
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
+
+    container: Mapped['SimpleContainers'] = relationship('SimpleContainers')
+""",
     )
 
 
 def test_manytomany(generator: CodeGenerator) -> None:
-    Table("simple_items", generator.metadata, Column("id", INTEGER, primary_key=True))
+    Table("left_table", generator.metadata, Column("id", INTEGER, primary_key=True))
     Table(
-        "simple_containers",
+        "right_table",
         generator.metadata,
         Column("id", INTEGER, primary_key=True),
     )
     Table(
-        "container_items",
+        "association_table",
         generator.metadata,
-        Column("item_id", INTEGER),
-        Column("container_id", INTEGER),
-        ForeignKeyConstraint(["item_id"], ["simple_items.id"]),
-        ForeignKeyConstraint(["container_id"], ["simple_containers.id"]),
+        Column("left_id", INTEGER),
+        Column("right_id", INTEGER),
+        ForeignKeyConstraint(["left_id"], ["left_table.id"]),
+        ForeignKeyConstraint(["right_id"], ["right_table.id"]),
     )
 
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer, Table
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List
 
-        Base = declarative_base()
-        metadata = Base.metadata
+from sqlalchemy import Column, ForeignKey, Integer, Table
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-        class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
-
-            id = Column(Integer, primary_key=True)
-
-            item = relationship('SimpleItems', secondary='container_items', \
-back_populates='container')
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class LeftTable(Base):
+    __tablename__ = 'left_table'
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            container = relationship('SimpleContainers', secondary='container_items', \
-back_populates='item')
+    right: Mapped[List['RightTable']] = relationship('RightTable', \
+secondary='association_table', back_populates='left')
 
 
-        t_container_items = Table(
-            'container_items', metadata,
-            Column('item_id', ForeignKey('simple_items.id')),
-            Column('container_id', ForeignKey('simple_containers.id'))
-        )
+class RightTable(Base):
+    __tablename__ = 'right_table'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    left: Mapped[List['LeftTable']] = relationship('LeftTable', \
+secondary='association_table', back_populates='right')
+
+
+t_association_table = Table(
+    'association_table', Base.metadata,
+    Column('left_id', ForeignKey('left_table.id')),
+    Column('right_id', ForeignKey('right_table.id'))
+)
         """,
     )
 
@@ -600,33 +657,36 @@ def test_manytomany_nobidi(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer, Table
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List
 
-        Base = declarative_base()
-        metadata = Base.metadata
+from sqlalchemy import Column, ForeignKey, Integer, Table
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-        class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
-
-            id = Column(Integer, primary_key=True)
-
-            item = relationship('SimpleItems', secondary='container_items')
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    item: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+secondary='container_items')
 
 
-        t_container_items = Table(
-            'container_items', metadata,
-            Column('item_id', ForeignKey('simple_items.id')),
-            Column('container_id', ForeignKey('simple_containers.id'))
-        )
-        """,
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
+t_container_items = Table(
+    'container_items', Base.metadata,
+    Column('item_id', ForeignKey('simple_items.id')),
+    Column('container_id', ForeignKey('simple_containers.id'))
+)
+            """,
     )
 
 
@@ -645,34 +705,38 @@ def test_manytomany_selfref(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer, Table
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List
 
-        Base = declarative_base()
-        metadata = Base.metadata
+from sqlalchemy import Column, ForeignKey, Integer, Table
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            parent = relationship('SimpleItems', secondary='otherschema.child_items', \
-primaryjoin=lambda: SimpleItems.id == t_child_items.c.child_id, \
-secondaryjoin=lambda: SimpleItems.id == t_child_items.c.parent_id, \
-back_populates='child')
-            child = relationship('SimpleItems', secondary='otherschema.child_items', \
+    parent: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+secondary='otherschema.child_items', primaryjoin=lambda: SimpleItems.id \
+== t_child_items.c.child_id, \
+secondaryjoin=lambda: SimpleItems.id == \
+t_child_items.c.parent_id, back_populates='child')
+    child: Mapped[List['SimpleItems']] = \
+relationship('SimpleItems', secondary='otherschema.child_items', \
 primaryjoin=lambda: SimpleItems.id == t_child_items.c.parent_id, \
 secondaryjoin=lambda: SimpleItems.id == t_child_items.c.child_id, \
 back_populates='parent')
 
 
-        t_child_items = Table(
-            'child_items', metadata,
-            Column('parent_id', ForeignKey('simple_items.id')),
-            Column('child_id', ForeignKey('simple_items.id')),
-            schema='otherschema'
-        )
+t_child_items = Table(
+    'child_items', Base.metadata,
+    Column('parent_id', ForeignKey('simple_items.id')),
+    Column('child_id', ForeignKey('simple_items.id')),
+    schema='otherschema'
+)
         """,
     )
 
@@ -709,44 +773,47 @@ def test_manytomany_composite(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKeyConstraint, Integer, Table
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List
 
-        Base = declarative_base()
-        metadata = Base.metadata
+from sqlalchemy import Column, ForeignKeyConstraint, Integer, Table
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-        class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
-
-            id1 = Column(Integer, primary_key=True, nullable=False)
-            id2 = Column(Integer, primary_key=True, nullable=False)
-
-            simple_items = relationship('SimpleItems', secondary='container_items', \
-back_populates='simple_containers')
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
 
-            id1 = Column(Integer, primary_key=True, nullable=False)
-            id2 = Column(Integer, primary_key=True, nullable=False)
+    id1: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id2: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            simple_containers = relationship('SimpleContainers', \
-secondary='container_items', back_populates='simple_items')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+secondary='container_items', back_populates='simple_containers')
 
 
-        t_container_items = Table(
-            'container_items', metadata,
-            Column('item_id1', Integer),
-            Column('item_id2', Integer),
-            Column('container_id1', Integer),
-            Column('container_id2', Integer),
-            ForeignKeyConstraint(['container_id1', 'container_id2'], \
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id1: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id2: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    simple_containers: Mapped[List['SimpleContainers']] = \
+relationship('SimpleContainers', secondary='container_items', \
+back_populates='simple_items')
+
+
+t_container_items = Table(
+    'container_items', Base.metadata,
+    Column('item_id1', Integer),
+    Column('item_id2', Integer),
+    Column('container_id1', Integer),
+    Column('container_id2', Integer),
+    ForeignKeyConstraint(['container_id1', 'container_id2'], \
 ['simple_containers.id1', 'simple_containers.id2']),
-            ForeignKeyConstraint(['item_id1', 'item_id2'], ['simple_items.id1', \
-'simple_items.id2'])
-        )
+    ForeignKeyConstraint(['item_id1', 'item_id2'], \
+['simple_items.id1', 'simple_items.id2'])
+)
         """,
     )
 
@@ -776,33 +843,36 @@ def test_joined_inheritance(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-
-        class SimpleSuperItems(Base):
-            __tablename__ = 'simple_super_items'
-
-            id = Column(Integer, primary_key=True)
-            data1 = Column(Integer)
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(SimpleSuperItems):
-            __tablename__ = 'simple_items'
+class SimpleSuperItems(Base):
+    __tablename__ = 'simple_super_items'
 
-            super_item_id = Column(ForeignKey('simple_super_items.id'), \
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    data1: Mapped[Optional[int]] = mapped_column(Integer)
+
+
+class SimpleItems(SimpleSuperItems):
+    __tablename__ = 'simple_items'
+
+    super_item_id: Mapped[int] = mapped_column(ForeignKey('simple_super_items.id'), \
 primary_key=True)
-            data2 = Column(Integer)
+    data2: Mapped[Optional[int]] = mapped_column(Integer)
 
 
-        class SimpleSubItems(SimpleItems):
-            __tablename__ = 'simple_sub_items'
+class SimpleSubItems(SimpleItems):
+    __tablename__ = 'simple_sub_items'
 
-            simple_items_id = Column(ForeignKey('simple_items.super_item_id'), \
-primary_key=True)
-            data3 = Column(Integer)
+    simple_items_id: Mapped[int] = \
+mapped_column(ForeignKey('simple_items.super_item_id'), primary_key=True)
+    data3: Mapped[Optional[int]] = mapped_column(Integer)
         """,
     )
 
@@ -823,23 +893,24 @@ def test_joined_inheritance_same_table_name(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base
+    from sqlalchemy import ForeignKey, Integer
+    from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-        Base = declarative_base()
-
-
-        class Simple(Base):
-            __tablename__ = 'simple'
-
-            id = Column(Integer, primary_key=True)
+    class Base(DeclarativeBase):
+        pass
 
 
-        class Simple_(Simple):
-            __tablename__ = 'simple'
-            __table_args__ = {'schema': 'altschema'}
+    class Simple(Base):
+        __tablename__ = 'simple'
 
-            id = Column(ForeignKey('simple.id'), primary_key=True)
+        id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
+    class Simple_(Simple):
+        __tablename__ = 'simple'
+        __table_args__ = {'schema': 'altschema'}
+
+        id: Mapped[int] = mapped_column(ForeignKey('simple.id'), primary_key=True)
         """,
     )
 
@@ -853,22 +924,23 @@ def test_use_inflect(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer
-        from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-        Base = declarative_base()
-
-
-        class SimpleItem(Base):
-            __tablename__ = 'simple_items'
-
-            id = Column(Integer, primary_key=True)
+class Base(DeclarativeBase):
+    pass
 
 
-        class Singular(Base):
-            __tablename__ = 'singular'
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
+class Singular(Base):
+    __tablename__ = 'singular'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
     )
 
@@ -908,29 +980,33 @@ def test_use_inflect_plural(
     validate_code(
         generator.generate(),
         f"""\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class {class_name.capitalize()}(Base):
-            __tablename__ = '{table_name}'
+class {class_name.capitalize()}(Base):
+    __tablename__ = '{table_name}'
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            simple_item = relationship('SimpleItem', uselist=False, \
+    simple_item: Mapped['SimpleItem'] = relationship('SimpleItem', uselist=False, \
 back_populates='{relationship_name}')
 
 
-        class SimpleItem(Base):
-            __tablename__ = 'simple_items'
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
 
-            id = Column(Integer, primary_key=True)
-            {relationship_name}_id = Column(ForeignKey('{table_name}.id'), unique=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    {relationship_name}_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('{table_name}.id'), unique=True)
 
-            {relationship_name} = relationship('{class_name.capitalize()}', \
-back_populates='simple_item')
+    {relationship_name}: Mapped['{class_name.capitalize()}'] = \
+relationship('{class_name.capitalize()}', back_populates='simple_item')
         """,
     )
 
@@ -946,17 +1022,18 @@ def test_table_kwargs(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer
-        from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-        Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
-            __table_args__ = {'schema': 'testschema'}
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = {'schema': 'testschema'}
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
     )
 
@@ -974,21 +1051,24 @@ def test_table_args_kwargs(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Index, Integer, String
-        from sqlalchemy.orm import declarative_base
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import Index, Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
-            __table_args__ = (
-                Index('testidx', 'id', 'name'),
-                {'schema': 'testschema'}
-            )
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        Index('testidx', 'id', 'name'),
+        {'schema': 'testschema'}
+    )
 
-            id = Column(Integer, primary_key=True)
-            name = Column(String)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[Optional[str]] = mapped_column(String)
         """,
     )
 
@@ -1011,28 +1091,34 @@ def test_foreign_key_schema(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKey, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List, Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-        class OtherItems(Base):
-            __tablename__ = 'other_items'
-            __table_args__ = {'schema': 'otherschema'}
-
-            id = Column(Integer, primary_key=True)
-
-            simple_items = relationship('SimpleItems', back_populates='other_item')
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+class OtherItems(Base):
+    __tablename__ = 'other_items'
+    __table_args__ = {'schema': 'otherschema'}
 
-            id = Column(Integer, primary_key=True)
-            other_item_id = Column(ForeignKey('otherschema.other_items.id'))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-            other_item = relationship('OtherItems', back_populates='simple_items')
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='other_item')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    other_item_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('otherschema.other_items.id'))
+
+    other_item: Mapped['OtherItems'] = relationship('OtherItems', \
+back_populates='simple_items')
         """,
     )
 
@@ -1050,19 +1136,22 @@ def test_invalid_attribute_names(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer
-        from sqlalchemy.orm import declarative_base
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple-items'
+class SimpleItems(Base):
+    __tablename__ = 'simple-items'
 
-            id_test = Column('id-test', Integer, primary_key=True)
-            _4test = Column('4test', Integer)
-            _4test_ = Column('_4test', Integer)
-            def_ = Column('def', Integer)
+    id_test: Mapped[int] = mapped_column('id-test', Integer, primary_key=True)
+    _4test: Mapped[Optional[int]] = mapped_column('4test', Integer)
+    _4test_: Mapped[Optional[int]] = mapped_column('_4test', Integer)
+    def_: Mapped[Optional[int]] = mapped_column('def', Integer)
         """,
     )
 
@@ -1077,17 +1166,18 @@ def test_pascal(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer
-        from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-        Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
-        class CustomerAPIPreference(Base):
-            __tablename__ = 'CustomerAPIPreference'
+class CustomerAPIPreference(Base):
+    __tablename__ = 'CustomerAPIPreference'
 
-            id = Column(Integer, primary_key=True)
-                """,
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+        """,
     )
 
 
@@ -1101,16 +1191,17 @@ def test_underscore(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer
-        from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-        Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
-        class CustomerApiPreference(Base):
-            __tablename__ = 'customer_api_preference'
+class CustomerApiPreference(Base):
+    __tablename__ = 'customer_api_preference'
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
     )
 
@@ -1125,16 +1216,17 @@ def test_pascal_underscore(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer
-        from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-        Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
-        class CustomerAPIPreference(Base):
-            __tablename__ = 'customer_API_Preference'
+class CustomerAPIPreference(Base):
+    __tablename__ = 'customer_API_Preference'
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
     )
 
@@ -1149,16 +1241,17 @@ def test_pascal_multiple_underscore(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer
-        from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-        Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
-        class CustomerAPIPreference(Base):
-            __tablename__ = 'customer_API__Preference'
+class CustomerAPIPreference(Base):
+    __tablename__ = 'customer_API__Preference'
 
-            id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
     )
 
@@ -1179,17 +1272,18 @@ def test_column_comment(generator: CodeGenerator, nocomments: bool) -> None:
     validate_code(
         generator.generate(),
         f"""\
-        from sqlalchemy import Column, Integer
-        from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-        Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
-        class Simple(Base):
-            __tablename__ = 'simple'
+class Simple(Base):
+    __tablename__ = 'simple'
 
-            id = Column(Integer, primary_key=True{comment_part})
-        """,
+    id: Mapped[int] = mapped_column(Integer, primary_key=True{comment_part})
+""",
     )
 
 
@@ -1204,18 +1298,19 @@ def test_table_comment(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer
-        from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-        Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
-        class Simple(Base):
-            __tablename__ = 'simple'
-            __table_args__ = {'comment': "this is a 'comment'"}
+class Simple(Base):
+    __tablename__ = 'simple'
+    __table_args__ = {'comment': "this is a 'comment'"}
 
-            id = Column(Integer, primary_key=True)
-        """,
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+""",
     )
 
 
@@ -1230,18 +1325,21 @@ def test_metadata_column(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer, String
-        from sqlalchemy.orm import declarative_base
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class Simple(Base):
-            __tablename__ = 'simple'
+class Simple(Base):
+    __tablename__ = 'simple'
 
-            id = Column(Integer, primary_key=True)
-            metadata_ = Column('metadata', String)
-        """,
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    metadata_: Mapped[Optional[str]] = mapped_column('metadata', String)
+""",
     )
 
 
@@ -1255,17 +1353,18 @@ def test_invalid_variable_name_from_column(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer
-        from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-        Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
-        class Simple(Base):
-            __tablename__ = 'simple'
+class Simple(Base):
+    __tablename__ = 'simple'
 
-            id = Column(' id ', Integer, primary_key=True)
-        """,
+    id: Mapped[int] = mapped_column(' id ', Integer, primary_key=True)
+""",
     )
 
 
@@ -1275,16 +1374,16 @@ def test_only_tables(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer, MetaData, Table
+from sqlalchemy import Column, Integer, MetaData, Table
 
-        metadata = MetaData()
+metadata = MetaData()
 
 
-        t_simple = Table(
-            'simple', metadata,
-            Column('id', Integer)
-        )
-        """,
+t_simple = Table(
+    'simple', metadata,
+    Column('id', Integer)
+)
+            """,
     )
 
 
@@ -1302,24 +1401,27 @@ def test_named_constraints(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import CheckConstraint, Column, Integer, \
-PrimaryKeyConstraint, String, UniqueConstraint
-        from sqlalchemy.orm import declarative_base
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import CheckConstraint, Integer, PrimaryKeyConstraint, \
+String, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class Simple(Base):
-            __tablename__ = 'simple'
-            __table_args__ = (
-                CheckConstraint('id > 0', name='checktest'),
-                PrimaryKeyConstraint('id', name='primarytest'),
-                UniqueConstraint('text', name='uniquetest')
-            )
+class Simple(Base):
+    __tablename__ = 'simple'
+    __table_args__ = (
+        CheckConstraint('id > 0', name='checktest'),
+        PrimaryKeyConstraint('id', name='primarytest'),
+        UniqueConstraint('text', name='uniquetest')
+    )
 
-            id = Column(Integer, primary_key=True)
-            text = Column(String)
-        """,
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    text: Mapped[Optional[str]] = mapped_column(String)
+""",
     )
 
 
@@ -1342,36 +1444,41 @@ def test_named_foreign_key_constraints(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, ForeignKeyConstraint, Integer
-        from sqlalchemy.orm import declarative_base, relationship
+from typing import List, Optional
 
-        Base = declarative_base()
+from sqlalchemy import ForeignKeyConstraint, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-        class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
-
-            id = Column(Integer, primary_key=True)
-
-            simple_items = relationship('SimpleItems', back_populates='container')
+class Base(DeclarativeBase):
+    pass
 
 
-        class SimpleItems(Base):
-            __tablename__ = 'simple_items'
-            __table_args__ = (
-                ForeignKeyConstraint(['container_id'], ['simple_containers.id'], \
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+back_populates='container')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        ForeignKeyConstraint(['container_id'], ['simple_containers.id'], \
 name='foreignkeytest'),
-            )
+    )
 
-            id = Column(Integer, primary_key=True)
-            container_id = Column(Integer)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    container_id: Mapped[Optional[int]] = mapped_column(Integer)
 
-            container = relationship('SimpleContainers', \
+    container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
 back_populates='simple_items')
-        """,
+""",
     )
 
 
+# @pytest.mark.xfail(strict=True)
 def test_colname_import_conflict(generator: CodeGenerator) -> None:
     Table(
         "simple",
@@ -1384,17 +1491,21 @@ def test_colname_import_conflict(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer, String, text
-        from sqlalchemy.orm import declarative_base
+from typing import Optional
 
-        Base = declarative_base()
+from sqlalchemy import Integer, String, text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
 
 
-        class Simple(Base):
-            __tablename__ = 'simple'
+class Simple(Base):
+    __tablename__ = 'simple'
 
-            id = Column(Integer, primary_key=True)
-            text_ = Column('text', String)
-            textwithdefault = Column(String, server_default=text("'test'"))
-        """,
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    text_: Mapped[Optional[str]] = mapped_column('text', String)
+    textwithdefault: Mapped[Optional[str]] = mapped_column(String, \
+server_default=text("'test'"))
+""",
     )

@@ -23,9 +23,7 @@ from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, TablesGenerator
 
-from .conftest import requires_sqlalchemy_1_4, validate_code
-
-pytestmark = requires_sqlalchemy_1_4
+from .conftest import validate_code
 
 
 @pytest.fixture
@@ -106,14 +104,14 @@ def test_arrays(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import ARRAY, Column, Float, Integer, MetaData, Table
+        from sqlalchemy import ARRAY, Column, Double, Integer, MetaData, Table
 
         metadata = MetaData()
 
 
         t_simple_items = Table(
             'simple_items', metadata,
-            Column('dp_array', ARRAY(Float(precision=53))),
+            Column('dp_array', ARRAY(Double(precision=53))),
             Column('int_array', ARRAY(Integer()))
         )
         """,
@@ -202,7 +200,7 @@ def test_column_adaptation(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import BigInteger, Column, Float, MetaData, Table
+        from sqlalchemy import BigInteger, Column, Double, MetaData, Table
 
         metadata = MetaData()
 
@@ -210,7 +208,7 @@ def test_column_adaptation(generator: CodeGenerator) -> None:
         t_simple_items = Table(
             'simple_items', metadata,
             Column('id', BigInteger),
-            Column('length', Float)
+            Column('length', Double)
         )
         """,
     )

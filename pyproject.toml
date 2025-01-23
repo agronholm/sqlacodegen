@@ -21,18 +21,17 @@ classifiers = [
     "Topic :: Software Development :: Code Generators",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 dependencies = [
-    "SQLAlchemy >= 1.4.36",
+    "SQLAlchemy >= 2.0.23",
     "inflect >= 4.0.0",
     "importlib_metadata; python_version < '3.10'",
-    "greenlet >= 3.0.0a1; python_version >= '3.12'",
 ]
 dynamic = ["version"]
 
@@ -42,16 +41,16 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
-    "pytest",
-    "pytest-cov",
+    "sqlacodegen[sqlmodel]",
+    "pytest >= 7.4",
+    "coverage >= 7",
     "psycopg2-binary",
     "mysql-connector-python",
 ]
-sqlmodel = [
-    "sqlmodel",
-]
+sqlmodel = ["sqlmodel >= 0.0.22"]
 citext = ["sqlalchemy-citext >= 1.7.0"]
 geoalchemy2 = ["geoalchemy2 >= 0.11.1"]
+pgvector = ["pgvector >= 0.2.4"]
 
 [project.entry-points."sqlacodegen.generators"]
 tables = "sqlacodegen.generators:TablesGenerator"
@@ -67,22 +66,24 @@ version_scheme = "post-release"
 local_scheme = "dirty-tag"
 
 [tool.ruff]
-select = [
-    "E", "F", "W",  # default Flake8
+src = ["src"]
+
+[tool.ruff.lint]
+extend-select = [
     "I",            # isort
     "ISC",          # flake8-implicit-str-concat
     "PGH",          # pygrep-hooks
     "RUF100",       # unused noqa (yesqa)
     "UP",           # pyupgrade
+    "W",            # pycodestyle warnings
 ]
 src = ["src"]
 
 [tool.mypy]
 strict = true
-plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [tool.pytest.ini_options]
-addopts = "-rsx --tb=short"
+addopts = "-rsfE --tb=short"
 testpaths = ["tests"]
 
 [coverage.run]
@@ -93,15 +94,10 @@ relative_files = true
 show_missing = true
 
 [tool.tox]
-legacy_tox_ini = """
-[tox]
-envlist = py37, py38, py39, py310, py311, py312
+env_list = ["py39", "py310", "py311", "py312", "py313"]
 skip_missing_interpreters = true
-isolated_build = true
 
-[testenv]
-extras = test
-setenv =
-  SQLALCHEMY_WARN_20 = true
-commands = python -m pytest {posargs}
-"""
+[tool.tox.env_run_base]
+package = "editable"
+commands = [["python", "-m", "pytest", { replace = "posargs", extend = true }]]
+extras = ["test"]

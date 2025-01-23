@@ -18,7 +18,7 @@ latest SQLAlchemy version).
 Features
 ========
 
-* Supports SQLAlchemy 1.4.x and 2
+* Supports SQLAlchemy 2.x
 * Produces declarative code that almost looks like it was hand written
 * Produces `PEP 8`_ compliant code
 * Accurately determines relationships, including many-to-many, one-to-one
@@ -44,6 +44,11 @@ considered as tested only under a few environments) specify the ``citext`` extra
 To include support for the PostgreSQL ``GEOMETRY``, ``GEOGRAPHY``, and ``RASTER`` types
 (which should be considered as tested only under a few environments) specify the
 ``geoalchemy2`` extra:
+
+To include support for the PostgreSQL ``PGVECTOR`` extension type, specify the
+``pgvector`` extra::
+
+    pip install sqlacodegen[pgvector]
 
 .. code-block:: bash
 
@@ -110,7 +115,7 @@ values must be delimited by commas, e.g. ``--options noconstraints,nobidi``):
 
   * all the options from ``declarative``
 
-* ``sqlmodel``
+* ``sqlmodels``
 
   * all the options from ``declarative``
 
