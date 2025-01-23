@@ -106,6 +106,11 @@ class CodeGenerator(metaclass=ABCMeta):
         if invalid_options:
             raise ValueError("Unrecognized options: " + ", ".join(invalid_options))
 
+    @property
+    @abstractmethod
+    def views_supported(self) -> bool:
+        pass
+
     @abstractmethod
     def generate(self) -> str:
         """
@@ -133,6 +138,10 @@ class TablesGenerator(CodeGenerator):
         self.indentation: str = indentation
         self.imports: dict[str, set[str]] = defaultdict(set)
         self.module_imports: set[str] = set()
+
+    @property
+    def views_supported(self) -> bool:
+        return True
 
     def generate_base(self) -> None:
         self.base = Base(
@@ -1360,6 +1369,10 @@ class SQLModelGenerator(DeclarativeGenerator):
             indentation=indentation,
             base_class_name=base_class_name,
         )
+
+    @property
+    def views_supported(self) -> bool:
+        return False
 
     def render_column_callable(self, is_table: bool, *args: Any, **kwargs: Any) -> str:
         self.add_import(Column)

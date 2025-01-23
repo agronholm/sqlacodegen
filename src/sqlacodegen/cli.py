@@ -61,12 +61,6 @@ def main() -> None:
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
     args = parser.parse_args()
 
-    if args.generator == "sqlmodels":
-        print(
-            "VIEW models will not be generated when using the 'sqlmodels' generator",
-            file=sys.stderr,
-        )
-
     if args.version:
         print(version("sqlacodegen"))
         return
@@ -91,14 +85,22 @@ def main() -> None:
     tables = args.tables.split(",") if args.tables else None
     schemas = args.schemas.split(",") if args.schemas else [None]
     options = set(args.options.split(",")) if args.options else set()
-    for schema in schemas:
-        metadata.reflect(
-            engine, schema, (args.generator != "sqlmodels" and not args.noviews), tables
-        )
 
     # Instantiate the generator
     generator_class = generators[args.generator].load()
     generator = generator_class(metadata, engine, options)
+
+    if not generator.views_supported:
+        name = generator_class.__name__
+        print(
+            f"VIEW models will not be generated when using the '{name}' generator",
+            file=sys.stderr,
+        )
+
+    for schema in schemas:
+        metadata.reflect(
+            engine, schema, (generator.views_supported and not args.noviews), tables
+        )
 
     # Open the target file (if given)
     with ExitStack() as stack:
