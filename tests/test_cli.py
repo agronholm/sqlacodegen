@@ -139,7 +139,7 @@ def test_cli_sqlmodels(db_path: Path, tmp_path: Path) -> None:
         == """\
 from typing import Optional
 
-from sqlalchemy import Column, Integer, MetaData, Text
+from sqlalchemy import Column, Integer, Text
 from sqlmodel import Field, SQLModel
 
 class Foo(SQLModel, table=True):
