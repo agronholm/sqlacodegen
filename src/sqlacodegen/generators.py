@@ -25,6 +25,7 @@ from sqlalchemy import (
     Computed,
     Constraint,
     DefaultClause,
+    Dialect,
     Enum,
     Float,
     ForeignKey,
@@ -39,7 +40,6 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
 
@@ -94,11 +94,9 @@ class Base:
 class CodeGenerator(metaclass=ABCMeta):
     valid_options: ClassVar[set[str]] = set()
 
-    def __init__(
-        self, metadata: MetaData, bind: Connection | Engine, options: Sequence[str]
-    ):
+    def __init__(self, metadata: MetaData, dialect: Dialect, options: Sequence[str]):
         self.metadata: MetaData = metadata
-        self.bind: Connection | Engine = bind
+        self.dialect: Dialect = dialect
         self.options: set[str] = set(options)
 
         # Validate options
@@ -129,12 +127,12 @@ class TablesGenerator(CodeGenerator):
     def __init__(
         self,
         metadata: MetaData,
-        bind: Connection | Engine,
+        dialect: Dialect,
         options: Sequence[str],
         *,
         indentation: str = "    ",
     ):
-        super().__init__(metadata, bind, options)
+        super().__init__(metadata, dialect, options)
         self.indentation: str = indentation
         self.imports: dict[str, set[str]] = defaultdict(set)
         self.module_imports: set[str] = set()
@@ -574,7 +572,7 @@ class TablesGenerator(CodeGenerator):
             ]
             add_fk_options(local_columns, remote_columns)
         elif isinstance(constraint, CheckConstraint):
-            args.append(repr(get_compiled_expression(constraint.sqltext, self.bind)))
+            args.append(repr(get_compiled_expression(constraint.sqltext, self.dialect)))
         elif isinstance(constraint, (UniqueConstraint, PrimaryKeyConstraint)):
             args.extend(repr(col.name) for col in constraint.columns)
         else:
@@ -620,7 +618,7 @@ class TablesGenerator(CodeGenerator):
         # Detect check constraints for boolean and enum columns
         for constraint in table.constraints.copy():
             if isinstance(constraint, CheckConstraint):
-                sqltext = get_compiled_expression(constraint.sqltext, self.bind)
+                sqltext = get_compiled_expression(constraint.sqltext, self.dialect)
 
                 # Turn any integer-like column with a CheckConstraint like
                 # "column IN (0, 1)" into a Boolean
@@ -658,7 +656,7 @@ class TablesGenerator(CodeGenerator):
                 pass
 
             # PostgreSQL specific fix: detect sequences from server_default
-            if column.server_default and self.bind.dialect.name == "postgresql":
+            if column.server_default and self.dialect.name == "postgresql":
                 if isinstance(column.server_default, DefaultClause) and isinstance(
                     column.server_default.arg, TextClause
                 ):
@@ -673,7 +671,7 @@ class TablesGenerator(CodeGenerator):
                         column.server_default = None
 
     def get_adapted_type(self, coltype: Any) -> Any:
-        compiled_type = coltype.compile(self.bind.engine.dialect)
+        compiled_type = coltype.compile(self.dialect)
         for supercls in coltype.__class__.__mro__:
             if not supercls.__name__.startswith("_") and hasattr(
                 supercls, "__visit_name__"
@@ -699,7 +697,7 @@ class TablesGenerator(CodeGenerator):
                 try:
                     # If the adapted column type does not render the same as the
                     # original, don't substitute it
-                    if new_coltype.compile(self.bind.engine.dialect) != compiled_type:
+                    if new_coltype.compile(self.dialect) != compiled_type:
                         # Make an exception to the rule for Float and arrays of Float,
                         # since at least on PostgreSQL, Float can accurately represent
                         # both REAL and DOUBLE_PRECISION
@@ -730,13 +728,13 @@ class DeclarativeGenerator(TablesGenerator):
     def __init__(
         self,
         metadata: MetaData,
-        bind: Connection | Engine,
+        dialect: Dialect,
         options: Sequence[str],
         *,
         indentation: str = "    ",
         base_class_name: str = "Base",
     ):
-        super().__init__(metadata, bind, options, indentation=indentation)
+        super().__init__(metadata, dialect, options, indentation=indentation)
         self.base_class_name: str = base_class_name
         self.inflect_engine = inflect.engine()
 
@@ -1317,7 +1315,7 @@ class DataclassGenerator(DeclarativeGenerator):
     def __init__(
         self,
         metadata: MetaData,
-        bind: Connection | Engine,
+        dialect: Dialect,
         options: Sequence[str],
         *,
         indentation: str = "    ",
@@ -1327,7 +1325,7 @@ class DataclassGenerator(DeclarativeGenerator):
     ):
         super().__init__(
             metadata,
-            bind,
+            dialect,
             options,
             indentation=indentation,
             base_class_name=base_class_name,
@@ -1353,7 +1351,7 @@ class SQLModelGenerator(DeclarativeGenerator):
     def __init__(
         self,
         metadata: MetaData,
-        bind: Connection | Engine,
+        dialect: Dialect,
         options: Sequence[str],
         *,
         indentation: str = "    ",
@@ -1361,7 +1359,7 @@ class SQLModelGenerator(DeclarativeGenerator):
     ):
         super().__init__(
             metadata,
-            bind,
+            dialect,
             options,
             indentation=indentation,
             base_class_name=base_class_name,

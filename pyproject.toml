@@ -44,8 +44,6 @@ test = [
     "sqlacodegen[sqlmodel]",
     "pytest >= 7.4",
     "coverage >= 7",
-    "psycopg2-binary",
-    "mysql-connector-python",
 ]
 sqlmodel = ["sqlmodel >= 0.0.22"]
 citext = ["sqlalchemy-citext >= 1.7.0"]

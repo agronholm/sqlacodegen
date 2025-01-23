@@ -88,7 +88,7 @@ def main() -> None:
 
     # Instantiate the generator
     generator_class = generators[args.generator].load()
-    generator = generator_class(metadata, engine, options)
+    generator = generator_class(metadata, engine.dialect, options)
 
     if not generator.views_supported:
         name = generator_class.__name__

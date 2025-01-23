@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import pytest
 from _pytest.fixtures import FixtureRequest
-from sqlalchemy import PrimaryKeyConstraint
-from sqlalchemy.engine import Engine
+from sqlalchemy import Dialect, PrimaryKeyConstraint
 from sqlalchemy.schema import (
     CheckConstraint,
     Column,
@@ -24,10 +23,10 @@ from .conftest import validate_code
 
 @pytest.fixture
 def generator(
-    request: FixtureRequest, metadata: MetaData, engine: Engine
+    request: FixtureRequest, metadata: MetaData, dialect: Dialect
 ) -> CodeGenerator:
     options = getattr(request, "param", [])
-    return DeclarativeGenerator(metadata, engine, options)
+    return DeclarativeGenerator(metadata, dialect, options)
 
 
 def test_indexes(generator: CodeGenerator) -> None:
