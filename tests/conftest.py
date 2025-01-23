@@ -11,7 +11,7 @@ from sqlalchemy.schema import MetaData
 def engine(request: FixtureRequest) -> Engine:
     dialect = getattr(request, "param", None)
     if dialect == "postgresql":
-        return create_engine("postgresql:///testdb")
+        return create_engine("postgresql+psycopg:///testdb")
     elif dialect == "mysql":
         return create_engine("mysql+mysqlconnector://testdb")
     else:

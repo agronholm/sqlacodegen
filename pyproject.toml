@@ -44,7 +44,7 @@ test = [
     "sqlacodegen[sqlmodel]",
     "pytest >= 7.4",
     "coverage >= 7",
-    "psycopg2-binary",
+    "psycopg[binary]",
     "mysql-connector-python",
 ]
 sqlmodel = ["sqlmodel >= 0.0.22"]
@@ -77,7 +77,6 @@ extend-select = [
     "UP",           # pyupgrade
     "W",            # pycodestyle warnings
 ]
-src = ["src"]
 
 [tool.mypy]
 strict = true
