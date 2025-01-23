@@ -1333,7 +1333,10 @@ class DataclassGenerator(DeclarativeGenerator):
                 LiteralImport("sqlalchemy.orm", "MappedAsDataclass"),
             ],
             declarations=[
-                (f"class {self.base_class_name}(MappedAsDataclass, DeclarativeBase):"),
+                (
+                    f"class {self.base_class_name}(MappedAsDataclass, "
+                    "DeclarativeBase):"
+                ),
                 f"{self.indentation}pass",
             ],
             metadata_ref=f"{self.base_class_name}.metadata",
@@ -1366,16 +1369,13 @@ class SQLModelGenerator(DeclarativeGenerator):
         self.base = Base(
             literal_imports=[],
             declarations=[],
-            metadata_ref="metadata",
-            table_metadata_declaration="metadata = MetaData()",
+            metadata_ref="",
         )
 
     def collect_imports(self, models: Iterable[Model]) -> None:
         super(DeclarativeGenerator, self).collect_imports(models)
-        if any(isinstance(model, Model) for model in models):
-            self.add_literal_import("sqlalchemy", "MetaData")
-
         if any(isinstance(model, ModelClass) for model in models):
+            self.remove_literal_import("sqlalchemy", "MetaData")
             self.add_literal_import("sqlmodel", "SQLModel")
             self.add_literal_import("sqlmodel", "Field")
 
