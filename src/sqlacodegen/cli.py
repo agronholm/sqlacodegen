@@ -61,6 +61,12 @@ def main() -> None:
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
     args = parser.parse_args()
 
+    if args.generator == "sqlmodels":
+        print(
+            "NOTICE: VIEW models will not be generated when using the 'sqlmodels' "
+            "generator"
+        )
+
     if args.version:
         print(version("sqlacodegen"))
         return
