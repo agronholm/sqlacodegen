@@ -56,7 +56,7 @@ def main() -> None:
     parser.add_argument(
         "--noviews",
         action="store_true",
-        help="ignore views (always true for sqlmodel generator)",
+        help="ignore views (always true for sqlmodels generator)",
     )
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
     args = parser.parse_args()
