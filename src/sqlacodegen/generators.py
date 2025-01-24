@@ -513,6 +513,8 @@ class TablesGenerator(CodeGenerator):
                 continue
             elif param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                 continue
+            elif isinstance(coltype, Enum):
+                continue
 
             value = getattr(coltype, param.name, missing)
             default = defaults.get(param.name, missing)
