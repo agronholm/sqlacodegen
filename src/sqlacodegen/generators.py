@@ -1344,10 +1344,7 @@ class DataclassGenerator(DeclarativeGenerator):
                 LiteralImport("sqlalchemy.orm", "MappedAsDataclass"),
             ],
             declarations=[
-                (
-                    f"class {self.base_class_name}(MappedAsDataclass, "
-                    "DeclarativeBase):"
-                ),
+                (f"class {self.base_class_name}(MappedAsDataclass, DeclarativeBase):"),
                 f"{self.indentation}pass",
             ],
             metadata_ref=f"{self.base_class_name}.metadata",
