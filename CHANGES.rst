@@ -1,6 +1,10 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Dropped support for Python 3.8
+
 **3.0.0rc5**
 
 - Fixed pgvector support not working
