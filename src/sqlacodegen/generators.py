@@ -315,7 +315,8 @@ class TablesGenerator(CodeGenerator):
             collection.append(f"from {package} import {imports}")
 
         for module in sorted(self.module_imports):
-            thirdparty_imports.append(f"import {module}")
+            # all third-party module references must include a `_module` prefix to avoid collision with field names
+            thirdparty_imports.append(f"import {module} as {module}_module")
 
         return [
             group
@@ -1204,7 +1205,7 @@ class DeclarativeGenerator(TablesGenerator):
                 column_python_type = python_type_name
             else:
                 python_type_module = python_type.__module__
-                column_python_type = f"{python_type_module}.{python_type_name}"
+                column_python_type = f"{python_type_module}_module.{python_type_name}"
                 self.add_module_import(python_type_module)
         except NotImplementedError:
             self.add_literal_import("typing", "Any")
