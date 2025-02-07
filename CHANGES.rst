@@ -3,6 +3,8 @@ Version history
 
 **UNRELEASED**
 
+Add- Fixed Enum columns code generation
+- Fixed SQLModel code generation
 - Dropped support for Python 3.8
 
 **3.0.0rc5**
