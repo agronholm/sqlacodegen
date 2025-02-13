@@ -725,6 +725,7 @@ class DeclarativeGenerator(TablesGenerator):
         "use_inflect",
         "nojoined",
         "nobidi",
+        "model_classes"
     }
 
     def __init__(
@@ -763,6 +764,7 @@ class DeclarativeGenerator(TablesGenerator):
                 self.add_literal_import("sqlalchemy.orm", "relationship")
 
     def generate_models(self) -> list[Model]:
+        is_model_classes_only = "model_classes" in self.options
         models_by_table_name: dict[str, Model] = {}
 
         # Pick association tables from the metadata into their own set, don't process
@@ -786,7 +788,7 @@ class DeclarativeGenerator(TablesGenerator):
 
             # Only form model classes for tables that have a primary key and are not
             # association tables
-            if not table.primary_key:
+            if not is_model_classes_only and not table.primary_key:
                 models_by_table_name[qualified_name] = Model(table)
             else:
                 model = ModelClass(table)
