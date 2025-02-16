@@ -39,9 +39,10 @@ def test_fancy_coltypes(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
         generator.metadata,
-        Column("enum", postgresql.ENUM("A", "B", name="blah")),
+        Column("enum", postgresql.ENUM("A", "B", name="blah", schema="someschema")),
         Column("bool", postgresql.BOOLEAN),
         Column("number", NUMERIC(10, asdecimal=False)),
+        schema="someschema",
     )
 
     validate_code(
@@ -54,9 +55,10 @@ def test_fancy_coltypes(generator: CodeGenerator) -> None:
 
         t_simple_items = Table(
             'simple_items', metadata,
-            Column('enum', Enum('A', 'B', name='blah')),
+            Column('enum', Enum('A', 'B', name='blah', schema='someschema')),
             Column('bool', Boolean),
-            Column('number', Numeric(10, asdecimal=False))
+            Column('number', Numeric(10, asdecimal=False)),
+            schema='someschema'
         )
         """,
     )

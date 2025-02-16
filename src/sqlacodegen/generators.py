@@ -512,6 +512,7 @@ class TablesGenerator(CodeGenerator):
             if param.name.startswith("_"):
                 continue
             elif param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
+                use_kwargs = True
                 continue
 
             value = getattr(coltype, param.name, missing)
@@ -535,8 +536,11 @@ class TablesGenerator(CodeGenerator):
             varargs_repr = [repr(arg) for arg in getattr(coltype, vararg)]
             args.extend(varargs_repr)
 
-        if isinstance(coltype, Enum) and coltype.name is not None:
-            kwargs["name"] = repr(coltype.name)
+        # These arguments cannot be autodetected from the Enum initializer
+        if isinstance(coltype, Enum):
+            for colname in "name", "schema":
+                if (value := getattr(coltype, colname)) is not None:
+                    kwargs[colname] = repr(value)
 
         if isinstance(coltype, JSONB):
             # Remove astext_type if it's the default
@@ -683,6 +687,8 @@ class TablesGenerator(CodeGenerator):
                 kw = {}
                 if supercls is Enum:
                     kw["name"] = coltype.name
+                    if coltype.schema:
+                        kw["schema"] = coltype.schema
 
                 try:
                     new_coltype = coltype.adapt(supercls)
