@@ -1509,3 +1509,36 @@ class Simple(Base):
 server_default=text("'test'"))
 """,
     )
+
+
+def test_optional_foreign_key_column(generator: CodeGenerator) -> None:
+    Table(
+        "refers",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("parent_id", INTEGER, nullable=True),
+        ForeignKeyConstraint(["parent_id"], ["refers.id"]),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import List, Optional
+
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Refers(Base):
+    __tablename__ = 'refers'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey('refers.id'))
+
+    parent: Mapped[Optional['Refers']] = relationship('Refers', remote_side=[id], back_populates='parent_reverse')
+    parent_reverse: Mapped[List['Refers']] = relationship('Refers', remote_side=[parent_id], back_populates='parent')
+""",
+    )

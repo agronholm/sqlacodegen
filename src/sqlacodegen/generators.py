@@ -514,8 +514,6 @@ class TablesGenerator(CodeGenerator):
             elif param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                 use_kwargs = True
                 continue
-            elif isinstance(coltype, Enum):
-                continue
 
             value = getattr(coltype, param.name, missing)
             default = defaults.get(param.name, missing)
@@ -1308,6 +1306,11 @@ class DeclarativeGenerator(TablesGenerator):
             RelationshipType.MANY_TO_ONE,
         ):
             relationship_type = f"'{relationship.target.name}'"
+            if relationship.constraint and list(
+                filter(lambda c: c.nullable, relationship.constraint.columns)
+            ):
+                self.add_literal_import("typing", "Optional")
+                relationship_type = f"Optional[{relationship_type}]"
         elif relationship.type == RelationshipType.MANY_TO_MANY:
             self.add_literal_import("typing", "List")
             relationship_type = f"List['{relationship.target.name}']"
