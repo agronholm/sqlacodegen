@@ -1306,8 +1306,8 @@ class DeclarativeGenerator(TablesGenerator):
             RelationshipType.MANY_TO_ONE,
         ):
             relationship_type = f"'{relationship.target.name}'"
-            if relationship.constraint and list(
-                filter(lambda c: c.nullable, relationship.constraint.columns)
+            if relationship.constraint and any(
+                col.nullable for col in relationship.constraint.columns
             ):
                 self.add_literal_import("typing", "Optional")
                 relationship_type = f"Optional[{relationship_type}]"
