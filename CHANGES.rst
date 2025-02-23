@@ -3,6 +3,7 @@ Version history
 
 **UNRELEASED**
 
+- Changed nullable relationships to include ``Optional`` in their type annotations
 - Dropped support for Python 3.8
 - Fixed SQLModel code generation
 - Fixed two rendering issues in ``ENUM`` columns when a non-default schema is used: an
