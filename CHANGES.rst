@@ -3,8 +3,7 @@ Version history
 
 **UNRELEASED**
 
-- Support nullable (optional) many-to-one relationships, aligning with SQLAlchemy
-  `2.0 standards <https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#nullable-many-to-one>`_
+- Changed nullable relationships to include ``Optional`` in their type annotations
 - Dropped support for Python 3.8
 - Fixed SQLModel code generation
 - Fixed two rendering issues in ``ENUM`` columns when a non-default schema is used: an
