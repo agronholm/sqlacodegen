@@ -4,7 +4,6 @@ Version history
 **UNRELEASED**
 
 - Support optional relationships
-- Fixed SQLModel code generation
 - Dropped support for Python 3.8
 - Fixed two rendering issues in ``ENUM`` columns when a non-default schema is used: an
   unwarranted positional argument and missing the ``schema`` argument
