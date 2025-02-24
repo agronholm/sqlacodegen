@@ -127,7 +127,7 @@ back_populates='container')
             container_id: Mapped[Optional[int]] = \
 mapped_column(ForeignKey('simple_containers.id'))
 
-            container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+            container: Mapped[Optional['SimpleContainers']] = relationship('SimpleContainers', \
 back_populates='simple_items')
         """,
     )
@@ -237,7 +237,7 @@ name='foreignkeytest'),
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
             container_id: Mapped[Optional[int]] = mapped_column(Integer)
 
-            container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+            container: Mapped[Optional['SimpleContainers']] = relationship('SimpleContainers', \
 back_populates='simple_items')
         """,
     )
