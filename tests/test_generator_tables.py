@@ -228,6 +228,7 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
         generator.metadata,
         Column("id", mysql.INTEGER),
         Column("name", mysql.VARCHAR(255)),
+        Column("double", mysql.DOUBLE(1, 2)),
         Column("set", mysql.SET("one", "two")),
     )
 
@@ -235,7 +236,7 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
         generator.generate(),
         """\
         from sqlalchemy import Column, Integer, MetaData, String, Table
-        from sqlalchemy.dialects.mysql import SET
+        from sqlalchemy.dialects.mysql import DOUBLE, SET
 
         metadata = MetaData()
 
@@ -244,6 +245,7 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('id', Integer),
             Column('name', String(255)),
+            Column('double', DOUBLE(1, 2)),
             Column('set', SET('one', 'two'))
         )
         """,
