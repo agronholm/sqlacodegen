@@ -706,6 +706,9 @@ class TablesGenerator(CodeGenerator):
                     # If the adapted column type does not render the same as the
                     # original, don't substitute it
                     if new_coltype.compile(self.bind.engine.dialect) != compiled_type:
+                        if self.bind.dialect.name != "postgresql":
+                            break
+
                         # Make an exception to the rule for Float and arrays of Float,
                         # since at least on PostgreSQL, Float can accurately represent
                         # both REAL and DOUBLE_PRECISION
