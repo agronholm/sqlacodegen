@@ -42,6 +42,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
+from sqlalchemy.sql.type_api import UserDefinedType
 
 from .models import (
     ColumnAttribute,
@@ -682,6 +683,10 @@ class TablesGenerator(CodeGenerator):
             if not supercls.__name__.startswith("_") and hasattr(
                 supercls, "__visit_name__"
             ):
+                # Don't try to adapt UserDefinedType as it's not a proper column type
+                if supercls is UserDefinedType:
+                    return coltype
+
                 # Hack to fix adaptation of the Enum class which is broken since
                 # SQLAlchemy 1.2
                 kw = {}

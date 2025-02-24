@@ -8,6 +8,7 @@ Version history
 - Fixed SQLModel code generation
 - Fixed two rendering issues in ``ENUM`` columns when a non-default schema is used: an
   unwarranted positional argument and missing the ``schema`` argument
+- Fixed ``AttributeError`` when metadata contains user defined column types
 - Fixed MySQL ``DOUBLE`` column types being rendered with the wrong arguments
 
 **3.0.0rc5**
