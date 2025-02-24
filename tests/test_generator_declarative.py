@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from textwrap import dedent
+
 import pytest
 from _pytest.fixtures import FixtureRequest
 from sqlalchemy import PrimaryKeyConstraint
@@ -28,6 +30,20 @@ def generator(
 ) -> CodeGenerator:
     options = getattr(request, "param", [])
     return DeclarativeGenerator(metadata, engine, options)
+
+
+@pytest.fixture
+def generator_dynamic_schema(
+    request: FixtureRequest, metadata: MetaData, engine: Engine
+) -> CodeGenerator:
+    schema_import_path, schema_value = getattr(request, "param", (None, None))
+    return DeclarativeGenerator(
+        metadata,
+        engine,
+        [],
+        dynamic_schema_import_path=schema_import_path,
+        dynamic_schema_value=schema_value,
+    )
 
 
 def test_indexes(generator: CodeGenerator) -> None:
@@ -1509,3 +1525,37 @@ class Simple(Base):
 server_default=text("'test'"))
 """,
     )
+
+
+@pytest.mark.parametrize(
+    "generator_dynamic_schema",
+    [[".conftest.schema_obj", "schema_obj.name"]],
+    indirect=True,
+)
+def test_use_dynamic_schema(generator_dynamic_schema: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator_dynamic_schema.metadata,
+        Column("id", INTEGER, primary_key=True),
+    )
+
+    expected_code = """\
+from .conftest import schema_obj
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = {'schema': schema_obj.name}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+"""
+    generated_code = generator_dynamic_schema.generate()
+    expected_code = dedent(expected_code)
+    assert generated_code == expected_code
+    # TODO: code execution fails with KeyError: "'__name__' not in globals", any idea?
+    # validate_code(generated_code, expected_code)
