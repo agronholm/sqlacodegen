@@ -36,11 +36,14 @@ def generator(
 
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_fancy_coltypes(generator: CodeGenerator) -> None:
+    from pgvector.sqlalchemy.vector import VECTOR
+
     Table(
         "simple_items",
         generator.metadata,
         Column("enum", postgresql.ENUM("A", "B", name="blah", schema="someschema")),
         Column("bool", postgresql.BOOLEAN),
+        Column("vector", VECTOR(3)),
         Column("number", NUMERIC(10, asdecimal=False)),
         schema="someschema",
     )
@@ -48,6 +51,7 @@ def test_fancy_coltypes(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
+        from pgvector.sqlalchemy.vector import VECTOR
         from sqlalchemy import Boolean, Column, Enum, MetaData, Numeric, Table
 
         metadata = MetaData()
@@ -57,6 +61,7 @@ def test_fancy_coltypes(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('enum', Enum('A', 'B', name='blah', schema='someschema')),
             Column('bool', Boolean),
+            Column('vector', VECTOR(3)),
             Column('number', Numeric(10, asdecimal=False)),
             schema='someschema'
         )
