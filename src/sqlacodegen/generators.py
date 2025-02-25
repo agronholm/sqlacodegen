@@ -36,6 +36,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    TypeDecorator,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -684,7 +685,7 @@ class TablesGenerator(CodeGenerator):
                 supercls, "__visit_name__"
             ):
                 # Don't try to adapt UserDefinedType as it's not a proper column type
-                if supercls is UserDefinedType:
+                if supercls is UserDefinedType or issubclass(supercls, TypeDecorator):
                     return coltype
 
                 # Hack to fix adaptation of the Enum class which is broken since
