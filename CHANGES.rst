@@ -9,6 +9,8 @@ Version history
 - Fixed two rendering issues in ``ENUM`` columns when a non-default schema is used: an
   unwarranted positional argument and missing the ``schema`` argument
 - Fixed ``AttributeError`` when metadata contains user defined column types
+- Fixed ``AssertionError`` when metadata contains a column type that is a type decorator
+  with an all-uppercase name
 - Fixed MySQL ``DOUBLE`` column types being rendered with the wrong arguments
 
 **3.0.0rc5**
