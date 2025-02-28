@@ -45,6 +45,7 @@ from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.type_api import UserDefinedType
 
+from .adapters import adapt_column_type
 from .models import (
     ColumnAttribute,
     JoinType,
@@ -697,7 +698,7 @@ class TablesGenerator(CodeGenerator):
                         kw["schema"] = coltype.schema
 
                 try:
-                    new_coltype = coltype.adapt(supercls)
+                    new_coltype = adapt_column_type(coltype, supercls)
                 except TypeError:
                     # If the adaptation fails, don't try again
                     break
@@ -712,9 +713,6 @@ class TablesGenerator(CodeGenerator):
                     # If the adapted column type does not render the same as the
                     # original, don't substitute it
                     if new_coltype.compile(self.bind.engine.dialect) != compiled_type:
-                        if self.bind.dialect.name != "postgresql":
-                            break
-
                         # Make an exception to the rule for Float and arrays of Float,
                         # since at least on PostgreSQL, Float can accurately represent
                         # both REAL and DOUBLE_PRECISION

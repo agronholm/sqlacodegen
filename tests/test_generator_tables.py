@@ -245,8 +245,8 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import Column, Integer, MetaData, String, Table
-        from sqlalchemy.dialects.mysql import DOUBLE, SET
+        from sqlalchemy import Column, Double, Integer, MetaData, String, Table
+        from sqlalchemy.dialects.mysql import SET
 
         metadata = MetaData()
 
@@ -255,7 +255,7 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('id', Integer),
             Column('name', String(255)),
-            Column('double', DOUBLE(1, 2)),
+            Column('double', Double(1, True, 2)),
             Column('set', SET('one', 'two'))
         )
         """,
