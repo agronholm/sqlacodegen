@@ -26,7 +26,6 @@ from sqlalchemy import (
     Constraint,
     DefaultClause,
     Enum,
-    Float,
     ForeignKey,
     ForeignKeyConstraint,
     Identity,
@@ -36,12 +35,14 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    TypeDecorator,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
+from sqlalchemy.sql.type_api import UserDefinedType
 
 from .models import (
     ColumnAttribute,
@@ -682,6 +683,10 @@ class TablesGenerator(CodeGenerator):
             if not supercls.__name__.startswith("_") and hasattr(
                 supercls, "__visit_name__"
             ):
+                # Don't try to adapt UserDefinedType as it's not a proper column type
+                if supercls is UserDefinedType or issubclass(supercls, TypeDecorator):
+                    return coltype
+
                 # Hack to fix adaptation of the Enum class which is broken since
                 # SQLAlchemy 1.2
                 kw = {}
@@ -706,14 +711,7 @@ class TablesGenerator(CodeGenerator):
                     # If the adapted column type does not render the same as the
                     # original, don't substitute it
                     if new_coltype.compile(self.bind.engine.dialect) != compiled_type:
-                        # Make an exception to the rule for Float and arrays of Float,
-                        # since at least on PostgreSQL, Float can accurately represent
-                        # both REAL and DOUBLE_PRECISION
-                        if not isinstance(new_coltype, Float) and not (
-                            isinstance(new_coltype, ARRAY)
-                            and isinstance(new_coltype.item_type, Float)
-                        ):
-                            break
+                        break
                 except CompileError:
                     # If the adapted column type can't be compiled, don't substitute it
                     break

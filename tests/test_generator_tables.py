@@ -4,6 +4,7 @@ from textwrap import dedent
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from sqlalchemy import TypeDecorator
 from sqlalchemy.dialects import mysql, postgresql
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
@@ -18,12 +19,17 @@ from sqlalchemy.schema import (
     UniqueConstraint,
 )
 from sqlalchemy.sql.expression import text
-from sqlalchemy.sql.sqltypes import NullType
+from sqlalchemy.sql.sqltypes import DateTime, NullType
 from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, TablesGenerator
 
 from .conftest import validate_code
+
+
+# This needs to be uppercased to trigger #315
+class TIMESTAMP_DECORATOR(TypeDecorator[DateTime]):
+    impl = DateTime
 
 
 @pytest.fixture
@@ -36,18 +42,25 @@ def generator(
 
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_fancy_coltypes(generator: CodeGenerator) -> None:
+    from pgvector.sqlalchemy.vector import VECTOR
+
     Table(
         "simple_items",
         generator.metadata,
         Column("enum", postgresql.ENUM("A", "B", name="blah", schema="someschema")),
         Column("bool", postgresql.BOOLEAN),
+        Column("vector", VECTOR(3)),
         Column("number", NUMERIC(10, asdecimal=False)),
+        Column("timestamp", TIMESTAMP_DECORATOR()),
         schema="someschema",
     )
 
     validate_code(
         generator.generate(),
         """\
+        from tests.test_generator_tables import TIMESTAMP_DECORATOR
+
+        from pgvector.sqlalchemy.vector import VECTOR
         from sqlalchemy import Boolean, Column, Enum, MetaData, Numeric, Table
 
         metadata = MetaData()
@@ -57,7 +70,9 @@ def test_fancy_coltypes(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('enum', Enum('A', 'B', name='blah', schema='someschema')),
             Column('bool', Boolean),
+            Column('vector', VECTOR(3)),
             Column('number', Numeric(10, asdecimal=False)),
+            Column('timestamp', TIMESTAMP_DECORATOR),
             schema='someschema'
         )
         """,
@@ -223,6 +238,7 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
         generator.metadata,
         Column("id", mysql.INTEGER),
         Column("name", mysql.VARCHAR(255)),
+        Column("double", mysql.DOUBLE(1, 2)),
         Column("set", mysql.SET("one", "two")),
     )
 
@@ -230,7 +246,7 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
         generator.generate(),
         """\
         from sqlalchemy import Column, Integer, MetaData, String, Table
-        from sqlalchemy.dialects.mysql import SET
+        from sqlalchemy.dialects.mysql import DOUBLE, SET
 
         metadata = MetaData()
 
@@ -239,6 +255,7 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('id', Integer),
             Column('name', String(255)),
+            Column('double', DOUBLE(1, 2)),
             Column('set', SET('one', 'two'))
         )
         """,
