@@ -43,6 +43,7 @@ from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.type_api import UserDefinedType
+from sqlalchemy.types import TypeEngine
 
 from .models import (
     ColumnAttribute,
@@ -1201,18 +1202,28 @@ class DeclarativeGenerator(TablesGenerator):
         column = column_attr.column
         rendered_column = self.render_column(column, column_attr.name != column.name)
 
-        try:
-            python_type = column.type.python_type
+        def recursively_get_col_type(column_type: TypeEngine[Any]) -> str:
+            if column_type.python_type == list:
+                self.add_literal_import("typing", "List")
+                # Dimensions is how postgres handles matrices
+                # See: https://docs.sqlalchemy.org/en/13/dialects/postgresql.html#sqlalchemy.dialects.postgresql.ARRAY
+                dim = getattr(column_type, "dimensions", None) or 1
+
+                return f"{'List[' * dim}{recursively_get_col_type(column_type.item_type)}{']' * dim}"
+
+            python_type = column_type.python_type
             python_type_name = python_type.__name__
             if python_type.__module__ == "builtins":
-                column_python_type = python_type_name
-            else:
+                return python_type_name
+            try:
                 python_type_module = python_type.__module__
-                column_python_type = f"{python_type_module}.{python_type_name}"
                 self.add_module_import(python_type_module)
-        except NotImplementedError:
-            self.add_literal_import("typing", "Any")
-            column_python_type = "Any"
+                return f"{python_type_module}.{python_type_name}"
+            except NotImplementedError as wtf:
+                self.add_literal_import("typing", "Any")
+                return "Any"
+
+        column_python_type = recursively_get_col_type(column.type)
 
         if column.nullable:
             self.add_literal_import("typing", "Optional")

@@ -14,8 +14,9 @@ from sqlalchemy.schema import (
     Table,
     UniqueConstraint,
 )
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.expression import text
-from sqlalchemy.types import INTEGER, VARCHAR, Text
+from sqlalchemy.types import ARRAY, INTEGER, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, DeclarativeGenerator
 
@@ -1509,3 +1510,41 @@ class Simple(Base):
 server_default=text("'test'"))
 """,
     )
+
+
+def test_table_with_arrays(generator: CodeGenerator) -> None:
+    _ = Table(
+        "with_items",
+        generator.metadata,
+        # Should still-handle run of the mill attributes
+        Column("id", INTEGER, primary_key=True),
+        Column("int_items_not_optional", ARRAY(INTEGER()), nullable=False),
+        # Should handle postgresql matrices
+        # TODO: How do the others handle multi-dimensional arrays?
+        Column("str_matrix", postgresql.ARRAY(VARCHAR(), dimensions=2)),
+    )
+
+
+    validate_code(
+    generator.generate(),
+        """\
+from typing import List, Optional
+
+from sqlalchemy import ARRAY, INTEGER, Integer, VARCHAR
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class WithItems(Base):
+    __tablename__ = 'with_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    int_items_not_optional: Mapped[List[int]] = mapped_column(ARRAY(INTEGER()))
+    str_matrix: Mapped[Optional[List[List[str]]]] = mapped_column(ARRAY(VARCHAR(), dimensions=2))
+""",
+    )
+
+
