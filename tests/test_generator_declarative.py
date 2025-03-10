@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from _pytest.fixtures import FixtureRequest
 from sqlalchemy import PrimaryKeyConstraint
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
     CheckConstraint,
@@ -14,7 +15,6 @@ from sqlalchemy.schema import (
     Table,
     UniqueConstraint,
 )
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.expression import text
 from sqlalchemy.types import ARRAY, INTEGER, VARCHAR, Text
 
@@ -1524,9 +1524,8 @@ def test_table_with_arrays(generator: CodeGenerator) -> None:
         Column("str_matrix", postgresql.ARRAY(VARCHAR(), dimensions=2)),
     )
 
-
     validate_code(
-    generator.generate(),
+        generator.generate(),
         """\
 from typing import List, Optional
 
@@ -1546,5 +1545,3 @@ class WithItems(Base):
     str_matrix: Mapped[Optional[List[List[str]]]] = mapped_column(ARRAY(VARCHAR(), dimensions=2))
 """,
     )
-
-

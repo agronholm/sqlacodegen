@@ -1219,7 +1219,7 @@ class DeclarativeGenerator(TablesGenerator):
                 python_type_module = python_type.__module__
                 self.add_module_import(python_type_module)
                 return f"{python_type_module}.{python_type_name}"
-            except NotImplementedError as wtf:
+            except NotImplementedError:
                 self.add_literal_import("typing", "Any")
                 return "Any"
 
