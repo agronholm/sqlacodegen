@@ -1202,25 +1202,29 @@ class DeclarativeGenerator(TablesGenerator):
         column = column_attr.column
         rendered_column = self.render_column(column, column_attr.name != column.name)
 
-        def recursively_get_col_type(column_type: TypeEngine[Any]) -> str:
+        def render_col_type(column_type: TypeEngine[Any]) -> str:
+            pre = ""
+            post = ""
             if column_type.python_type is list:
                 dim = getattr(column_type, "dimensions", None) or 1
-
-                return f"{'list[' * dim}{recursively_get_col_type(cast(ARRAY[Any], column_type).item_type)}{']' * dim}"
+                pre = "list[" * dim
+                post = "]" * dim
+                column_type = cast(ARRAY[Any], column_type).item_type
 
             python_type = column_type.python_type
             python_type_name = python_type.__name__
             if python_type.__module__ == "builtins":
-                return python_type_name
+                return f"{pre}{python_type_name}{post}"
             try:
                 python_type_module = python_type.__module__
                 self.add_module_import(python_type_module)
-                return f"{python_type_module}.{python_type_name}"
+                return f"{pre}{python_type_module}.{python_type_name}{post}"
             except NotImplementedError:
                 self.add_literal_import("typing", "Any")
-                return "Any"
 
-        column_python_type = recursively_get_col_type(column.type)
+                return f"{pre}Any{post}"
+
+        column_python_type = render_col_type(column.type)
 
         if column.nullable:
             self.add_literal_import("typing", "Optional")
