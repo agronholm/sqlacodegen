@@ -1202,33 +1202,39 @@ class DeclarativeGenerator(TablesGenerator):
         column = column_attr.column
         rendered_column = self.render_column(column, column_attr.name != column.name)
 
-        def render_col_type(column_type: TypeEngine[Any]) -> str:
-            pre = ""
-            post = ""
+        def get_type_qualifiers() -> tuple[str, TypeEngine[Any], str]:
+            column_type = column.type
+            pre: list[str] = []
+            post_size = 0
+            if column.nullable:
+                self.add_literal_import("typing", "Optional")
+                pre.append("Optional[")
+                post_size += 1
             if isinstance(column_type, ARRAY):
                 dim = getattr(column_type, "dimensions", None) or 1
-                pre = "list[" * dim
-                post = "]" * dim
+                pre.extend("list[" for _ in range(dim))
+                post_size += dim
+
                 column_type = column_type.item_type
 
+            return "".join(pre), column_type, "]" * post_size
+
+        def render_col_type(column_type: TypeEngine[Any]) -> str:
             python_type = column_type.python_type
             python_type_name = python_type.__name__
-            if python_type.__module__ == "builtins":
-                return f"{pre}{python_type_name}{post}"
+            python_type_module = python_type.__module__
+            if python_type_module == "builtins":
+                return python_type_name
             try:
-                python_type_module = python_type.__module__
                 self.add_module_import(python_type_module)
-                return f"{pre}{python_type_module}.{python_type_name}{post}"
+                return f"{python_type_module}.{python_type_name}"
             except NotImplementedError:
                 self.add_literal_import("typing", "Any")
+                return "Any"
 
-                return f"{pre}Any{post}"
+        pre, col_type, post = get_type_qualifiers()
+        column_python_type = f"{pre}{render_col_type(col_type)}{post}"
 
-        column_python_type = render_col_type(column.type)
-
-        if column.nullable:
-            self.add_literal_import("typing", "Optional")
-            column_python_type = f"Optional[{column_python_type}]"
         return f"{column_attr.name}: Mapped[{column_python_type}] = {rendered_column}"
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
