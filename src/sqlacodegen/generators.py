@@ -13,7 +13,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 import inflect
 import sqlalchemy
@@ -1203,13 +1203,10 @@ class DeclarativeGenerator(TablesGenerator):
         rendered_column = self.render_column(column, column_attr.name != column.name)
 
         def recursively_get_col_type(column_type: TypeEngine[Any]) -> str:
-            if column_type.python_type == list:
-                self.add_literal_import("typing", "List")
-                # Dimensions is how postgres handles matrices
-                # See: https://docs.sqlalchemy.org/en/13/dialects/postgresql.html#sqlalchemy.dialects.postgresql.ARRAY
+            if column_type.python_type is list:
                 dim = getattr(column_type, "dimensions", None) or 1
 
-                return f"{'List[' * dim}{recursively_get_col_type(column_type.item_type)}{']' * dim}"
+                return f"{'list[' * dim}{recursively_get_col_type(cast(ARRAY[Any], column_type).item_type)}{']' * dim}"
 
             python_type = column_type.python_type
             python_type_name = python_type.__name__
@@ -1308,8 +1305,7 @@ class DeclarativeGenerator(TablesGenerator):
 
         relationship_type: str
         if relationship.type == RelationshipType.ONE_TO_MANY:
-            self.add_literal_import("typing", "List")
-            relationship_type = f"List['{relationship.target.name}']"
+            relationship_type = f"list['{relationship.target.name}']"
         elif relationship.type in (
             RelationshipType.ONE_TO_ONE,
             RelationshipType.MANY_TO_ONE,
@@ -1321,8 +1317,7 @@ class DeclarativeGenerator(TablesGenerator):
                 self.add_literal_import("typing", "Optional")
                 relationship_type = f"Optional[{relationship_type}]"
         elif relationship.type == RelationshipType.MANY_TO_MANY:
-            self.add_literal_import("typing", "List")
-            relationship_type = f"List['{relationship.target.name}']"
+            relationship_type = f"list['{relationship.target.name}']"
         else:
             self.add_literal_import("typing", "Any")
             relationship_type = "Any"
@@ -1420,13 +1415,6 @@ class SQLModelGenerator(DeclarativeGenerator):
             if model.relationships:
                 self.add_literal_import("sqlmodel", "Relationship")
 
-            for relationship_attr in model.relationships:
-                if relationship_attr.type in (
-                    RelationshipType.ONE_TO_MANY,
-                    RelationshipType.MANY_TO_MANY,
-                ):
-                    self.add_literal_import("typing", "List")
-
     def collect_imports_for_column(self, column: Column[Any]) -> None:
         super().collect_imports_for_column(column)
         try:
@@ -1498,8 +1486,7 @@ class SQLModelGenerator(DeclarativeGenerator):
             RelationshipType.ONE_TO_MANY,
             RelationshipType.MANY_TO_MANY,
         ):
-            self.add_literal_import("typing", "List")
-            annotation = f"List[{annotation}]"
+            annotation = f"list[{annotation}]"
         else:
             self.add_literal_import("typing", "Optional")
             annotation = f"Optional[{annotation}]"
