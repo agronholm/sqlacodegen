@@ -13,7 +13,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 import inflect
 import sqlalchemy
@@ -1205,11 +1205,11 @@ class DeclarativeGenerator(TablesGenerator):
         def render_col_type(column_type: TypeEngine[Any]) -> str:
             pre = ""
             post = ""
-            if column_type.python_type is list:
+            if isinstance(column_type, ARRAY):
                 dim = getattr(column_type, "dimensions", None) or 1
                 pre = "list[" * dim
                 post = "]" * dim
-                column_type = cast(ARRAY[Any], column_type).item_type
+                column_type = column_type.item_type
 
             python_type = column_type.python_type
             python_type_name = python_type.__name__
