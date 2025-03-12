@@ -1210,6 +1210,7 @@ class DeclarativeGenerator(TablesGenerator):
                 self.add_literal_import("typing", "Optional")
                 pre.append("Optional[")
                 post_size += 1
+
             if isinstance(column_type, ARRAY):
                 dim = getattr(column_type, "dimensions", None) or 1
                 pre.extend("list[" for _ in range(dim))
