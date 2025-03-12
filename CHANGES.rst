@@ -1,6 +1,10 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Array types are no longer partially unknown.
+
 **3.0.0**
 
 - Dropped support for Python 3.8
