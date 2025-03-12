@@ -1215,7 +1215,7 @@ class DeclarativeGenerator(TablesGenerator):
 
             return "".join(pre), column_type, "]" * post_size
 
-        def render_annotation(column_type: TypeEngine[Any]) -> str:
+        def render_python_type(column_type: TypeEngine[Any]) -> str:
             python_type = column_type.python_type
             python_type_name = python_type.__name__
             python_type_module = python_type.__module__
@@ -1230,7 +1230,7 @@ class DeclarativeGenerator(TablesGenerator):
                 return "Any"
 
         pre, col_type, post = get_type_qualifiers()
-        column_python_type = f"{pre}{render_annotation(col_type)}{post}"
+        column_python_type = f"{pre}{render_python_type(col_type)}{post}"
         return f"{column_attr.name}: Mapped[{column_python_type}] = {rendered_column}"
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
