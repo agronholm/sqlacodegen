@@ -3,7 +3,8 @@ Version history
 
 **UNRELEASED**
 
-- Array types are no longer partially unknown.
+- Type annotations for ARRAY column attributes now include the Python type of
+  the array elements
 
 **3.0.0**
 
