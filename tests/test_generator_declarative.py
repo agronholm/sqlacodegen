@@ -1504,7 +1504,7 @@ server_default=text("'test'"))
 
 
 def test_table_with_arrays(generator: CodeGenerator) -> None:
-    _ = Table(
+    Table(
         "with_items",
         generator.metadata,
         Column("id", INTEGER, primary_key=True),
