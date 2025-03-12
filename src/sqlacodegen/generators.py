@@ -64,11 +64,6 @@ from .utils import (
     uses_default_name,
 )
 
-if sys.version_info < (3, 10):
-    pass
-else:
-    pass
-
 _re_boolean_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?).*\1\.)?(["`]?)(.*)\2')
 _re_enum_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \((.+)\)")
@@ -1220,12 +1215,13 @@ class DeclarativeGenerator(TablesGenerator):
 
             return "".join(pre), column_type, "]" * post_size
 
-        def render_python_type(column_type: TypeEngine[Any]) -> str:
+        def render_annotation(column_type: TypeEngine[Any]) -> str:
             python_type = column_type.python_type
             python_type_name = python_type.__name__
             python_type_module = python_type.__module__
             if python_type_module == "builtins":
                 return python_type_name
+
             try:
                 self.add_module_import(python_type_module)
                 return f"{python_type_module}.{python_type_name}"
@@ -1234,8 +1230,7 @@ class DeclarativeGenerator(TablesGenerator):
                 return "Any"
 
         pre, col_type, post = get_type_qualifiers()
-        column_python_type = f"{pre}{render_python_type(col_type)}{post}"
-
+        column_python_type = f"{pre}{render_annotation(col_type)}{post}"
         return f"{column_attr.name}: Mapped[{column_python_type}] = {rendered_column}"
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
