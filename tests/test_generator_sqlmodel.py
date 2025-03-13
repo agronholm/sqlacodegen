@@ -116,7 +116,7 @@ def test_onetomany(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-            from typing import List, Optional
+            from typing import Optional
 
             from sqlalchemy import Column, ForeignKey, Integer
             from sqlmodel import Field, Relationship, SQLModel
@@ -127,7 +127,7 @@ def test_onetomany(generator: CodeGenerator) -> None:
                 id: Optional[int] = Field(default=None, sa_column=Column(\
 'id', Integer, primary_key=True))
 
-                simple_goods: List['SimpleGoods'] = Relationship(\
+                simple_goods: list['SimpleGoods'] = Relationship(\
 back_populates='container')
 
 
