@@ -4,7 +4,7 @@ import argparse
 import ast
 import sys
 from contextlib import ExitStack
-from typing import TextIO
+from typing import Any, TextIO
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
@@ -25,15 +25,15 @@ except ImportError:
     pgvector = None
 
 if sys.version_info < (3, 10):
-    from importlib_metadata import entry_points, version
+    from importlib_metadata import entry_points, version, EntryPoint
 else:
-    from importlib.metadata import entry_points, version
+    from importlib.metadata import entry_points, version, EntryPoint
 
 
 _generators_cache = None
 
 
-def get_generators() -> list[str]:
+def get_generators() -> dict[str, EntryPoint]:
     global _generators_cache
     if _generators_cache is None:
         _generators_cache = {
@@ -42,7 +42,7 @@ def get_generators() -> list[str]:
     return _generators_cache
 
 
-def _parse_flag_or_dict(value) -> bool | dict:
+def _parse_flag_or_dict(value: str) -> bool | dict[Any, Any]:
     if value is None or value.lower() == "true":
         return True
     if value.lower() == "false":
@@ -123,7 +123,7 @@ def main() -> None:
     # Use reflection to fill in the metadata
     kwargs = {}
     if args.thickmode is not None:
-        kwargs["thick_mode"] = args
+        kwargs["thick_mode"] = args.thickmode
     engine = create_engine(args.url, **kwargs)
     metadata = MetaData()
     tables = args.tables.split(",") if args.tables else None
