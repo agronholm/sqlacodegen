@@ -25,40 +25,33 @@ except ImportError:
     pgvector = None
 
 if sys.version_info < (3, 10):
-    from importlib_metadata import EntryPoint, entry_points, version
+    from importlib_metadata import entry_points, version
 else:
-    from importlib.metadata import EntryPoint, entry_points, version
+    from importlib.metadata import entry_points, version
 
 
-_generators_cache = None
+def _parse_engine_arg(arg_str):
+    if "=" not in arg_str:
+        raise argparse.ArgumentTypeError("engine-arg must be in key=value format")
 
-
-def get_generators() -> dict[str, EntryPoint]:
-    global _generators_cache
-    if _generators_cache is None:
-        _generators_cache = {
-            ep.name: ep for ep in entry_points(group="sqlacodegen.generators")
-        }
-    return _generators_cache
-
-
-def _parse_flag_or_dict(value: str) -> bool | dict[Any, Any]:
-    if value is None or value.lower() == "true":
-        return True
-    if value.lower() == "false":
-        return False
+    key, value = arg_str.split("=", 1)
     try:
-        parsed = ast.literal_eval(value)
-        if not isinstance(parsed, dict):
-            raise ValueError
-        return parsed
-    except Exception as exc:
-        raise argparse.ArgumentTypeError(
-            "Value must be 'true' or a valid dict string."
-        ) from exc
+        value = ast.literal_eval(value)
+    except Exception:
+        pass  # Leave as string if literal_eval fails
+    return key, value
 
 
-def create_parser() -> argparse.ArgumentParser:
+def _parse_engine_args(arg_list: list[str]) -> dict[str, Any]:
+    result = {}
+    for arg in arg_list or []:
+        key, value = _parse_engine_arg(arg)
+        result[key] = value
+    return result
+
+
+def main() -> None:
+    generators = {ep.name: ep for ep in entry_points(group="sqlacodegen.generators")}
     parser = argparse.ArgumentParser(
         description="Generates SQLAlchemy model code from an existing database."
     )
@@ -74,7 +67,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--generator",
-        choices=get_generators(),
+        choices=generators,
         default="declarative",
         help="generator class to use",
     )
@@ -87,19 +80,16 @@ def create_parser() -> argparse.ArgumentParser:
         help="ignore views (always true for sqlmodels generator)",
     )
     parser.add_argument(
-        "--thickmode",
-        nargs="?",
-        const=True,
-        type=_parse_flag_or_dict,
-        help="""(Oracle) Set to True or provide a dict string like: --thickmode '{"lib_dir": "/path", "config_dir": "/config", "driver_name": "app : 1.0.0"}'""",
+        "--engine-arg",
+        action="append",
+        help=(
+            "engine arguments in key=value format, e.g., "
+            '--engine-arg=connect_args=\'{"user": "scott"}\''
+            "--engine-arg thick_mode=true or"
+            '--engine-arg thick_mode=\'{"lib_dir": "/path"}\''
+        ),
     )
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
-
-    return parser
-
-
-def main() -> None:
-    parser = create_parser()
     args = parser.parse_args()
 
     if args.version:
@@ -121,17 +111,15 @@ def main() -> None:
         print(f"Using pgvector {version('pgvector')}")
 
     # Use reflection to fill in the metadata
-    kwargs = {}
-    if args.thickmode is not None:
-        kwargs["thick_mode"] = args.thickmode
-    engine = create_engine(args.url, **kwargs)
+    engine_args = _parse_engine_args(args.engine_arg)
+    engine = create_engine(args.url, **engine_args)
     metadata = MetaData()
     tables = args.tables.split(",") if args.tables else None
     schemas = args.schemas.split(",") if args.schemas else [None]
     options = set(args.options.split(",")) if args.options else set()
 
     # Instantiate the generator
-    generator_class = get_generators()[args.generator].load()
+    generator_class = generators[args.generator].load()
     generator = generator_class(metadata, engine, options)
 
     if not generator.views_supported:

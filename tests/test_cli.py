@@ -5,11 +5,8 @@ import subprocess
 import sys
 from importlib.metadata import version
 from pathlib import Path
-from typing import Any
 
 import pytest
-
-from sqlacodegen.cli import create_parser
 
 future_imports = "from __future__ import annotations\n\n"
 
@@ -153,26 +150,36 @@ primary_key=True))
     )
 
 
-@pytest.mark.parametrize(
-    "cli_args, expected",
-    [
-        ([], None),
-        (["--thickmode"], True),
-        (["--thickmode", "true"], True),
-        (["--thickmode", "false"], False),
-        (
-            ["--thickmode", '{"lib_dir": "/foo", "driver_name": "v1"}'],
-            {"lib_dir": "/foo", "driver_name": "v1"},
-        ),
-    ],
+def test_cli_engine_arg(db_path: Path, tmp_path: Path) -> None:
+    output_path = tmp_path / "outfile"
+    subprocess.run(
+        [
+            "sqlacodegen",
+            f"sqlite:///{db_path}",
+            "--generator",
+            "tables",
+            "--engine-arg thick_mode=true",
+            "--outfile",
+            str(output_path),
+        ],
+        check=True,
+    )
+
+    assert (
+        output_path.read_text()
+        == """\
+from sqlalchemy import Column, Integer, MetaData, Table, Text
+
+metadata = MetaData()
+
+
+t_foo = Table(
+    'foo', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', Text, nullable=False)
 )
-def test_cli_thickmode(
-    cli_args: list[str],
-    expected: None | bool | dict[Any, Any],
-) -> None:
-    parser = create_parser()
-    args = parser.parse_args(cli_args)
-    assert args.thickmode == expected
+"""
+    )
 
 
 def test_main() -> None:
