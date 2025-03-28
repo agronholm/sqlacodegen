@@ -159,7 +159,7 @@ def test_cli_engine_arg(db_path: Path, tmp_path: Path) -> None:
             "--generator",
             "tables",
             "--engine-arg",
-            "thick_mode=true",
+            'connect_args={"timeout": 10}',
             "--outfile",
             str(output_path),
         ],
