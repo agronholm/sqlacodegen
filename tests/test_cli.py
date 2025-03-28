@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from sqlacodegen.cli import create_parser
+
 future_imports = "from __future__ import annotations\n\n"
 
 
@@ -148,6 +150,28 @@ primary_key=True))
     name: str = Field(sa_column=Column('name', Text))
 """
     )
+
+
+@pytest.mark.parametrize(
+    "cli_args, expected",
+    [
+        ([], None),
+        (["--thickmode"], True),
+        (["--thickmode", "true"], True),
+        (["--thickmode", "false"], False),
+        (
+            ["--thickmode", '{"lib_dir": "/foo", "driver_name": "v1"}'],
+            {"lib_dir": "/foo", "driver_name": "v1"},
+        ),
+    ],
+)
+def test_cli_thickmode(
+    cli_args: list[str],
+    expected: None | bool | dict,
+) -> None:
+    parser = create_parser()
+    args = parser.parse_args(cli_args)
+    assert args.thickmode == expected
 
 
 def test_main() -> None:

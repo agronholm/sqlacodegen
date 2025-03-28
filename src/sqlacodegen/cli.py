@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import sys
 from contextlib import ExitStack
 from typing import TextIO
@@ -29,8 +30,35 @@ else:
     from importlib.metadata import entry_points, version
 
 
-def main() -> None:
-    generators = {ep.name: ep for ep in entry_points(group="sqlacodegen.generators")}
+_generators_cache = None
+
+
+def get_generators() -> list[str]:
+    global _generators_cache
+    if _generators_cache is None:
+        _generators_cache = {
+            ep.name: ep for ep in entry_points(group="sqlacodegen.generators")
+        }
+    return _generators_cache
+
+
+def _parse_flag_or_dict(value) -> bool | dict:
+    if value is None or value.lower() == "true":
+        return True
+    if value.lower() == "false":
+        return False
+    try:
+        parsed = ast.literal_eval(value)
+        if not isinstance(parsed, dict):
+            raise ValueError
+        return parsed
+    except Exception as exc:
+        raise argparse.ArgumentTypeError(
+            "Value must be 'true' or a valid dict string."
+        ) from exc
+
+
+def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Generates SQLAlchemy model code from an existing database."
     )
@@ -46,7 +74,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--generator",
-        choices=generators,
+        choices=get_generators(),
         default="declarative",
         help="generator class to use",
     )
@@ -58,7 +86,20 @@ def main() -> None:
         action="store_true",
         help="ignore views (always true for sqlmodels generator)",
     )
+    parser.add_argument(
+        "--thickmode",
+        nargs="?",
+        const=True,
+        type=_parse_flag_or_dict,
+        help="""(Oracle) Set to True or provide a dict string like: --thickmode '{"lib_dir": "/path", "config_dir": "/config", "driver_name": "app : 1.0.0"}'""",
+    )
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
+
+    return parser
+
+
+def main() -> None:
+    parser = create_parser()
     args = parser.parse_args()
 
     if args.version:
@@ -80,14 +121,17 @@ def main() -> None:
         print(f"Using pgvector {version('pgvector')}")
 
     # Use reflection to fill in the metadata
-    engine = create_engine(args.url)
+    kwargs = {}
+    if args.thickmode is not None:
+        kwargs["thick_mode"] = args
+    engine = create_engine(args.url, **kwargs)
     metadata = MetaData()
     tables = args.tables.split(",") if args.tables else None
     schemas = args.schemas.split(",") if args.schemas else [None]
     options = set(args.options.split(",")) if args.options else set()
 
     # Instantiate the generator
-    generator_class = generators[args.generator].load()
+    generator_class = get_generators()[args.generator].load()
     generator = generator_class(metadata, engine, options)
 
     if not generator.views_supported:
