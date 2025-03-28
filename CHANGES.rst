@@ -5,7 +5,7 @@ Version history
 
 - Type annotations for ARRAY column attributes now include the Python type of
   the array elements
--- Add Oracle thick mode support (``--thickmode``)
+-- Allow specifying engine args (``--engine-arg``)
 
 **3.0.0**
 
