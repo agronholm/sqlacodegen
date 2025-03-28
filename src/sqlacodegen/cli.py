@@ -25,9 +25,9 @@ except ImportError:
     pgvector = None
 
 if sys.version_info < (3, 10):
-    from importlib_metadata import entry_points, version, EntryPoint
+    from importlib_metadata import EntryPoint, entry_points, version
 else:
-    from importlib.metadata import entry_points, version, EntryPoint
+    from importlib.metadata import EntryPoint, entry_points, version
 
 
 _generators_cache = None
