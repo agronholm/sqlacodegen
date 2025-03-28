@@ -5,6 +5,7 @@ import subprocess
 import sys
 from importlib.metadata import version
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -167,7 +168,7 @@ primary_key=True))
 )
 def test_cli_thickmode(
     cli_args: list[str],
-    expected: None | bool | dict,
+    expected: None | bool | dict[Any, Any],
 ) -> None:
     parser = create_parser()
     args = parser.parse_args(cli_args)
