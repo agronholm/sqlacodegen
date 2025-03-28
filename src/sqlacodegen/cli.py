@@ -30,7 +30,7 @@ else:
     from importlib.metadata import entry_points, version
 
 
-def _parse_engine_arg(arg_str):
+def _parse_engine_arg(arg_str) -> tuple[str, Any]:
     if "=" not in arg_str:
         raise argparse.ArgumentTypeError("engine-arg must be in key=value format")
 
