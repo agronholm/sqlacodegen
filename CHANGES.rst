@@ -5,6 +5,8 @@ Version history
 
 - Type annotations for ARRAY column attributes now include the Python type of
   the array elements
+- Added support for specifying engine arguments via ``--engine-arg``
+  (PR by @LajosCseppento)
 
 **3.0.0**
 
