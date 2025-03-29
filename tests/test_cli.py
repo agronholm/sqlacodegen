@@ -204,10 +204,16 @@ def test_cli_invalid_engine_arg(db_path: Path, tmp_path: Path) -> None:
             capture_output=True,
         )
 
-    assert (
-        "TypeError: 'this_arg_does_not_exist' is an invalid keyword argument"
-        in exc_info.value.stderr.decode()
-    )
+    if sys.version_info < (3, 13):
+        assert (
+            "'this_arg_does_not_exist' is an invalid keyword argument"
+            in exc_info.value.stderr.decode()
+        )
+    else:
+        assert (
+            "got an unexpected keyword argument 'this_arg_does_not_exist'"
+            in exc_info.value.stderr.decode()
+        )
 
 
 def test_main() -> None:
