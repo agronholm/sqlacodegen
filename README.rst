@@ -67,7 +67,9 @@ Examples::
     sqlacodegen postgresql:///some_local_db
     sqlacodegen --generator tables mysql+pymysql://user:password@localhost/dbname
     sqlacodegen --generator dataclasses sqlite:///database.db
+    # --engine-arg values are parsed with ast.literal_eval
     sqlacodegen oracle+oracledb://user:pass@127.0.0.1:1521/XE --engine-arg thick_mode=True
+    sqlacodegen oracle+oracledb://user:pass@127.0.0.1:1521/XE --engine-arg thick_mode=True --engine-arg connect_args='{"user": "user", "dsn": "..."}'
 
 To see the list of generic options::
 

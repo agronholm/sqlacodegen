@@ -86,9 +86,10 @@ def main() -> None:
         action="append",
         help=(
             "engine arguments in key=value format, e.g., "
-            '--engine-arg=connect_args=\'{"user": "scott"}\''
-            "--engine-arg thick_mode=true or"
-            '--engine-arg thick_mode=\'{"lib_dir": "/path"}\''
+            '--engine-arg=connect_args=\'{"user": "scott"}\' '
+            "--engine-arg thick_mode=true or "
+            '--engine-arg thick_mode=\'{"lib_dir": "/path"}\' '
+            "(values are parsed with ast.literal_eval)"
         ),
     )
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
