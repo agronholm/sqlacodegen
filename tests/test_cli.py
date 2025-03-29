@@ -183,6 +183,33 @@ t_foo = Table(
     )
 
 
+def test_cli_invalid_engine_arg(db_path: Path, tmp_path: Path) -> None:
+    output_path = tmp_path / "outfile"
+
+    # Expect exception:
+    # TypeError: 'this_arg_does_not_exist' is an invalid keyword argument for Connection()
+    with pytest.raises(subprocess.CalledProcessError) as exc_info:
+        subprocess.run(
+            [
+                "sqlacodegen",
+                f"sqlite:///{db_path}",
+                "--generator",
+                "tables",
+                "--engine-arg",
+                'connect_args={"this_arg_does_not_exist": 10}',
+                "--outfile",
+                str(output_path),
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+    assert (
+        "TypeError: 'this_arg_does_not_exist' is an invalid keyword argument"
+        in exc_info.value.stderr.decode()
+    )
+
+
 def test_main() -> None:
     expected_version = version("sqlacodegen")
     completed = subprocess.run(
