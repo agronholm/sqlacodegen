@@ -187,8 +187,11 @@ back_populates='simple_onetoone')
             """,
     )
 
+
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
-def test_generate_table_without_id(generator: CodeGenerator, metadata: MetaData, engine: Engine) -> None:
+def test_generate_table_without_id(
+    generator: CodeGenerator, metadata: MetaData, engine: Engine
+) -> None:
     Table("test_table_with_pkey", metadata, Column("id", INTEGER, primary_key=True))
 
     Table(
