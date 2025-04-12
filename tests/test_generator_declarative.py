@@ -57,7 +57,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
     __table_args__ = (
         Index('idx_number', 'number'),
         Index('idx_text', 'text', unique=True),
@@ -94,7 +94,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
     __table_args__ = (
         CheckConstraint('number > 0'),
         UniqueConstraint('id', 'number')
@@ -133,7 +133,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleContainers(Base):
-    __tablename__ = 'simple_containers'
+    __tablename__: str = 'simple_containers'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -142,7 +142,7 @@ back_populates='container')
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     container_id: Mapped[Optional[int]] = \
@@ -176,7 +176,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     parent_item_id: Mapped[Optional[int]] = \
@@ -214,7 +214,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     parent_item_id: Mapped[Optional[int]] = \
@@ -268,7 +268,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleContainers(Base):
-    __tablename__ = 'simple_containers'
+    __tablename__: str = 'simple_containers'
 
     id1: Mapped[int] = mapped_column(Integer, primary_key=True)
     id2: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -278,7 +278,7 @@ back_populates='simple_containers')
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
     __table_args__ = (
         ForeignKeyConstraint(['container_id1', 'container_id2'], \
 ['simple_containers.id1', 'simple_containers.id2'], ondelete='CASCADE', \
@@ -324,7 +324,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleContainers(Base):
-    __tablename__ = 'simple_containers'
+    __tablename__: str = 'simple_containers'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -335,7 +335,7 @@ foreign_keys='[SimpleItems.top_container_id]', back_populates='top_container')
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     top_container_id: Mapped[int] = \
@@ -379,7 +379,7 @@ class Base(DeclarativeBase):
 
 
 class OtherItems(Base):
-    __tablename__ = 'other_items'
+    __tablename__: str = 'other_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -388,7 +388,7 @@ back_populates='other_item')
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     other_item_id: Mapped[Optional[int]] = \
@@ -423,7 +423,7 @@ class Base(DeclarativeBase):
 
 
 class Fehwiuhfiw(Base):
-    __tablename__ = 'fehwiuhfiw'
+    __tablename__: str = 'fehwiuhfiw'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -432,7 +432,7 @@ back_populates='fehwiuhfiw')
 
 
 class Oglkrogk(Base):
-    __tablename__ = 'oglkrogk'
+    __tablename__: str = 'oglkrogk'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     fehwiuhfiwID: Mapped[Optional[int]] = mapped_column(ForeignKey('fehwiuhfiw.id'))
@@ -471,7 +471,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleContainers(Base):
-    __tablename__ = 'simple_containers'
+    __tablename__: str = 'simple_containers'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     relationship_: Mapped[Optional[str]] = mapped_column('relationship', Text)
@@ -481,7 +481,7 @@ back_populates='container')
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     container_id: Mapped[Optional[int]] = \
@@ -516,7 +516,7 @@ class Base(DeclarativeBase):
 
 
 class Relationship(Base):
-    __tablename__ = 'relationship'
+    __tablename__: str = 'relationship'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -525,7 +525,7 @@ back_populates='relationship_')
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     relationship_id: Mapped[Optional[int]] = \
@@ -565,13 +565,13 @@ class Base(DeclarativeBase):
 
 
 class SimpleContainers(Base):
-    __tablename__ = 'simple_containers'
+    __tablename__: str = 'simple_containers'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     container_id: Mapped[Optional[int]] = \
@@ -609,7 +609,7 @@ class Base(DeclarativeBase):
 
 
 class LeftTable(Base):
-    __tablename__ = 'left_table'
+    __tablename__: str = 'left_table'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -618,7 +618,7 @@ secondary='association_table', back_populates='left')
 
 
 class RightTable(Base):
-    __tablename__ = 'right_table'
+    __tablename__: str = 'right_table'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -663,7 +663,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleContainers(Base):
-    __tablename__ = 'simple_containers'
+    __tablename__: str = 'simple_containers'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -672,7 +672,7 @@ secondary='container_items')
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -709,7 +709,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -775,7 +775,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleContainers(Base):
-    __tablename__ = 'simple_containers'
+    __tablename__: str = 'simple_containers'
 
     id1: Mapped[int] = mapped_column(Integer, primary_key=True)
     id2: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -785,7 +785,7 @@ secondary='container_items', back_populates='simple_containers')
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id1: Mapped[int] = mapped_column(Integer, primary_key=True)
     id2: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -845,14 +845,14 @@ class Base(DeclarativeBase):
 
 
 class SimpleSuperItems(Base):
-    __tablename__ = 'simple_super_items'
+    __tablename__: str = 'simple_super_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     data1: Mapped[Optional[int]] = mapped_column(Integer)
 
 
 class SimpleItems(SimpleSuperItems):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     super_item_id: Mapped[int] = mapped_column(ForeignKey('simple_super_items.id'), \
 primary_key=True)
@@ -860,7 +860,7 @@ primary_key=True)
 
 
 class SimpleSubItems(SimpleItems):
-    __tablename__ = 'simple_sub_items'
+    __tablename__: str = 'simple_sub_items'
 
     simple_items_id: Mapped[int] = \
 mapped_column(ForeignKey('simple_items.super_item_id'), primary_key=True)
@@ -893,13 +893,13 @@ def test_joined_inheritance_same_table_name(generator: CodeGenerator) -> None:
 
 
     class Simple(Base):
-        __tablename__ = 'simple'
+        __tablename__: str = 'simple'
 
         id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
 
     class Simple_(Simple):
-        __tablename__ = 'simple'
+        __tablename__: str = 'simple'
         __table_args__ = {'schema': 'altschema'}
 
         id: Mapped[int] = mapped_column(ForeignKey('simple.id'), primary_key=True)
@@ -924,13 +924,13 @@ class Base(DeclarativeBase):
 
 
 class SimpleItem(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
 
 class Singular(Base):
-    __tablename__ = 'singular'
+    __tablename__: str = 'singular'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
@@ -982,7 +982,7 @@ class Base(DeclarativeBase):
 
 
 class {class_name.capitalize()}(Base):
-    __tablename__ = '{table_name}'
+    __tablename__: str = '{table_name}'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -991,7 +991,7 @@ back_populates='{relationship_name}')
 
 
 class SimpleItem(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     {relationship_name}_id: Mapped[Optional[int]] = \
@@ -1022,7 +1022,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
     __table_args__ = {'schema': 'testschema'}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -1053,7 +1053,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
     __table_args__ = (
         Index('testidx', 'id', 'name'),
         {'schema': 'testschema'}
@@ -1093,7 +1093,7 @@ class Base(DeclarativeBase):
 
 
 class OtherItems(Base):
-    __tablename__ = 'other_items'
+    __tablename__: str = 'other_items'
     __table_args__ = {'schema': 'otherschema'}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -1103,7 +1103,7 @@ back_populates='other_item')
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     other_item_id: Mapped[Optional[int]] = \
@@ -1138,7 +1138,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple-items'
+    __tablename__: str = 'simple-items'
 
     id_test: Mapped[int] = mapped_column('id-test', Integer, primary_key=True)
     _4test: Mapped[Optional[int]] = mapped_column('4test', Integer)
@@ -1166,7 +1166,7 @@ class Base(DeclarativeBase):
 
 
 class CustomerAPIPreference(Base):
-    __tablename__ = 'CustomerAPIPreference'
+    __tablename__: str = 'CustomerAPIPreference'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
@@ -1191,7 +1191,7 @@ class Base(DeclarativeBase):
 
 
 class CustomerApiPreference(Base):
-    __tablename__ = 'customer_api_preference'
+    __tablename__: str = 'customer_api_preference'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
@@ -1216,7 +1216,7 @@ class Base(DeclarativeBase):
 
 
 class CustomerAPIPreference(Base):
-    __tablename__ = 'customer_API_Preference'
+    __tablename__: str = 'customer_API_Preference'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
@@ -1241,7 +1241,7 @@ class Base(DeclarativeBase):
 
 
 class CustomerAPIPreference(Base):
-    __tablename__ = 'customer_API__Preference'
+    __tablename__: str = 'customer_API__Preference'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
@@ -1272,7 +1272,7 @@ class Base(DeclarativeBase):
 
 
 class Simple(Base):
-    __tablename__ = 'simple'
+    __tablename__: str = 'simple'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True{comment_part})
 """,
@@ -1298,7 +1298,7 @@ class Base(DeclarativeBase):
 
 
 class Simple(Base):
-    __tablename__ = 'simple'
+    __tablename__: str = 'simple'
     __table_args__ = {'comment': "this is a 'comment'"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -1327,7 +1327,7 @@ class Base(DeclarativeBase):
 
 
 class Simple(Base):
-    __tablename__ = 'simple'
+    __tablename__: str = 'simple'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     metadata_: Mapped[Optional[str]] = mapped_column('metadata', String)
@@ -1353,7 +1353,7 @@ class Base(DeclarativeBase):
 
 
 class Simple(Base):
-    __tablename__ = 'simple'
+    __tablename__: str = 'simple'
 
     id: Mapped[int] = mapped_column(' id ', Integer, primary_key=True)
 """,
@@ -1404,7 +1404,7 @@ class Base(DeclarativeBase):
 
 
 class Simple(Base):
-    __tablename__ = 'simple'
+    __tablename__: str = 'simple'
     __table_args__ = (
         CheckConstraint('id > 0', name='checktest'),
         PrimaryKeyConstraint('id', name='primarytest'),
@@ -1446,7 +1446,7 @@ class Base(DeclarativeBase):
 
 
 class SimpleContainers(Base):
-    __tablename__ = 'simple_containers'
+    __tablename__: str = 'simple_containers'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -1455,7 +1455,7 @@ back_populates='container')
 
 
 class SimpleItems(Base):
-    __tablename__ = 'simple_items'
+    __tablename__: str = 'simple_items'
     __table_args__ = (
         ForeignKeyConstraint(['container_id'], ['simple_containers.id'], \
 name='foreignkeytest'),
@@ -1493,7 +1493,7 @@ class Base(DeclarativeBase):
 
 
 class Simple(Base):
-    __tablename__ = 'simple'
+    __tablename__: str = 'simple'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     text_: Mapped[Optional[str]] = mapped_column('text', String)
@@ -1525,7 +1525,7 @@ class Base(DeclarativeBase):
 
 
 class WithItems(Base):
-    __tablename__ = 'with_items'
+    __tablename__: str = 'with_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     int_items_not_optional: Mapped[list[int]] = mapped_column(ARRAY(INTEGER()))

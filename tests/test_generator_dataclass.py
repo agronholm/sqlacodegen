@@ -43,7 +43,7 @@ mapped_column
 
 
         class Simple(Base):
-            __tablename__ = 'simple'
+            __tablename__: str = 'simple'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
             name: Mapped[Optional[str]] = mapped_column(String(20))
@@ -74,7 +74,7 @@ mapped_column
 
 
         class Simple(Base):
-            __tablename__ = 'simple'
+            __tablename__: str = 'simple'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
             age: Mapped[int] = mapped_column(Integer)
@@ -112,7 +112,7 @@ mapped_column, relationship
 
 
         class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
+            __tablename__: str = 'simple_containers'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -121,7 +121,7 @@ back_populates='container')
 
 
         class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+            __tablename__: str = 'simple_items'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
             container_id: Mapped[Optional[int]] = \
@@ -161,7 +161,7 @@ mapped_column, relationship
 
 
         class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
+            __tablename__: str = 'simple_containers'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -170,7 +170,7 @@ secondary='container_items', back_populates='container')
 
 
         class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+            __tablename__: str = 'simple_items'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -217,7 +217,7 @@ mapped_column, relationship
 
 
         class SimpleContainers(Base):
-            __tablename__ = 'simple_containers'
+            __tablename__: str = 'simple_containers'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -226,7 +226,7 @@ back_populates='container')
 
 
         class SimpleItems(Base):
-            __tablename__ = 'simple_items'
+            __tablename__: str = 'simple_items'
             __table_args__ = (
                 ForeignKeyConstraint(['container_id'], ['simple_containers.id'], \
 name='foreignkeytest'),
@@ -261,7 +261,7 @@ mapped_column
 
 
         class Simple(Base):
-            __tablename__ = 'simple'
+            __tablename__: str = 'simple'
 
             id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True)
         """,

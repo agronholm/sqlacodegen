@@ -85,7 +85,7 @@ def test_constraints(generator: CodeGenerator) -> None:
             from sqlmodel import Field, SQLModel
 
             class SimpleConstraints(SQLModel, table=True):
-                __tablename__ = 'simple_constraints'
+                __tablename__: str = 'simple_constraints'
                 __table_args__ = (
                     CheckConstraint('number > 0'),
                     UniqueConstraint('id', 'number')
@@ -122,7 +122,7 @@ def test_onetomany(generator: CodeGenerator) -> None:
             from sqlmodel import Field, Relationship, SQLModel
 
             class SimpleContainers(SQLModel, table=True):
-                __tablename__ = 'simple_containers'
+                __tablename__: str = 'simple_containers'
 
                 id: Optional[int] = Field(default=None, sa_column=Column(\
 'id', Integer, primary_key=True))
@@ -132,7 +132,7 @@ back_populates='container')
 
 
             class SimpleGoods(SQLModel, table=True):
-                __tablename__ = 'simple_goods'
+                __tablename__: str = 'simple_goods'
 
                 id: Optional[int] = Field(default=None, sa_column=Column(\
 'id', Integer, primary_key=True))
@@ -165,7 +165,7 @@ def test_onetoone(generator: CodeGenerator) -> None:
             from sqlmodel import Field, Relationship, SQLModel
 
             class OtherItems(SQLModel, table=True):
-                __tablename__ = 'other_items'
+                __tablename__: str = 'other_items'
 
                 id: Optional[int] = Field(default=None, sa_column=Column(\
 'id', Integer, primary_key=True))
@@ -175,7 +175,7 @@ sa_relationship_kwargs={'uselist': False}, back_populates='other_item')
 
 
             class SimpleOnetoone(SQLModel, table=True):
-                __tablename__ = 'simple_onetoone'
+                __tablename__: str = 'simple_onetoone'
 
                 id: Optional[int] = Field(default=None, sa_column=Column(\
 'id', Integer, primary_key=True))
@@ -185,4 +185,35 @@ sa_relationship_kwargs={'uselist': False}, back_populates='other_item')
                 other_item: Optional['OtherItems'] = Relationship(\
 back_populates='simple_onetoone')
             """,
+    )
+
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_generate_table_without_id(generator: CodeGenerator, metadata: MetaData, engine: Engine) -> None:
+    Table("test_table_with_pkey", metadata, Column("id", INTEGER, primary_key=True))
+
+    Table(
+        "test_table",
+        metadata,
+        Column("id", INTEGER, unique=True),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from typing import Optional
+
+        from sqlalchemy import Column, Integer, Table
+        from sqlmodel import Field, SQLModel
+
+        t_test_table = Table(
+            'test_table', SQLModel.metadata,
+            Column('id', Integer, unique=True)
+        )
+
+
+        class TestTableWithPkey(SQLModel, table=True):
+            __tablename__: str = 'test_table_with_pkey'
+
+            id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, primary_key=True))
+        """,
     )
