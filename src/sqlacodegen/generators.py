@@ -1140,7 +1140,7 @@ class DeclarativeGenerator(TablesGenerator):
         return f"class {model.name}({parent_class_name}):"
 
     def render_class_variables(self, model: ModelClass) -> str:
-        variables = [f"__tablename__ = {model.table.name!r}"]
+        variables = [f"__tablename__: str = {model.table.name!r}"]
 
         # Render constraints and indexes as __table_args__
         table_args = self.render_table_args(model.table)
@@ -1400,7 +1400,7 @@ class SQLModelGenerator(DeclarativeGenerator):
         self.base = Base(
             literal_imports=[],
             declarations=[],
-            metadata_ref="",
+            metadata_ref=f"{self.base_class_name}.metadata",
         )
 
     def collect_imports(self, models: Iterable[Model]) -> None:
@@ -1451,7 +1451,7 @@ class SQLModelGenerator(DeclarativeGenerator):
         variables = []
 
         if model.table.name != model.name.lower():
-            variables.append(f"__tablename__ = {model.table.name!r}")
+            variables.append(f"__tablename__: str = {model.table.name!r}")
 
         # Render constraints and indexes as __table_args__
         table_args = self.render_table_args(model.table)
