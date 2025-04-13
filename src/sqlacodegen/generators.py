@@ -782,7 +782,10 @@ class DeclarativeGenerator(TablesGenerator):
             for fk in list(other_table.foreign_keys):
                 if fk.column.table.name == table.name:
                     for constraint in list(other_table.constraints):
-                        if isinstance(constraint, ForeignKeyConstraint) and fk in constraint.elements:
+                        if (
+                            isinstance(constraint, ForeignKeyConstraint)
+                            and fk in constraint.elements
+                        ):
                             other_table.constraints.discard(constraint)
                     fk.parent.foreign_keys.discard(fk)
                     fks_to_remove.append(fk)
@@ -813,8 +816,13 @@ class DeclarativeGenerator(TablesGenerator):
         # them normally
         links: defaultdict[str, list[Model]] = defaultdict(lambda: [])
         for table in self.metadata.sorted_tables:
-            if not table.primary_key and not self.generate_tables_for_relations_without_pk:
-                self.warnings.append(f"table {table.name!r} has no primary key and will not be included in the generated models")
+            if (
+                not table.primary_key
+                and not self.generate_tables_for_relations_without_pk
+            ):
+                self.warnings.append(
+                    f"table {table.name!r} has no primary key and will not be included in the generated models"
+                )
                 self.remove_table_from_metadata(table)
                 continue
 

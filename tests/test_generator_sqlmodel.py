@@ -210,4 +210,7 @@ def test_generate_table_without_id(
         """,
     )
     assert len(generator.warnings) == 1
-    assert generator.warnings[0] == "table 'test_table' has no primary key and will not be included in the generated models"
+    assert (
+        generator.warnings[0]
+        == "table 'test_table' has no primary key and will not be included in the generated models"
+    )
