@@ -9,6 +9,8 @@ from typing import Any, TextIO
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
 
+from sqlacodegen.generators import CodeGenerator
+
 try:
     import citext
 except ImportError:
@@ -123,12 +125,18 @@ def main() -> None:
 
     # Instantiate the generator
     generator_class = generators[args.generator].load()
-    generator = generator_class(metadata, engine, options)
+    generator: CodeGenerator = generator_class(metadata, engine, options)
 
     if not generator.views_supported:
         name = generator_class.__name__
         print(
             f"VIEW models will not be generated when using the '{name}' generator",
+            file=sys.stderr,
+        )
+
+    if not generator.generate_tables_for_relations_without_pk:
+        print(
+            f"Relations without primary keys will not be generated when using the {name!r} generator",
             file=sys.stderr,
         )
 
@@ -148,3 +156,6 @@ def main() -> None:
 
         # Write the generated model code to the specified file or standard output
         outfile.write(generator.generate())
+
+    for warning in generator.warnings:
+        print(f"WARNING: {warning}", file=sys.stderr)

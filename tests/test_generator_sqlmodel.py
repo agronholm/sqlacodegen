@@ -193,26 +193,15 @@ def test_generate_table_without_id(
     generator: CodeGenerator, metadata: MetaData, engine: Engine
 ) -> None:
     Table("test_table_with_pkey", metadata, Column("id", INTEGER, primary_key=True))
-
-    Table(
-        "test_table",
-        metadata,
-        Column("id", INTEGER, unique=True),
-    )
+    Table("test_table", metadata, Column("foo", INTEGER))
 
     validate_code(
         generator.generate(),
         """\
         from typing import Optional
 
-        from sqlalchemy import Column, Integer, Table
+        from sqlalchemy import Column, Integer
         from sqlmodel import Field, SQLModel
-
-        t_test_table = Table(
-            'test_table', SQLModel.metadata,
-            Column('id', Integer, unique=True)
-        )
-
 
         class TestTableWithPkey(SQLModel, table=True):
             __tablename__: str = 'test_table_with_pkey'
@@ -220,3 +209,5 @@ def test_generate_table_without_id(
             id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, primary_key=True))
         """,
     )
+    assert len(generator.warnings) == 1
+    assert generator.warnings[0] == "table 'test_table' has no primary key and will not be included in the generated models"

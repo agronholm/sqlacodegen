@@ -7,8 +7,8 @@ Version history
   the array elements
 - Added support for specifying engine arguments via ``--engine-arg``
   (PR by @LajosCseppento)
-- Added str type-hint to generated `__tablename__` assignments to prevent reportAssignmentType pylance error
-- Fixed SQLModel code generation when some tables have no primary key
+- Added str type-hint to generated ``__tablename__`` assignments to prevent reportAssignmentType pylance error
+- Remove ``Table`` generation from ``SQLModelGenerator`` and emit warning for tables with no primary key
 
 **3.0.0**
 

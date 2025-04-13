@@ -91,6 +91,8 @@ class Base:
 class CodeGenerator(metaclass=ABCMeta):
     valid_options: ClassVar[set[str]] = set()
 
+    warnings: list[str] = []
+
     def __init__(
         self, metadata: MetaData, bind: Connection | Engine, options: Sequence[str]
     ):
@@ -106,6 +108,11 @@ class CodeGenerator(metaclass=ABCMeta):
     @property
     @abstractmethod
     def views_supported(self) -> bool:
+        pass
+
+    @property
+    @abstractmethod
+    def generate_tables_for_relations_without_pk(self) -> bool:
         pass
 
     @abstractmethod
@@ -140,6 +147,10 @@ class TablesGenerator(CodeGenerator):
     def views_supported(self) -> bool:
         return True
 
+    @property
+    def generate_tables_for_relations_without_pk(self) -> bool:
+        return True
+
     def generate_base(self) -> None:
         self.base = Base(
             literal_imports=[LiteralImport("sqlalchemy", "MetaData")],
@@ -148,6 +159,7 @@ class TablesGenerator(CodeGenerator):
         )
 
     def generate(self) -> str:
+        self.warnings = []
         self.generate_base()
 
         sections: list[str] = []
@@ -762,6 +774,38 @@ class DeclarativeGenerator(TablesGenerator):
             if model.relationships:
                 self.add_literal_import("sqlalchemy.orm", "relationship")
 
+    def remove_table_from_metadata(self, table: Table) -> None:
+        for other_table in self.metadata.sorted_tables:
+            if other_table is table:
+                continue
+            fks_to_remove = []
+            for fk in list(other_table.foreign_keys):
+                if fk.column.table.name == table.name:
+                    for constraint in list(other_table.constraints):
+                        if isinstance(constraint, ForeignKeyConstraint) and fk in constraint.elements:
+                            other_table.constraints.discard(constraint)
+                    fk.parent.foreign_keys.discard(fk)
+                    fks_to_remove.append(fk)
+            for fk in fks_to_remove:
+                other_table.foreign_keys.discard(fk)
+
+        for other_table in self.metadata.tables.values():
+            if other_table is table:
+                continue
+            constraints_to_remove = []
+
+            for constraint in other_table.constraints:
+                if isinstance(constraint, (CheckConstraint, UniqueConstraint)):
+                    for col in constraint.columns:
+                        if col.table is table:
+                            constraints_to_remove.append(constraint)
+                            break
+
+            for constraint in constraints_to_remove:
+                other_table.constraints.discard(constraint)
+
+        self.metadata.remove(table)
+
     def generate_models(self) -> list[Model]:
         models_by_table_name: dict[str, Model] = {}
 
@@ -769,6 +813,11 @@ class DeclarativeGenerator(TablesGenerator):
         # them normally
         links: defaultdict[str, list[Model]] = defaultdict(lambda: [])
         for table in self.metadata.sorted_tables:
+            if not table.primary_key and not self.generate_tables_for_relations_without_pk:
+                self.warnings.append(f"table {table.name!r} has no primary key and will not be included in the generated models")
+                self.remove_table_from_metadata(table)
+                continue
+
             qualified_name = qualified_table_name(table)
 
             # Link tables have exactly two foreign key constraints and all columns are
@@ -1390,6 +1439,10 @@ class SQLModelGenerator(DeclarativeGenerator):
 
     @property
     def views_supported(self) -> bool:
+        return False
+
+    @property
+    def generate_tables_for_relations_without_pk(self) -> bool:
         return False
 
     def render_column_callable(self, is_table: bool, *args: Any, **kwargs: Any) -> str:
