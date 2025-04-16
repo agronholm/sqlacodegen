@@ -79,7 +79,7 @@ class Base(DeclarativeBase):
 
 
 class Foo(Base):
-    __tablename__ = 'foo'
+    __tablename__: str = 'foo'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(Text)
@@ -112,7 +112,7 @@ class Base(MappedAsDataclass, DeclarativeBase):
 
 
 class Foo(Base):
-    __tablename__ = 'foo'
+    __tablename__: str = 'foo'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(Text)
