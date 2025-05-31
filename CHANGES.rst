@@ -7,6 +7,7 @@ Version history
   the array elements
 - Added support for specifying engine arguments via ``--engine-arg``
   (PR by @LajosCseppento)
+- Prevent double pluralization (PR by @dkratzert)
 
 **3.0.0**
 
