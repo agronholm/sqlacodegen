@@ -18,7 +18,7 @@ latest SQLAlchemy version).
 Features
 ========
 
-* Supports SQLAlchemy 1.4.x
+* Supports SQLAlchemy 2.x
 * Produces declarative code that almost looks like it was hand written
 * Produces `PEP 8`_ compliant code
 * Accurately determines relationships, including many-to-many, one-to-one
@@ -41,6 +41,20 @@ considered as tested only under a few environments) specify the ``citext`` extra
     pip install sqlacodegen[citext]
 
 
+To include support for the PostgreSQL ``GEOMETRY``, ``GEOGRAPHY``, and ``RASTER`` types
+(which should be considered as tested only under a few environments) specify the
+``geoalchemy2`` extra:
+
+To include support for the PostgreSQL ``PGVECTOR`` extension type, specify the
+``pgvector`` extra::
+
+    pip install sqlacodegen[pgvector]
+
+.. code-block:: bash
+
+    pip install sqlacodegen[geoalchemy2]
+
+
 Quickstart
 ==========
 
@@ -53,6 +67,9 @@ Examples::
     sqlacodegen postgresql:///some_local_db
     sqlacodegen --generator tables mysql+pymysql://user:password@localhost/dbname
     sqlacodegen --generator dataclasses sqlite:///database.db
+    # --engine-arg values are parsed with ast.literal_eval
+    sqlacodegen oracle+oracledb://user:pass@127.0.0.1:1521/XE --engine-arg thick_mode=True
+    sqlacodegen oracle+oracledb://user:pass@127.0.0.1:1521/XE --engine-arg thick_mode=True --engine-arg connect_args='{"user": "user", "dsn": "..."}'
 
 To see the list of generic options::
 
@@ -78,8 +95,8 @@ The following built-in generators are available:
 Generator-specific options
 ==========================
 
-The following options can be turned on by passing them using ``--option`` (can be used
-multiple times):
+The following options can be turned on by passing them using ``--options`` (multiple
+values must be delimited by commas, e.g. ``--options noconstraints,nobidi``):
 
 * ``tables``
 
@@ -101,7 +118,7 @@ multiple times):
 
   * all the options from ``declarative``
 
-* ``sqlmodel``
+* ``sqlmodels``
 
   * all the options from ``declarative``
 
@@ -181,10 +198,9 @@ For examples, you can look at sqlacodegen's own entry points in its `pyproject.t
 Getting help
 ============
 
-If you have problems or other questions, you can either:
+If you have problems or other questions, you should start a discussion on the
+`sqlacodegen discussion forum`_. As an alternative, you could also try your luck on the
+sqlalchemy_ room on Gitter.
 
-* Ask on the `SQLAlchemy Google group`_, or
-* Ask on the sqlalchemy_ room on Gitter
-
-.. _SQLAlchemy Google group: http://groups.google.com/group/sqlalchemy
-.. _sqlalchemy: https://gitter.im/sqlalchemy/community
+.. _sqlacodegen discussion forum: https://github.com/agronholm/sqlacodegen/discussions/categories/q-a
+.. _sqlalchemy: https://app.gitter.im/#/room/#sqlalchemy_community:gitter.im

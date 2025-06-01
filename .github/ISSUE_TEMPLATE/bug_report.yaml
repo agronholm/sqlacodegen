@@ -1,0 +1,66 @@
+name: Bug Report
+description: File a bug report
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        If you observed a crash in the project, or saw unexpected behavior in it, report
+        your findings here.
+  - type: checkboxes
+    attributes:
+      label: Things to check first
+      options:
+        - label: >
+            I have searched the existing issues and didn't find my bug already reported
+            there
+          required: true
+        - label: >
+            I have checked that my bug is still present in the latest release
+          required: true
+  - type: input
+    id: project-version
+    attributes:
+      label: Sqlacodegen version
+      description: What version of Sqlacodegen were you running?
+    validations:
+      required: true
+  - type: input
+    id: sqlalchemy-version
+    attributes:
+      label: SQLAlchemy version
+      description: What version of SQLAlchemy were you running?
+    validations:
+      required: true
+  - type: dropdown
+    id: rdbms
+    attributes:
+      label: RDBMS vendor
+      description: >
+        What RDBMS (relational database management system) did you run the tool against?
+      options:
+        - PostgreSQL
+        - MySQL (or compatible)
+        - SQLite
+        - MSSQL
+        - Oracle
+        - DB2
+        - Other
+        - N/A
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: >
+        Unless you are reporting a crash, tell us what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: schema
+    attributes:
+      label: Database schema for reproducing the bug
+      description: >
+        If applicable, paste the database schema (as a series of `CREATE TABLE` and
+        other SQL commands) here.
