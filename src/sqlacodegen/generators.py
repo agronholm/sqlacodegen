@@ -13,7 +13,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal, Union, cast
 
 import inflect
 import sqlalchemy
@@ -381,7 +381,7 @@ class TablesGenerator(CodeGenerator):
 
             args.append(self.render_constraint(constraint))
 
-        for index in sorted(table.indexes, key=lambda i: i.name):
+        for index in sorted(table.indexes, key=lambda i: cast(str, i.name)):
             # One-column indexes should be rendered as index=True on columns
             if len(index.columns) > 1 or not uses_default_name(index):
                 args.append(self.render_index(index))
@@ -473,7 +473,7 @@ class TablesGenerator(CodeGenerator):
 
         if isinstance(column.server_default, DefaultClause):
             kwargs["server_default"] = render_callable(
-                "text", repr(column.server_default.arg.text)
+                "text", repr(cast(TextClause, column.server_default.arg).text)
             )
         elif isinstance(column.server_default, Computed):
             expression = str(column.server_default.sqltext)
@@ -1084,6 +1084,7 @@ class DeclarativeGenerator(TablesGenerator):
                         preferred_name = column_names[0][:-3]
 
             if "use_inflect" in self.options:
+                inflected_name: Union[str, Literal[False]]
                 if relationship.type in (
                     RelationshipType.ONE_TO_MANY,
                     RelationshipType.MANY_TO_MANY,
@@ -1179,7 +1180,7 @@ class DeclarativeGenerator(TablesGenerator):
             args.append(self.render_constraint(constraint))
 
         # Render indexes
-        for index in sorted(table.indexes, key=lambda i: i.name):
+        for index in sorted(table.indexes, key=lambda i: cast(str, i.name)):
             if len(index.columns) > 1 or not uses_default_name(index):
                 args.append(self.render_index(index))
 
