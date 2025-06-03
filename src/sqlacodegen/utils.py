@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Literal, cast
 
 from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
 from sqlalchemy.engine import Connection, Engine
@@ -97,6 +97,7 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
                 }
             )
 
+    key: Literal["fk", "pk", "ix", "ck", "uq"]
     if isinstance(constraint, Index):
         key = "ix"
     elif isinstance(constraint, CheckConstraint):
@@ -139,7 +140,10 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
         raise TypeError(f"Unknown constraint type: {constraint.__class__.__qualname__}")
 
     try:
-        convention: str = table.metadata.naming_convention[key]
+        convention = cast(
+            Mapping[str, str],
+            table.metadata.naming_convention,
+        )[key]
         return constraint.name == (convention % values)
     except KeyError:
         return False
