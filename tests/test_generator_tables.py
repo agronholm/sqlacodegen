@@ -273,7 +273,7 @@ def test_domain_int(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('n', DOMAIN('positive_int', INTEGER(), \
 constraint_name='positive', not_null=False, \
-check=text("VALUE > 0")), nullable=False)
+check=text('VALUE > 0')), nullable=False)
         )
         """,
     )
