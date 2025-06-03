@@ -13,7 +13,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar, Literal, Union, cast
+from typing import Any, ClassVar, Literal, cast
 
 import inflect
 import sqlalchemy
@@ -1084,7 +1084,7 @@ class DeclarativeGenerator(TablesGenerator):
                         preferred_name = column_names[0][:-3]
 
             if "use_inflect" in self.options:
-                inflected_name: Union[str, Literal[False]]
+                inflected_name: str | Literal[False]
                 if relationship.type in (
                     RelationshipType.ONE_TO_MANY,
                     RelationshipType.MANY_TO_MANY,
