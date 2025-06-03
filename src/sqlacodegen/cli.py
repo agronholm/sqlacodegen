@@ -105,7 +105,7 @@ def main() -> None:
         return
 
     if citext:
-        print(f"Using sqlalchemy-citext {version('citext')}")
+        print(f"Using sqlalchemy-citext {version('sqlalchemy-citext')}")
 
     if geoalchemy2:
         print(f"Using geoalchemy2 {version('geoalchemy2')}")
