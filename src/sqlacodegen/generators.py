@@ -230,10 +230,6 @@ class TablesGenerator(CodeGenerator):
                 self.add_import(column.type.astext_type)
         elif isinstance(column.type, DOMAIN):
             self.add_import(column.type.data_type.__class__)
-            if isinstance(column.type.default, TextClause) or isinstance(
-                column.type.check, TextClause
-            ):
-                self.add_literal_import("sqlalchemy", "text")
 
         if column.default:
             self.add_import(column.default)
@@ -521,6 +517,7 @@ class TablesGenerator(CodeGenerator):
             value = getattr(coltype, param.name, missing)
             default = defaults.get(param.name, missing)
             if isinstance(value, TextClause):
+                self.add_literal_import("sqlalchemy", "text")
                 rendered_value = render_callable("text", repr(value.text))
             else:
                 rendered_value = repr(value)
