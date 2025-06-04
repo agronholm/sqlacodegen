@@ -7,6 +7,8 @@ Version history
   the array elements
 - Added support for specifying engine arguments via ``--engine-arg``
   (PR by @LajosCseppento)
+- Fixed incorrect package name used in ``importlib.metadata.version`` for
+  ``sqlalchemy-citext``, resolving ``PackageNotFoundError`` (PR by @oaimtiaz)
 - Prevent double pluralization (PR by @dkratzert)
 
 **3.0.0**
