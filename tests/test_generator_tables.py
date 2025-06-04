@@ -311,9 +311,9 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
         "simple_items",
         generator.metadata,
         Column("id", mysql.INTEGER),
-        Column("name", mysql.VARCHAR(255)),
-        Column("double", mysql.DOUBLE(1, 2)),
-        Column("set", mysql.SET("one", "two")),
+        Column("name", mysql.VARCHAR(255)),  # type: ignore[no-untyped-call]
+        Column("double", mysql.DOUBLE(1, 2)),  # type: ignore[no-untyped-call]
+        Column("set", mysql.SET("one", "two")),  # type: ignore[no-untyped-call]
     )
 
     validate_code(
@@ -683,7 +683,7 @@ def test_mysql_integer_display_width(generator: CodeGenerator) -> None:
         "simple_items",
         generator.metadata,
         Column("id", INTEGER, primary_key=True),
-        Column("number", mysql.INTEGER(11)),
+        Column("number", mysql.INTEGER(11)),  # type: ignore[no-untyped-call]
     )
 
     validate_code(

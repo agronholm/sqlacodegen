@@ -1089,9 +1089,8 @@ class DeclarativeGenerator(TablesGenerator):
                     RelationshipType.ONE_TO_MANY,
                     RelationshipType.MANY_TO_MANY,
                 ):
-                    inflected_name = self.inflect_engine.plural_noun(preferred_name)
-                    if inflected_name:
-                        preferred_name = inflected_name
+                    if not self.inflect_engine.singular_noun(preferred_name):
+                        preferred_name = self.inflect_engine.plural_noun(preferred_name)
                 else:
                     inflected_name = self.inflect_engine.singular_noun(preferred_name)
                     if inflected_name:
