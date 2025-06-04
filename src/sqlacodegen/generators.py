@@ -553,11 +553,9 @@ class TablesGenerator(CodeGenerator):
             ):
                 del kwargs["astext_type"]
 
-        if isinstance(coltype, DOMAIN):
-            if isinstance(coltype.default, TextClause):
-                kwargs["default"] = render_callable("text", repr(coltype.default.text))
-            if isinstance(coltype.check, TextClause):
-                kwargs["check"] = render_callable("text", repr(coltype.check.text))
+        for kw in kwargs:
+            if isinstance(kwargs[kw], TextClause):
+                kwargs[kw] = render_callable("text", repr(kwargs[kw].text))
 
         if args or kwargs:
             return render_callable(coltype.__class__.__name__, *args, kwargs=kwargs)
