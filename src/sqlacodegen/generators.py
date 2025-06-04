@@ -521,6 +521,7 @@ class TablesGenerator(CodeGenerator):
                 rendered_value = render_callable("text", repr(value.text))
             else:
                 rendered_value = repr(value)
+
             if value is missing or value == default:
                 use_kwargs = True
             elif use_kwargs:
