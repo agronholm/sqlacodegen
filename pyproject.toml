@@ -29,7 +29,7 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "SQLAlchemy >= 2.0.23",
+    "SQLAlchemy >= 2.0.29",
     "inflect >= 4.0.0",
     "importlib_metadata; python_version < '3.10'",
 ]
@@ -80,6 +80,7 @@ extend-select = [
 
 [tool.mypy]
 strict = true
+disable_error_code = "no-untyped-call"
 
 [tool.pytest.ini_options]
 addopts = "-rsfE --tb=short"
