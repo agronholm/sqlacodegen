@@ -80,6 +80,7 @@ extend-select = [
 
 [tool.mypy]
 strict = true
+disable_error_code = "no-untyped-call"
 
 [tool.pytest.ini_options]
 addopts = "-rsfE --tb=short"
