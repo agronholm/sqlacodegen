@@ -733,6 +733,7 @@ class DeclarativeGenerator(TablesGenerator):
         "use_inflect",
         "nojoined",
         "nobidi",
+        "noidsuffix",
     }
 
     def __init__(
@@ -1069,7 +1070,7 @@ class DeclarativeGenerator(TablesGenerator):
 
             # If there's a constraint with a single column that ends with "_id", use the
             # preceding part as the relationship name
-            if relationship.constraint:
+            if relationship.constraint and "noidsuffix" not in self.options:
                 is_source = relationship.source.table is relationship.constraint.table
                 if is_source or relationship.type not in (
                     RelationshipType.ONE_TO_ONE,
