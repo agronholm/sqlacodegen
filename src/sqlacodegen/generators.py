@@ -520,12 +520,16 @@ class TablesGenerator(CodeGenerator):
 
             value = getattr(coltype, param.name, missing)
             default = defaults.get(param.name, missing)
+            if isinstance(value, TextClause):
+                rendered_value = render_callable("text", repr(value.text))
+            else:
+                rendered_value = repr(value)
             if value is missing or value == default:
                 use_kwargs = True
             elif use_kwargs:
-                kwargs[param.name] = repr(value)
+                kwargs[param.name] = rendered_value
             else:
-                args.append(repr(value))
+                args.append(rendered_value)
 
         vararg = next(
             (
@@ -552,10 +556,6 @@ class TablesGenerator(CodeGenerator):
                 and coltype.astext_type.length is None
             ):
                 del kwargs["astext_type"]
-
-        for kw in kwargs:
-            if isinstance(kwargs[kw], TextClause):
-                kwargs[kw] = render_callable("text", repr(kwargs[kw].text))
 
         if args or kwargs:
             return render_callable(coltype.__class__.__name__, *args, kwargs=kwargs)
