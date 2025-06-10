@@ -13,7 +13,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal, cast
 
 import inflect
 import sqlalchemy
@@ -38,7 +38,7 @@ from sqlalchemy import (
     TypeDecorator,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import DOMAIN, JSONB
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
@@ -228,6 +228,8 @@ class TablesGenerator(CodeGenerator):
                 or column.type.astext_type.length is not None
             ):
                 self.add_import(column.type.astext_type)
+        elif isinstance(column.type, DOMAIN):
+            self.add_import(column.type.data_type.__class__)
 
         if column.default:
             self.add_import(column.default)
@@ -375,7 +377,7 @@ class TablesGenerator(CodeGenerator):
 
             args.append(self.render_constraint(constraint))
 
-        for index in sorted(table.indexes, key=lambda i: i.name):
+        for index in sorted(table.indexes, key=lambda i: cast(str, i.name)):
             # One-column indexes should be rendered as index=True on columns
             if len(index.columns) > 1 or not uses_default_name(index):
                 args.append(self.render_index(index))
@@ -467,7 +469,7 @@ class TablesGenerator(CodeGenerator):
 
         if isinstance(column.server_default, DefaultClause):
             kwargs["server_default"] = render_callable(
-                "text", repr(column.server_default.arg.text)
+                "text", repr(cast(TextClause, column.server_default.arg).text)
             )
         elif isinstance(column.server_default, Computed):
             expression = str(column.server_default.sqltext)
@@ -514,12 +516,18 @@ class TablesGenerator(CodeGenerator):
 
             value = getattr(coltype, param.name, missing)
             default = defaults.get(param.name, missing)
+            if isinstance(value, TextClause):
+                self.add_literal_import("sqlalchemy", "text")
+                rendered_value = render_callable("text", repr(value.text))
+            else:
+                rendered_value = repr(value)
+
             if value is missing or value == default:
                 use_kwargs = True
             elif use_kwargs:
-                kwargs[param.name] = repr(value)
+                kwargs[param.name] = rendered_value
             else:
-                args.append(repr(value))
+                args.append(rendered_value)
 
         vararg = next(
             (
@@ -1072,13 +1080,13 @@ class DeclarativeGenerator(TablesGenerator):
                         preferred_name = column_names[0][:-3]
 
             if "use_inflect" in self.options:
+                inflected_name: str | Literal[False]
                 if relationship.type in (
                     RelationshipType.ONE_TO_MANY,
                     RelationshipType.MANY_TO_MANY,
                 ):
-                    inflected_name = self.inflect_engine.plural_noun(preferred_name)
-                    if inflected_name:
-                        preferred_name = inflected_name
+                    if not self.inflect_engine.singular_noun(preferred_name):
+                        preferred_name = self.inflect_engine.plural_noun(preferred_name)
                 else:
                     inflected_name = self.inflect_engine.singular_noun(preferred_name)
                     if inflected_name:
@@ -1173,7 +1181,7 @@ class DeclarativeGenerator(TablesGenerator):
             args.append(self.render_constraint(constraint))
 
         # Render indexes
-        for index in sorted(table.indexes, key=lambda i: i.name):
+        for index in sorted(table.indexes, key=lambda i: cast(str, i.name)):
             if len(index.columns) > 1 or not uses_default_name(index):
                 args.append(self.render_index(index))
 

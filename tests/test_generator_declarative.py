@@ -1003,6 +1003,66 @@ relationship('{class_name.capitalize()}', back_populates='simple_item')
     )
 
 
+@pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+def test_use_inflect_plural_double_pluralize(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("users_id", INTEGER),
+        Column("groups_id", INTEGER),
+        ForeignKeyConstraint(
+            ["groups_id"], ["groups.groups_id"], name="fk_users_groups_id"
+        ),
+        PrimaryKeyConstraint("users_id", name="users_pkey"),
+    )
+
+    Table(
+        "groups",
+        generator.metadata,
+        Column("groups_id", INTEGER),
+        Column("group_name", Text(50), nullable=False),
+        PrimaryKeyConstraint("groups_id", name="groups_pkey"),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import ForeignKeyConstraint, Integer, PrimaryKeyConstraint, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Group(Base):
+    __tablename__ = 'groups'
+    __table_args__ = (
+        PrimaryKeyConstraint('groups_id', name='groups_pkey'),
+    )
+
+    groups_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    group_name: Mapped[str] = mapped_column(Text(50))
+
+    users: Mapped[list['User']] = relationship('User', back_populates='group')
+
+
+class User(Base):
+    __tablename__ = 'users'
+    __table_args__ = (
+        ForeignKeyConstraint(['groups_id'], ['groups.groups_id'], name='fk_users_groups_id'),
+        PrimaryKeyConstraint('users_id', name='users_pkey')
+    )
+
+    users_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    groups_id: Mapped[Optional[int]] = mapped_column(Integer)
+
+    group: Mapped[Optional['Group']] = relationship('Group', back_populates='users')
+    """,
+    )
+
+
 def test_table_kwargs(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
