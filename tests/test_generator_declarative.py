@@ -1597,7 +1597,7 @@ class WithItems(Base):
 
 
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
-def test_domain_text(generator: CodeGenerator) -> None:
+def test_domain_json(generator: CodeGenerator) -> None:
     Table(
         "test_domain_json",
         generator.metadata,
