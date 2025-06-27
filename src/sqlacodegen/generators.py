@@ -1239,6 +1239,7 @@ class DeclarativeGenerator(TablesGenerator):
                 python_type = column_type.data_type.python_type
             else:
                 python_type = column_type.python_type
+
             python_type_name = python_type.__name__
             python_type_module = python_type.__module__
             if python_type_module == "builtins":
