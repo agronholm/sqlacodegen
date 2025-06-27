@@ -13,4 +13,4 @@
 dist
 build
 venv*
-compose.yaml
+docker-compose.yaml
