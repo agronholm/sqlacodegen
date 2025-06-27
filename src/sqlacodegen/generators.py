@@ -523,6 +523,8 @@ class TablesGenerator(CodeGenerator):
                     and value.astext_type.length is None
                 ):
                     value.astext_type = None  # type: ignore[assignment]
+                else:
+                    self.add_import(Text)
 
             default = defaults.get(param.name, missing)
             if isinstance(value, TextClause):
