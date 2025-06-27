@@ -181,6 +181,26 @@ def test_jsonb_default(generator: CodeGenerator) -> None:
     )
 
 
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_json_default(generator: CodeGenerator) -> None:
+    Table("simple_items", generator.metadata, Column("json", postgresql.JSON))
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, JSON, MetaData, Table
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('json', JSON)
+        )
+        """,
+    )
+
+
 def test_enum_detection(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
