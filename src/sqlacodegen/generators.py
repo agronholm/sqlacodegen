@@ -38,7 +38,7 @@ from sqlalchemy import (
     TypeDecorator,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import DOMAIN, JSONB
+from sqlalchemy.dialects.postgresql import DOMAIN, JSON, JSONB
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
@@ -222,7 +222,7 @@ class TablesGenerator(CodeGenerator):
 
         if isinstance(column.type, ARRAY):
             self.add_import(column.type.item_type.__class__)
-        elif isinstance(column.type, JSONB):
+        elif isinstance(column.type, (JSONB, JSON)):
             if (
                 not isinstance(column.type.astext_type, Text)
                 or column.type.astext_type.length is not None
@@ -499,7 +499,7 @@ class TablesGenerator(CodeGenerator):
         else:
             return render_callable("mapped_column", *args, kwargs=kwargs)
 
-    def render_column_type(self, coltype: object) -> str:
+    def render_column_type(self, coltype: TypeEngine[Any]) -> str:
         args = []
         kwargs: dict[str, Any] = {}
         sig = inspect.signature(coltype.__class__.__init__)
@@ -515,6 +515,17 @@ class TablesGenerator(CodeGenerator):
                 continue
 
             value = getattr(coltype, param.name, missing)
+
+            if isinstance(value, (JSONB, JSON)):
+                # Remove astext_type if it's the default
+                if (
+                    isinstance(value.astext_type, Text)
+                    and value.astext_type.length is None
+                ):
+                    value.astext_type = None  # type: ignore[assignment]
+                else:
+                    self.add_import(Text)
+
             default = defaults.get(param.name, missing)
             if isinstance(value, TextClause):
                 self.add_literal_import("sqlalchemy", "text")
@@ -547,7 +558,7 @@ class TablesGenerator(CodeGenerator):
                 if (value := getattr(coltype, colname)) is not None:
                     kwargs[colname] = repr(value)
 
-        if isinstance(coltype, JSONB):
+        if isinstance(coltype, (JSONB, JSON)):
             # Remove astext_type if it's the default
             if (
                 isinstance(coltype.astext_type, Text)
@@ -1224,7 +1235,11 @@ class DeclarativeGenerator(TablesGenerator):
             return "".join(pre), column_type, "]" * post_size
 
         def render_python_type(column_type: TypeEngine[Any]) -> str:
-            python_type = column_type.python_type
+            if isinstance(column_type, DOMAIN):
+                python_type = column_type.data_type.python_type
+            else:
+                python_type = column_type.python_type
+
             python_type_name = python_type.__name__
             python_type_module = python_type.__module__
             if python_type_module == "builtins":

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import pytest
 from _pytest.fixtures import FixtureRequest
-from sqlalchemy import PrimaryKeyConstraint
+from sqlalchemy import BIGINT, PrimaryKeyConstraint
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import JSON, JSONB
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
     CheckConstraint,
@@ -1590,5 +1592,89 @@ class WithItems(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     int_items_not_optional: Mapped[list[int]] = mapped_column(ARRAY(INTEGER()))
     str_matrix: Mapped[Optional[list[list[str]]]] = mapped_column(ARRAY(VARCHAR(), dimensions=2))
+""",
+    )
+
+
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_domain_json(generator: CodeGenerator) -> None:
+    Table(
+        "test_domain_json",
+        generator.metadata,
+        Column("id", BIGINT, primary_key=True),
+        Column(
+            "foo",
+            postgresql.DOMAIN(
+                "domain_json",
+                JSON,
+                not_null=False,
+            ),
+            nullable=True,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import BigInteger
+from sqlalchemy.dialects.postgresql import DOMAIN, JSON
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TestDomainJson(Base):
+    __tablename__ = 'test_domain_json'
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    foo: Mapped[Optional[dict]] = mapped_column(DOMAIN('domain_json', JSON(), not_null=False))
+""",
+    )
+
+
+@pytest.mark.parametrize(
+    "domain_type",
+    [JSONB, JSON],
+)
+def test_domain_non_default_json(
+    generator: CodeGenerator,
+    domain_type: type[JSON] | type[JSONB],
+) -> None:
+    Table(
+        "test_domain_json",
+        generator.metadata,
+        Column("id", BIGINT, primary_key=True),
+        Column(
+            "foo",
+            postgresql.DOMAIN(
+                "domain_json",
+                domain_type(astext_type=Text(128)),
+                not_null=False,
+            ),
+            nullable=True,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        f"""\
+from typing import Optional
+
+from sqlalchemy import BigInteger, Text
+from sqlalchemy.dialects.postgresql import DOMAIN, {domain_type.__name__}
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TestDomainJson(Base):
+    __tablename__ = 'test_domain_json'
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    foo: Mapped[Optional[dict]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False))
 """,
     )

@@ -10,6 +10,7 @@ Version history
 - Fixed incorrect package name used in ``importlib.metadata.version`` for
   ``sqlalchemy-citext``, resolving ``PackageNotFoundError`` (PR by @oaimtiaz)
 - Prevent double pluralization (PR by @dkratzert)
+- Fixes DOMAIN extending JSON/JSONB data types (PR by @sheinbergon)
 
 **3.0.0**
 
