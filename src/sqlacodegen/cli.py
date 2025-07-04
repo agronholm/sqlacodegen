@@ -118,7 +118,7 @@ def main() -> None:
     engine = create_engine(args.url, **engine_args)
     metadata = MetaData()
     tables = args.tables.split(",") if args.tables else None
-    schemas = args.schemas.split(",") if args.schemas else [None]
+    schemas = [schema.strip() for schema in args.schemas.split(",")] if args.schemas else [None]
     options = set(args.options.split(",")) if args.options else set()
 
     # Instantiate the generator
