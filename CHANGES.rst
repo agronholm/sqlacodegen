@@ -11,6 +11,7 @@ Version history
   ``sqlalchemy-citext``, resolving ``PackageNotFoundError`` (PR by @oaimtiaz)
 - Prevent double pluralization (PR by @dkratzert)
 - Fixes DOMAIN extending JSON/JSONB data types (PR by @sheinbergon)
+- Fixes imports from wrong package if name shared
 
 **3.0.0**
 

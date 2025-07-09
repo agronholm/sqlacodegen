@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from sqlalchemy import Uuid
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
     CheckConstraint,
@@ -185,4 +186,28 @@ sa_relationship_kwargs={'uselist': False}, back_populates='other_item')
                 other_item: Optional['OtherItems'] = Relationship(\
 back_populates='simple_onetoone')
             """,
+    )
+
+
+def test_uuid(generator: CodeGenerator) -> None:
+    Table(
+        "simple_uuid",
+        generator.metadata,
+        Column("id", Uuid, primary_key=True),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from typing import Optional
+            from uuid import UUID
+
+            from sqlalchemy import Column, Uuid
+            from sqlmodel import Field, SQLModel
+
+            class SimpleUuid(SQLModel, table=True):
+                __tablename__ = 'simple_uuid'
+
+                id: Optional[UUID] = Field(default=None, sa_column=Column('id', Uuid, primary_key=True))
+        """,
     )
