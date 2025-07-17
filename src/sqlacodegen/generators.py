@@ -44,7 +44,6 @@ from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.type_api import UserDefinedType
 from sqlalchemy.types import TypeEngine
-from stdlib_list import stdlib_list
 
 from .models import (
     ColumnAttribute,
@@ -121,6 +120,18 @@ class CodeGenerator(metaclass=ABCMeta):
 class TablesGenerator(CodeGenerator):
     valid_options: ClassVar[set[str]] = {"noindexes", "noconstraints", "nocomments"}
 
+    @staticmethod
+    def get_stdlib_module_names() -> set[str]:
+        major, minor = sys.version_info.major, sys.version_info.minor
+        if (major, minor) > (3, 9):
+            return set(sys.builtin_module_names) | set(sys.stdlib_module_names)
+        else:
+            from stdlib_list import stdlib_list
+
+            return set(sys.builtin_module_names) | set(stdlib_list(f"{major}.{minor}"))
+
+    stdlib_module_names: ClassVar[set[str]] = get_stdlib_module_names()
+
     def __init__(
         self,
         metadata: MetaData,
@@ -133,14 +144,6 @@ class TablesGenerator(CodeGenerator):
         self.indentation: str = indentation
         self.imports: dict[str, set[str]] = defaultdict(set)
         self.module_imports: set[str] = set()
-
-    @property
-    def stdlib_module_names(self) -> set[str]:
-        major, minor = sys.version_info.major, sys.version_info.minor
-        if (major, minor) > (3, 9):
-            return set(sys.builtin_module_names) | set(sys.stdlib_module_names)
-        else:
-            return set(sys.builtin_module_names) | set(stdlib_list(f"{major}.{minor}"))
 
     @property
     def views_supported(self) -> bool:
