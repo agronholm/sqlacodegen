@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from sqlalchemy import Uuid
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
     CheckConstraint,
@@ -56,8 +57,7 @@ def test_indexes(generator: CodeGenerator) -> None:
                     Index('idx_text_number', 'text', 'number')
                 )
 
-                id: Optional[int] = Field(default=None, sa_column=Column(\
-'id', Integer, primary_key=True))
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
                 number: Optional[int] = Field(default=None, sa_column=Column(\
 'number', Integer))
                 text: Optional[str] = Field(default=None, sa_column=Column(\
@@ -91,8 +91,7 @@ def test_constraints(generator: CodeGenerator) -> None:
                     UniqueConstraint('id', 'number')
                 )
 
-                id: Optional[int] = Field(default=None, sa_column=Column(\
-'id', Integer, primary_key=True))
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
                 number: Optional[int] = Field(default=None, sa_column=Column(\
 'number', Integer))
         """,
@@ -124,8 +123,7 @@ def test_onetomany(generator: CodeGenerator) -> None:
             class SimpleContainers(SQLModel, table=True):
                 __tablename__ = 'simple_containers'
 
-                id: Optional[int] = Field(default=None, sa_column=Column(\
-'id', Integer, primary_key=True))
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
 
                 simple_goods: list['SimpleGoods'] = Relationship(\
 back_populates='container')
@@ -134,8 +132,7 @@ back_populates='container')
             class SimpleGoods(SQLModel, table=True):
                 __tablename__ = 'simple_goods'
 
-                id: Optional[int] = Field(default=None, sa_column=Column(\
-'id', Integer, primary_key=True))
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
                 container_id: Optional[int] = Field(default=None, sa_column=Column(\
 'container_id', ForeignKey('simple_containers.id')))
 
@@ -167,8 +164,7 @@ def test_onetoone(generator: CodeGenerator) -> None:
             class OtherItems(SQLModel, table=True):
                 __tablename__ = 'other_items'
 
-                id: Optional[int] = Field(default=None, sa_column=Column(\
-'id', Integer, primary_key=True))
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
 
                 simple_onetoone: Optional['SimpleOnetoone'] = Relationship(\
 sa_relationship_kwargs={'uselist': False}, back_populates='other_item')
@@ -177,12 +173,34 @@ sa_relationship_kwargs={'uselist': False}, back_populates='other_item')
             class SimpleOnetoone(SQLModel, table=True):
                 __tablename__ = 'simple_onetoone'
 
-                id: Optional[int] = Field(default=None, sa_column=Column(\
-'id', Integer, primary_key=True))
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
                 other_item_id: Optional[int] = Field(default=None, sa_column=Column(\
 'other_item_id', ForeignKey('other_items.id'), unique=True))
 
                 other_item: Optional['OtherItems'] = Relationship(\
 back_populates='simple_onetoone')
             """,
+    )
+
+
+def test_uuid(generator: CodeGenerator) -> None:
+    Table(
+        "simple_uuid",
+        generator.metadata,
+        Column("id", Uuid, primary_key=True),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            import uuid
+
+            from sqlalchemy import Column, Uuid
+            from sqlmodel import Field, SQLModel
+
+            class SimpleUuid(SQLModel, table=True):
+                __tablename__ = 'simple_uuid'
+
+                id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
+        """,
     )

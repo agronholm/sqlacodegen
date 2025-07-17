@@ -119,9 +119,9 @@ class CodeGenerator(metaclass=ABCMeta):
 @dataclass(eq=False)
 class TablesGenerator(CodeGenerator):
     valid_options: ClassVar[set[str]] = {"noindexes", "noconstraints", "nocomments"}
-    builtin_module_names: ClassVar[set[str]] = set(sys.builtin_module_names) | {
-        "dataclasses"
-    }
+    stdlib_module_names: ClassVar[set[str]] = set(sys.builtin_module_names) | set(
+        sys.stdlib_module_names
+    )
 
     def __init__(
         self,
@@ -276,7 +276,9 @@ class TablesGenerator(CodeGenerator):
 
             if type_.__name__ in dialect_pkg.__all__:
                 pkgname = dialect_pkgname
-        elif type_.__name__ in dir(sqlalchemy):
+        elif type_.__name__ in dir(sqlalchemy) and type_ == getattr(
+            sqlalchemy, type_.__name__
+        ):
             pkgname = "sqlalchemy"
         else:
             pkgname = type_.__module__
@@ -300,21 +302,26 @@ class TablesGenerator(CodeGenerator):
         stdlib_imports: list[str] = []
         thirdparty_imports: list[str] = []
 
-        for package in sorted(self.imports):
-            imports = ", ".join(sorted(self.imports[package]))
+        def get_collection(package: str) -> list[str]:
             collection = thirdparty_imports
             if package == "__future__":
                 collection = future_imports
-            elif package in self.builtin_module_names:
+            elif package in self.stdlib_module_names:
                 collection = stdlib_imports
             elif package in sys.modules:
                 if "site-packages" not in (sys.modules[package].__file__ or ""):
                     collection = stdlib_imports
+            return collection
 
+        for package in sorted(self.imports):
+            imports = ", ".join(sorted(self.imports[package]))
+
+            collection = get_collection(package)
             collection.append(f"from {package} import {imports}")
 
         for module in sorted(self.module_imports):
-            thirdparty_imports.append(f"import {module}")
+            collection = get_collection(module)
+            collection.append(f"import {module}")
 
         return [
             group
@@ -1212,10 +1219,7 @@ class DeclarativeGenerator(TablesGenerator):
         else:
             return ""
 
-    def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
-        column = column_attr.column
-        rendered_column = self.render_column(column, column_attr.name != column.name)
-
+    def render_column_python_type(self, column: Column[Any]) -> str:
         def get_type_qualifiers() -> tuple[str, TypeEngine[Any], str]:
             column_type = column.type
             pre: list[str] = []
@@ -1254,7 +1258,14 @@ class DeclarativeGenerator(TablesGenerator):
 
         pre, col_type, post = get_type_qualifiers()
         column_python_type = f"{pre}{render_python_type(col_type)}{post}"
-        return f"{column_attr.name}: Mapped[{column_python_type}] = {rendered_column}"
+        return column_python_type
+
+    def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
+        column = column_attr.column
+        rendered_column = self.render_column(column, column_attr.name != column.name)
+        rendered_column_python_type = self.render_column_python_type(column)
+
+        return f"{column_attr.name}: Mapped[{rendered_column_python_type}] = {rendered_column}"
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
         def render_column_attrs(column_attrs: list[ColumnAttribute]) -> str:
@@ -1444,15 +1455,6 @@ class SQLModelGenerator(DeclarativeGenerator):
             if model.relationships:
                 self.add_literal_import("sqlmodel", "Relationship")
 
-    def collect_imports_for_column(self, column: Column[Any]) -> None:
-        super().collect_imports_for_column(column)
-        try:
-            python_type = column.type.python_type
-        except NotImplementedError:
-            self.add_literal_import("typing", "Any")
-        else:
-            self.add_import(python_type)
-
     def render_module_variables(self, models: list[Model]) -> str:
         declarations: list[str] = []
         if any(not isinstance(model, ModelClass) for model in models):
@@ -1485,25 +1487,17 @@ class SQLModelGenerator(DeclarativeGenerator):
 
     def render_column_attribute(self, column_attr: ColumnAttribute) -> str:
         column = column_attr.column
-        try:
-            python_type = column.type.python_type
-        except NotImplementedError:
-            python_type_name = "Any"
-        else:
-            python_type_name = python_type.__name__
+        rendered_column = self.render_column(column, True)
+        rendered_column_python_type = self.render_column_python_type(column)
 
         kwargs: dict[str, Any] = {}
-        if (
-            column.autoincrement and column.name in column.table.primary_key
-        ) or column.nullable:
-            self.add_literal_import("typing", "Optional")
+        if column.nullable:
             kwargs["default"] = None
-            python_type_name = f"Optional[{python_type_name}]"
-
-        rendered_column = self.render_column(column, True)
         kwargs["sa_column"] = f"{rendered_column}"
+
         rendered_field = render_callable("Field", kwargs=kwargs)
-        return f"{column_attr.name}: {python_type_name} = {rendered_field}"
+
+        return f"{column_attr.name}: {rendered_column_python_type} = {rendered_field}"
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
         rendered = super().render_relationship(relationship).partition(" = ")[2]
