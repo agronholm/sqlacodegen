@@ -59,6 +59,7 @@ from .utils import (
     get_common_fk_constraints,
     get_compiled_expression,
     get_constraint_sort_key,
+    get_stdlib_module_names,
     qualified_table_name,
     render_callable,
     uses_default_name,
@@ -119,17 +120,6 @@ class CodeGenerator(metaclass=ABCMeta):
 @dataclass(eq=False)
 class TablesGenerator(CodeGenerator):
     valid_options: ClassVar[set[str]] = {"noindexes", "noconstraints", "nocomments"}
-
-    @staticmethod
-    def get_stdlib_module_names() -> set[str]:
-        major, minor = sys.version_info.major, sys.version_info.minor
-        if (major, minor) > (3, 9):
-            return set(sys.builtin_module_names) | set(sys.stdlib_module_names)
-        else:
-            from stdlib_list import stdlib_list
-
-            return set(sys.builtin_module_names) | set(stdlib_list(f"{major}.{minor}"))
-
     stdlib_module_names: ClassVar[set[str]] = get_stdlib_module_names()
 
     def __init__(
