@@ -120,9 +120,6 @@ class CodeGenerator(metaclass=ABCMeta):
 @dataclass(eq=False)
 class TablesGenerator(CodeGenerator):
     valid_options: ClassVar[set[str]] = {"noindexes", "noconstraints", "nocomments"}
-    stdlib_module_names: ClassVar[set[str]] = set(sys.builtin_module_names) | set(
-        stdlib_list(f"{sys.version_info.major}.{sys.version_info.minor}")
-    )
 
     def __init__(
         self,
@@ -136,6 +133,14 @@ class TablesGenerator(CodeGenerator):
         self.indentation: str = indentation
         self.imports: dict[str, set[str]] = defaultdict(set)
         self.module_imports: set[str] = set()
+
+    @property
+    def stdlib_module_names(self) -> set[str]:
+        major, minor = sys.version_info.major, sys.version_info.minor
+        if (major, minor) > (3, 9):
+            return set(sys.builtin_module_names) | set(sys.stdlib_module_names)
+        else:
+            return set(sys.builtin_module_names) | set(stdlib_list(f"{major}.{minor}"))
 
     @property
     def views_supported(self) -> bool:
