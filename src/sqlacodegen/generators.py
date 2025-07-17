@@ -44,6 +44,7 @@ from sqlalchemy.exc import CompileError
 from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.type_api import UserDefinedType
 from sqlalchemy.types import TypeEngine
+from stdlib_list import stdlib_list
 
 from .models import (
     ColumnAttribute,
@@ -120,7 +121,7 @@ class CodeGenerator(metaclass=ABCMeta):
 class TablesGenerator(CodeGenerator):
     valid_options: ClassVar[set[str]] = {"noindexes", "noconstraints", "nocomments"}
     stdlib_module_names: ClassVar[set[str]] = set(sys.builtin_module_names) | set(
-        sys.stdlib_module_names
+        stdlib_list(f"{sys.version_info.major}.{sys.version_info.minor}")
     )
 
     def __init__(
