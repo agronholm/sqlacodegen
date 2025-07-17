@@ -276,9 +276,7 @@ class TablesGenerator(CodeGenerator):
 
             if type_.__name__ in dialect_pkg.__all__:
                 pkgname = dialect_pkgname
-        elif type_.__name__ in dir(sqlalchemy) and type_ == getattr(
-            sqlalchemy, type_.__name__
-        ):
+        elif type_.__name__ in dir(sqlalchemy):
             pkgname = "sqlalchemy"
         else:
             pkgname = type_.__module__
