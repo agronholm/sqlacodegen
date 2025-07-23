@@ -251,10 +251,11 @@ def test_uuid_type_annotation(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
+        import uuid
+
         from sqlalchemy import UUID
         from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, \
 mapped_column
-        import uuid
 
         class Base(MappedAsDataclass, DeclarativeBase):
             pass
