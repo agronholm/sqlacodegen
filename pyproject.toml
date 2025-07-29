@@ -29,7 +29,7 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "SQLAlchemy >= 2.0.29",
+    "SQLAlchemy >= 2.0.29,<2.0.42",
     "inflect >= 4.0.0",
     "importlib_metadata; python_version < '3.10'",
 ]
