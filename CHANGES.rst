@@ -12,6 +12,8 @@ Version history
 - Prevent double pluralization (PR by @dkratzert)
 - Fixes DOMAIN extending JSON/JSONB data types (PR by @sheinbergon)
 - Temporarily restrict SQLAlchemy version to 2.0.41 (PR by @sheinbergon)
+- Fixes ``add_import`` behavior when adding imports from sqlalchemy and overall better
+  alignment of import behavior(s) across generators
 
 **3.0.0**
 
