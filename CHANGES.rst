@@ -7,6 +7,13 @@ Version history
   the array elements
 - Added support for specifying engine arguments via ``--engine-arg``
   (PR by @LajosCseppento)
+- Fixed incorrect package name used in ``importlib.metadata.version`` for
+  ``sqlalchemy-citext``, resolving ``PackageNotFoundError`` (PR by @oaimtiaz)
+- Prevent double pluralization (PR by @dkratzert)
+- Fixes DOMAIN extending JSON/JSONB data types (PR by @sheinbergon)
+- Temporarily restrict SQLAlchemy version to 2.0.41 (PR by @sheinbergon)
+- Fixes ``add_import`` behavior when adding imports from sqlalchemy and overall better
+  alignment of import behavior(s) across generators
 
 **3.0.0**
 

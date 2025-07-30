@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import re
+import sys
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Literal, cast
 
 from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
 from sqlalchemy.engine import Connection, Engine
@@ -97,6 +98,7 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
                 }
             )
 
+    key: Literal["fk", "pk", "ix", "ck", "uq"]
     if isinstance(constraint, Index):
         key = "ix"
     elif isinstance(constraint, CheckConstraint):
@@ -139,7 +141,10 @@ def uses_default_name(constraint: Constraint | Index) -> bool:
         raise TypeError(f"Unknown constraint type: {constraint.__class__.__qualname__}")
 
     try:
-        convention: str = table.metadata.naming_convention[key]
+        convention = cast(
+            Mapping[str, str],
+            table.metadata.naming_convention,
+        )[key]
         return constraint.name == (convention % values)
     except KeyError:
         return False
@@ -202,3 +207,13 @@ def decode_postgresql_sequence(clause: TextClause) -> tuple[str | None, str | No
                 schema, sequence = sequence, ""
 
     return schema, sequence
+
+
+def get_stdlib_module_names() -> set[str]:
+    major, minor = sys.version_info.major, sys.version_info.minor
+    if (major, minor) > (3, 9):
+        return set(sys.builtin_module_names) | set(sys.stdlib_module_names)
+    else:
+        from stdlib_list import stdlib_list
+
+        return set(sys.builtin_module_names) | set(stdlib_list(f"{major}.{minor}"))
