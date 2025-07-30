@@ -10,6 +10,7 @@ name = "sqlacodegen"
 description = "Automatic model code generator for SQLAlchemy"
 readme = "README.rst"
 authors = [{name = "Alex Grönholm", email = "alex.gronholm@nextday.fi"}]
+maintainers = [{name = "Idan Sheinberg", email = "ishinberg0@gmail.com"}]
 keywords = ["sqlalchemy"]
 license = {text = "MIT"}
 classifiers = [
