@@ -11,11 +11,10 @@ description = "Automatic model code generator for SQLAlchemy"
 readme = "README.rst"
 authors = [{name = "Alex Grönholm", email = "alex.gronholm@nextday.fi"}]
 keywords = ["sqlalchemy"]
-license = {text = "MIT"}
+license = "MIT"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Environment :: Console",
     "Topic :: Database",
     "Topic :: Software Development :: Code Generators",
