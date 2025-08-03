@@ -341,7 +341,7 @@ class SimpleItems(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     top_container_id: Mapped[int] = \
-mapped_column(ForeignKey('simple_containers.id'))
+mapped_column(ForeignKey('simple_containers.id'), nullable=False)
     parent_container_id: Mapped[Optional[int]] = \
 mapped_column(ForeignKey('simple_containers.id'))
 
@@ -1045,7 +1045,7 @@ class Group(Base):
     )
 
     groups_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    group_name: Mapped[str] = mapped_column(Text(50))
+    group_name: Mapped[str] = mapped_column(Text(50), nullable=False)
 
     users: Mapped[list['User']] = relationship('User', back_populates='group')
 
@@ -1590,7 +1590,7 @@ class WithItems(Base):
     __tablename__ = 'with_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    int_items_not_optional: Mapped[list[int]] = mapped_column(ARRAY(INTEGER()))
+    int_items_not_optional: Mapped[list[int]] = mapped_column(ARRAY(INTEGER()), nullable=False)
     str_matrix: Mapped[Optional[list[list[str]]]] = mapped_column(ARRAY(VARCHAR(), dimensions=2))
 """,
     )
