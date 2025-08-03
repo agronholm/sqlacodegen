@@ -14,6 +14,8 @@ Version history
 - Temporarily restrict SQLAlchemy version to 2.0.41 (PR by @sheinbergon)
 - Fixes ``add_import`` behavior when adding imports from sqlalchemy and overall better
   alignment of import behavior(s) across generators
+- Fixes ``nullable`` column behavior for non-null columns for both
+  ``sqlmodels`` and ``declarative`` generators (PR by @sheinbergon)
 
 **3.0.0**
 
