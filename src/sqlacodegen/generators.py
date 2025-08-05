@@ -410,7 +410,6 @@ class TablesGenerator(CodeGenerator):
         args = []
         kwargs: dict[str, Any] = {}
         kwarg = []
-        is_sole_pk = column.primary_key and len(column.table.primary_key) == 1
         dedicated_fks = [
             c
             for c in column.foreign_keys
@@ -460,7 +459,7 @@ class TablesGenerator(CodeGenerator):
             kwargs["key"] = column.key
         if is_primary:
             kwargs["primary_key"] = True
-        if not column.nullable and not is_sole_pk and is_table:
+        if not column.nullable and not column.primary_key:
             kwargs["nullable"] = False
 
         if is_unique:

@@ -33,7 +33,7 @@ def test_indexes(generator: CodeGenerator) -> None:
         "item",
         generator.metadata,
         Column("id", INTEGER, primary_key=True),
-        Column("number", INTEGER),
+        Column("number", INTEGER, nullable=False),
         Column("text", VARCHAR),
     )
     simple_items.indexes.add(Index("idx_number", simple_items.c.number))
@@ -58,8 +58,8 @@ def test_indexes(generator: CodeGenerator) -> None:
                 )
 
                 id: int = Field(sa_column=Column('id', Integer, primary_key=True))
-                number: Optional[int] = Field(default=None, sa_column=Column(\
-'number', Integer))
+                number: int = Field(sa_column=Column(\
+'number', Integer, nullable=False))
                 text: Optional[str] = Field(default=None, sa_column=Column(\
 'text', String))
         """,
