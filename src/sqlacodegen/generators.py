@@ -410,6 +410,9 @@ class TablesGenerator(CodeGenerator):
         args = []
         kwargs: dict[str, Any] = {}
         kwarg = []
+        is_part_of_composite_pk = (
+            column.primary_key and len(column.table.primary_key) > 1
+        )
         dedicated_fks = [
             c
             for c in column.foreign_keys
@@ -461,6 +464,8 @@ class TablesGenerator(CodeGenerator):
             kwargs["primary_key"] = True
         if not column.nullable and not column.primary_key:
             kwargs["nullable"] = False
+        if column.nullable and is_part_of_composite_pk:
+            kwargs["nullable"] = True
 
         if is_unique:
             column.unique = True
