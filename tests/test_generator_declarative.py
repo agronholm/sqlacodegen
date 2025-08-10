@@ -341,7 +341,7 @@ class SimpleItems(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     top_container_id: Mapped[int] = \
-mapped_column(ForeignKey('simple_containers.id'))
+mapped_column(ForeignKey('simple_containers.id'), nullable=False)
     parent_container_id: Mapped[Optional[int]] = \
 mapped_column(ForeignKey('simple_containers.id'))
 
@@ -812,6 +812,34 @@ t_container_items = Table(
     )
 
 
+def test_composite_nullable_pk(generator: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id1", INTEGER, primary_key=True),
+        Column("id2", INTEGER, primary_key=True, nullable=True),
+    )
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id1: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id2: Mapped[Optional[int]] = mapped_column(Integer, primary_key=True, nullable=True)
+        """,
+    )
+
+
 def test_joined_inheritance(generator: CodeGenerator) -> None:
     Table(
         "simple_sub_items",
@@ -1045,7 +1073,7 @@ class Group(Base):
     )
 
     groups_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    group_name: Mapped[str] = mapped_column(Text(50))
+    group_name: Mapped[str] = mapped_column(Text(50), nullable=False)
 
     users: Mapped[list['User']] = relationship('User', back_populates='group')
 
@@ -1590,7 +1618,7 @@ class WithItems(Base):
     __tablename__ = 'with_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    int_items_not_optional: Mapped[list[int]] = mapped_column(ARRAY(INTEGER()))
+    int_items_not_optional: Mapped[list[int]] = mapped_column(ARRAY(INTEGER()), nullable=False)
     str_matrix: Mapped[Optional[list[list[str]]]] = mapped_column(ARRAY(VARCHAR(), dimensions=2))
 """,
     )
