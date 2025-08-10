@@ -10,12 +10,12 @@ name = "sqlacodegen"
 description = "Automatic model code generator for SQLAlchemy"
 readme = "README.rst"
 authors = [{name = "Alex Grönholm", email = "alex.gronholm@nextday.fi"}]
+maintainers = [{name = "Idan Sheinberg", email = "ishinberg0@gmail.com"}]
 keywords = ["sqlalchemy"]
-license = {text = "MIT"}
+license = "MIT"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Environment :: Console",
     "Topic :: Database",
     "Topic :: Software Development :: Code Generators",
@@ -29,9 +29,10 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "SQLAlchemy >= 2.0.29",
+    "SQLAlchemy >= 2.0.29,<2.0.42",
     "inflect >= 4.0.0",
     "importlib_metadata; python_version < '3.10'",
+    "stdlib-list; python_version < '3.10'"
 ]
 dynamic = ["version"]
 

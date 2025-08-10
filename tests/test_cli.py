@@ -82,7 +82,7 @@ class Foo(Base):
     __tablename__ = 'foo'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
 """
     )
 
@@ -115,7 +115,7 @@ class Foo(Base):
     __tablename__ = 'foo'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
 """
     )
 
@@ -137,15 +137,12 @@ def test_cli_sqlmodels(db_path: Path, tmp_path: Path) -> None:
     assert (
         output_path.read_text()
         == """\
-from typing import Optional
-
 from sqlalchemy import Column, Integer, Text
 from sqlmodel import Field, SQLModel
 
 class Foo(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, \
-primary_key=True))
-    name: str = Field(sa_column=Column('name', Text))
+    id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+    name: str = Field(sa_column=Column('name', Text, nullable=False))
 """
     )
 

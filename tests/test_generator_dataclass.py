@@ -77,7 +77,7 @@ mapped_column
             __tablename__ = 'simple'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            age: Mapped[int] = mapped_column(Integer)
+            age: Mapped[int] = mapped_column(Integer, nullable=False)
             name: Mapped[Optional[str]] = mapped_column(String(20), \
 server_default=text('foo'))
         """,
@@ -251,10 +251,11 @@ def test_uuid_type_annotation(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
+        import uuid
+
         from sqlalchemy import UUID
         from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, \
 mapped_column
-        import uuid
 
         class Base(MappedAsDataclass, DeclarativeBase):
             pass

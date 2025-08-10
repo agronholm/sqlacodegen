@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**3.1.0**
 
 - Type annotations for ARRAY column attributes now include the Python type of
   the array elements
@@ -10,6 +10,12 @@ Version history
 - Fixed incorrect package name used in ``importlib.metadata.version`` for
   ``sqlalchemy-citext``, resolving ``PackageNotFoundError`` (PR by @oaimtiaz)
 - Prevent double pluralization (PR by @dkratzert)
+- Fixes DOMAIN extending JSON/JSONB data types (PR by @sheinbergon)
+- Temporarily restrict SQLAlchemy version to 2.0.41 (PR by @sheinbergon)
+- Fixes ``add_import`` behavior when adding imports from sqlalchemy and overall better
+  alignment of import behavior(s) across generators
+- Fixes ``nullable`` column behavior for non-null columns for both
+  ``sqlmodels`` and ``declarative`` generators (PR by @sheinbergon)
 
 **3.0.0**
 
