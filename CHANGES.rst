@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**3.1.0**
 
 - Type annotations for ARRAY column attributes now include the Python type of
   the array elements
