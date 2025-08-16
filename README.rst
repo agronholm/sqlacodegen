@@ -103,6 +103,8 @@ values must be delimited by commas, e.g. ``--options noconstraints,nobidi``):
   * ``noconstraints``: ignore constraints (foreign key, unique etc.)
   * ``nocomments``: ignore table/column comments
   * ``noindexes``: ignore indexes
+  * ``noidsuffix``: prevent the special naming logic for single column many-to-one
+    and one-to-one relationships (see `Relationship naming logic`_ for details)
 
 * ``declarative``
 
