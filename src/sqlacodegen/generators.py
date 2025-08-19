@@ -1249,7 +1249,11 @@ class DeclarativeGenerator(TablesGenerator):
                     self.add_literal_import("typing", "Any")
                     python_type = Any
 
-            python_type_name = python_type.__name__
+            python_type_name = (
+                python_type.__name__
+                if hasattr(python_type, "__name__")
+                else python_type._name
+            )
             python_type_module = python_type.__module__
             if python_type_module == "builtins":
                 return python_type_name
