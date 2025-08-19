@@ -1,6 +1,10 @@
 Version history
 ===============
 
+**UNRELEASED**
+- Handle SQLAlchemy type with unimplemented python_type as typing.Any (PR by @danplischke)
+- Fix SQLModel metadata reference (PR by @danplischke)
+
 **3.1.0**
 
 - Type annotations for ARRAY column attributes now include the Python type of

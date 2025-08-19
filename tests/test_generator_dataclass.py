@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from _pytest.fixtures import FixtureRequest
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import Column, ForeignKeyConstraint, MetaData, Table
 from sqlalchemy.sql.expression import text
@@ -265,5 +265,37 @@ mapped_column
             __tablename__ = 'simple'
 
             id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True)
+        """,
+    )
+
+
+def test_tsvector_missing_python_type(generator: CodeGenerator) -> None:
+    Table(
+        "simple_tsvector",
+        generator.metadata,
+        Column("id", UUID, primary_key=True),
+        Column("vector", TSVECTOR),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from typing import Any, Optional
+        import typing
+        import uuid
+
+        from sqlalchemy import UUID
+        from sqlalchemy.dialects.postgresql import TSVECTOR
+        from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column
+
+        class Base(MappedAsDataclass, DeclarativeBase):
+            pass
+
+
+        class SimpleTsvector(Base):
+            __tablename__ = 'simple_tsvector'
+
+            id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True)
+            vector: Mapped[Optional[typing.Any]] = mapped_column(TSVECTOR)
         """,
     )

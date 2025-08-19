@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from _pytest.fixtures import FixtureRequest
 from sqlalchemy import Uuid
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
     CheckConstraint,
@@ -202,5 +203,33 @@ def test_uuid(generator: CodeGenerator) -> None:
                 __tablename__ = 'simple_uuid'
 
                 id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
+        """,
+    )
+
+
+def test_tsvector_missing_python_type(generator: CodeGenerator) -> None:
+    Table(
+        "simple_tsvector",
+        generator.metadata,
+        Column("id", Uuid, primary_key=True),
+        Column("search", TSVECTOR),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from typing import Any, Optional
+        import typing
+        import uuid
+
+        from sqlalchemy import Column, Uuid
+        from sqlalchemy.dialects.postgresql import TSVECTOR
+        from sqlmodel import Field, SQLModel
+
+        class SimpleTsvector(SQLModel, table=True):
+            __tablename__ = 'simple_tsvector'
+
+            id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
+            search: Optional[typing.Any] = Field(default=None, sa_column=Column('search', TSVECTOR))
         """,
     )

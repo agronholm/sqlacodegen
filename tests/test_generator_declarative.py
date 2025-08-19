@@ -4,7 +4,7 @@ import pytest
 from _pytest.fixtures import FixtureRequest
 from sqlalchemy import BIGINT, PrimaryKeyConstraint
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects.postgresql import JSON, JSONB
+from sqlalchemy.dialects.postgresql import JSON, JSONB, TSVECTOR
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
     CheckConstraint,
@@ -1705,4 +1705,35 @@ class TestDomainJson(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     foo: Mapped[Optional[dict]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False))
 """,
+    )
+
+
+def test_tsvector_missing_python_type(generator: CodeGenerator) -> None:
+    Table(
+        "test_tsvector",
+        generator.metadata,
+        Column("id", BIGINT, primary_key=True),
+        Column("vector", TSVECTOR()),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from typing import Any, Optional
+        import typing
+
+        from sqlalchemy import BigInteger
+        from sqlalchemy.dialects.postgresql import TSVECTOR
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class TestTsvector(Base):
+            __tablename__ = 'test_tsvector'
+
+            id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+            vector: Mapped[Optional[typing.Any]] = mapped_column(TSVECTOR)
+        """,
     )

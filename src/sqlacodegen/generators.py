@@ -1243,7 +1243,11 @@ class DeclarativeGenerator(TablesGenerator):
             if isinstance(column_type, DOMAIN):
                 python_type = column_type.data_type.python_type
             else:
-                python_type = column_type.python_type
+                try:
+                    python_type = column_type.python_type
+                except NotImplementedError:
+                    self.add_literal_import("typing", "Any")
+                    python_type = Any
 
             python_type_name = python_type.__name__
             python_type_module = python_type.__module__
@@ -1435,7 +1439,7 @@ class SQLModelGenerator(DeclarativeGenerator):
         self.base = Base(
             literal_imports=[],
             declarations=[],
-            metadata_ref="",
+            metadata_ref="SQLModel.metadata",
         )
 
     def collect_imports(self, models: Iterable[Model]) -> None:
