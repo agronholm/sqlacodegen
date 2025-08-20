@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from _pytest.fixtures import FixtureRequest
 from sqlalchemy import Uuid
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
     CheckConstraint,
@@ -204,3 +205,61 @@ def test_uuid(generator: CodeGenerator) -> None:
                 id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
         """,
     )
+
+
+def test_tsvector_missing_python_type(generator: CodeGenerator) -> None:
+    Table(
+        "simple_tsvector",
+        generator.metadata,
+        Column("id", Uuid, primary_key=True),
+        Column("search", TSVECTOR),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from typing import Any, Optional
+        import typing
+        import uuid
+
+        from sqlalchemy import Column, Uuid
+        from sqlalchemy.dialects.postgresql import TSVECTOR
+        from sqlmodel import Field, SQLModel
+
+        class SimpleTsvector(SQLModel, table=True):
+            __tablename__ = 'simple_tsvector'
+
+            id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
+            search: Optional[typing.Any] = Field(default=None, sa_column=Column('search', TSVECTOR))
+        """,
+    )
+
+
+def test_metadata_ref(generator: CodeGenerator) -> None:
+    from sqlmodel import SQLModel
+
+    Table(
+        "metadata_ref_test_table",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+    )
+
+    code = generator.generate()
+    validate_code(
+        code,
+        """\
+            from sqlalchemy import Column, Integer
+            from sqlmodel import Field, SQLModel
+
+            class MetadataRefTestTable(SQLModel, table=True):
+                __tablename__ = 'metadata_ref_test_table'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+        """,
+    )
+
+    SQLModel.metadata.clear()  # clear the metadata to avoid with the tables defined in this test
+    exec(code, globals())
+
+    assert len(SQLModel.metadata.tables) == 1
+    assert "metadata_ref_test_table" in SQLModel.metadata.tables
