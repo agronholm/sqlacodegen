@@ -233,3 +233,33 @@ def test_tsvector_missing_python_type(generator: CodeGenerator) -> None:
             search: Optional[typing.Any] = Field(default=None, sa_column=Column('search', TSVECTOR))
         """,
     )
+
+
+def test_metadata_ref(generator: CodeGenerator) -> None:
+    from sqlmodel import SQLModel
+
+    Table(
+        "metadata_ref_test_table",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+    )
+
+    code = generator.generate()
+    validate_code(
+        code,
+        """\
+            from sqlalchemy import Column, Integer
+            from sqlmodel import Field, SQLModel
+
+            class MetadataRefTestTable(SQLModel, table=True):
+                __tablename__ = 'metadata_ref_test_table'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+        """,
+    )
+
+    SQLModel.metadata.clear()  # clear the metadata to avoid with the tables defined in this test
+    exec(code, globals())
+
+    assert len(SQLModel.metadata.tables) == 1
+    assert "metadata_ref_test_table" in SQLModel.metadata.tables

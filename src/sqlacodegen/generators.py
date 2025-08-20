@@ -1246,7 +1246,7 @@ class DeclarativeGenerator(TablesGenerator):
                 try:
                     python_type = column_type.python_type
                 except NotImplementedError:
-                    self.add_literal_import("typing", "Any")
+                    self.add_import(Any)
                     python_type = Any
 
             python_type_name = (
@@ -1254,6 +1254,7 @@ class DeclarativeGenerator(TablesGenerator):
                 if hasattr(python_type, "__name__")
                 else python_type._name
             )
+
             python_type_module = python_type.__module__
             if python_type_module == "builtins":
                 return python_type_name

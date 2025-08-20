@@ -2,6 +2,7 @@ Version history
 ===============
 
 **UNRELEASED**
+
 - Handle SQLAlchemy type with unimplemented python_type as typing.Any (PR by @danplischke)
 - Fix SQLModel metadata reference (PR by @danplischke)
 
