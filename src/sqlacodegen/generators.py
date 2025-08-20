@@ -1246,7 +1246,7 @@ class DeclarativeGenerator(TablesGenerator):
                 try:
                     python_type = column_type.python_type
                 except NotImplementedError:
-                    self.add_import(Any)
+                    self.add_literal_import("typing", "Any")
                     python_type = Any
 
             python_type_name = (
