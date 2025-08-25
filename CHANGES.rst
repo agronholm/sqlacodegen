@@ -1,6 +1,10 @@
 Version history
 ===============
 
+
+**UNRELEASED**
+- Add optional `--ignored-tables` argument (PR by @plaes)
+
 **3.1.0**
 
 - Type annotations for ARRAY column attributes now include the Python type of
