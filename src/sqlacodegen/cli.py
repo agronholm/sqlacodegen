@@ -93,6 +93,13 @@ def main() -> None:
         ),
     )
     parser.add_argument("--outfile", help="file to write output to (default: stdout)")
+    parser.add_argument(
+        "--ignored_tables",
+        default=None,
+        nargs="?",
+        type=argparse.FileType("r"),
+        help="file containing list of ignored table names separated by newlines (default: None)",
+    )
     args = parser.parse_args()
 
     if args.version:
@@ -121,9 +128,12 @@ def main() -> None:
     schemas = args.schemas.split(",") if args.schemas else [None]
     options = set(args.options.split(",")) if args.options else set()
 
+    # Prepare set of ignored tables
+    ignored = {t.strip().lower() for t in args.ignored_tables}
+
     # Instantiate the generator
     generator_class = generators[args.generator].load()
-    generator = generator_class(metadata, engine, options)
+    generator = generator_class(metadata, engine, options, ignored)
 
     if not generator.views_supported:
         name = generator_class.__name__

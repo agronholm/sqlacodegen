@@ -93,11 +93,16 @@ class CodeGenerator(metaclass=ABCMeta):
     valid_options: ClassVar[set[str]] = set()
 
     def __init__(
-        self, metadata: MetaData, bind: Connection | Engine, options: Sequence[str]
+        self,
+        metadata: MetaData,
+        bind: Connection | Engine,
+        options: Sequence[str],
+        ignored: set[str],
     ):
         self.metadata: MetaData = metadata
         self.bind: Connection | Engine = bind
         self.options: set[str] = set(options)
+        self.ignored: set[str] = ignored
 
         # Validate options
         invalid_options = {opt for opt in options if opt not in self.valid_options}
@@ -127,10 +132,11 @@ class TablesGenerator(CodeGenerator):
         metadata: MetaData,
         bind: Connection | Engine,
         options: Sequence[str],
+        ignored: str[str],
         *,
         indentation: str = "    ",
     ):
-        super().__init__(metadata, bind, options)
+        super().__init__(metadata, bind, options, ignored)
         self.indentation: str = indentation
         self.imports: dict[str, set[str]] = defaultdict(set)
         self.module_imports: set[str] = set()
@@ -618,7 +624,11 @@ class TablesGenerator(CodeGenerator):
     def should_ignore_table(self, table: Table) -> bool:
         # Support for Alembic and sqlalchemy-migrate -- never expose the schema version
         # tables
-        return table.name in ("alembic_version", "migrate_version")
+        if table.name in ("alembic_version", "migrate_version"):
+            return True
+        if table.name in self.ignored:
+            return True
+        return False
 
     def find_free_name(
         self, name: str, global_names: set[str], local_names: Collection[str] = ()
@@ -759,11 +769,12 @@ class DeclarativeGenerator(TablesGenerator):
         metadata: MetaData,
         bind: Connection | Engine,
         options: Sequence[str],
+        ignored: set[str],
         *,
         indentation: str = "    ",
         base_class_name: str = "Base",
     ):
-        super().__init__(metadata, bind, options, indentation=indentation)
+        super().__init__(metadata, bind, options, ignored, indentation=indentation)
         self.base_class_name: str = base_class_name
         self.inflect_engine = inflect.engine()
 
@@ -1375,6 +1386,7 @@ class DataclassGenerator(DeclarativeGenerator):
         metadata: MetaData,
         bind: Connection | Engine,
         options: Sequence[str],
+        ignored: set[str],
         *,
         indentation: str = "    ",
         base_class_name: str = "Base",
@@ -1385,6 +1397,7 @@ class DataclassGenerator(DeclarativeGenerator):
             metadata,
             bind,
             options,
+            ignored,
             indentation=indentation,
             base_class_name=base_class_name,
         )
@@ -1411,6 +1424,7 @@ class SQLModelGenerator(DeclarativeGenerator):
         metadata: MetaData,
         bind: Connection | Engine,
         options: Sequence[str],
+        ignored: set[str],
         *,
         indentation: str = "    ",
         base_class_name: str = "SQLModel",
@@ -1419,6 +1433,7 @@ class SQLModelGenerator(DeclarativeGenerator):
             metadata,
             bind,
             options,
+            ignored,
             indentation=indentation,
             base_class_name=base_class_name,
         )
