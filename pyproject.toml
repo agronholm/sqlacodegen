@@ -42,7 +42,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
-    "sqlacodegen[sqlmodel,pgvector]",
+    "sqlacodegen[sqlmodel,pgvector,geoalchemy2]",
     "pytest >= 7.4",
     "coverage >= 7",
     "psycopg[binary]",
