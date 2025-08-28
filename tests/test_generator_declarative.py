@@ -1716,8 +1716,8 @@ def test_geoalchemy2_types(generator: CodeGenerator) -> None:
         "spatial_table",
         generator.metadata,
         Column("id", INTEGER, primary_key=True),
-        Column("geom", Geometry("POINT", srid=4326), nullable=False),
-        Column("geog", Geography("POLYGON")),
+        Column("geom", Geometry("POINT", srid=4326, dimension=2), nullable=False),
+        Column("geog", Geography("POLYGON", dimension=2)),
     )
 
     validate_code(
