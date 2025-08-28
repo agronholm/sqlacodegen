@@ -13,7 +13,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar, Literal, cast
+from typing import Any, ClassVar, Literal, _SpecialForm, cast
 
 import inflect
 import sqlalchemy
@@ -1243,9 +1243,23 @@ class DeclarativeGenerator(TablesGenerator):
             if isinstance(column_type, DOMAIN):
                 python_type = column_type.data_type.python_type
             else:
-                python_type = column_type.python_type
+                try:
+                    python_type = column_type.python_type
+                except NotImplementedError:
+                    self.add_literal_import("typing", "Any")
+                    python_type = Any
 
-            python_type_name = python_type.__name__
+            def get_python_type_name() -> str:
+                if hasattr(python_type, "__name__"):
+                    return python_type.__name__
+                elif isinstance(python_type, _SpecialForm):
+                    return python_type._name
+                else:
+                    raise AttributeError(
+                        f"Cannot get name from type {python_type}: no __name__ attribute and not a _SpecialForm"
+                    )
+
+            python_type_name = get_python_type_name()
             python_type_module = python_type.__module__
             if python_type_module == "builtins":
                 return python_type_name
