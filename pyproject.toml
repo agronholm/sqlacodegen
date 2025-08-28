@@ -50,7 +50,7 @@ test = [
 ]
 sqlmodel = ["sqlmodel >= 0.0.22"]
 citext = ["sqlalchemy-citext >= 1.7.0"]
-geoalchemy2 = ["geoalchemy2 >= 0.11.1"]
+geoalchemy2 = ["geoalchemy2 >= 0.17.1"]
 pgvector = ["pgvector >= 0.2.4"]
 
 [project.entry-points."sqlacodegen.generators"]

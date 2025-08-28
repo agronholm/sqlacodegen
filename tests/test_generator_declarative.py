@@ -1706,3 +1706,43 @@ class TestDomainJson(Base):
     foo: Mapped[Optional[dict]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False))
 """,
     )
+
+
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_geoalchemy2_types(generator: CodeGenerator) -> None:
+    from geoalchemy2 import Geography, Geometry
+
+    Table(
+        "spatial_table",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("geom", Geometry("POINT", srid=4326), nullable=False),
+        Column("geog", Geography("POLYGON")),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Any, Optional
+import typing
+
+from geoalchemy2.types import Geography, Geometry
+from sqlalchemy import Index, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SpatialTable(Base):
+    __tablename__ = 'spatial_table'
+    __table_args__ = (
+        Index('idx_spatial_table_geog', 'geog'),
+        Index('idx_spatial_table_geom', 'geom')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    geom: Mapped[typing.Any] = mapped_column(Geometry('POINT', 4326, 2, from_text='ST_GeomFromEWKT', name='geometry', nullable=False), nullable=False)
+    geog: Mapped[Optional[typing.Any]] = mapped_column(Geography('POLYGON', dimension=2, from_text='ST_GeogFromText', name='geography'))
+""",
+    )
