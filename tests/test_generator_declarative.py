@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import sys
+
 import pytest
 from _pytest.fixtures import FixtureRequest
+from geoalchemy2 import Geography, Geometry
 from sqlalchemy import BIGINT, PrimaryKeyConstraint
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSON, JSONB
@@ -1708,10 +1711,13 @@ class TestDomainJson(Base):
     )
 
 
+# SQLAlchemy doesn't reflect
+@pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="This test assumes GeoAlchemy2 0.18.x and above, which does not support python 3.9",
+)
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_geoalchemy2_types(generator: CodeGenerator) -> None:
-    from geoalchemy2 import Geography, Geometry
-
     Table(
         "spatial_table",
         generator.metadata,
