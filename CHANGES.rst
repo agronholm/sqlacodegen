@@ -1,6 +1,12 @@
 Version history
 ===============
 
+**3.1.1**
+
+- Fallback ``NotImplemented`` errors encountered when accessing ``python_type`` for
+  non-native types to ``typing.Any``
+  (PR by @sheinbergon, based on work by @danplischke)
+
 **3.1.0**
 
 - Type annotations for ARRAY column attributes now include the Python type of
