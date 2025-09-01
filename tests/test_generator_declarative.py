@@ -1711,7 +1711,6 @@ class TestDomainJson(Base):
     )
 
 
-# SQLAlchemy doesn't reflect
 @pytest.mark.skipif(
     sys.version_info < (3, 10),
     reason="This test assumes GeoAlchemy2 0.18.x and above, which does not support python 3.9",
@@ -1729,7 +1728,7 @@ def test_geoalchemy2_types(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-from typing import Any, Optional
+from typing import Optional
 import typing
 
 from geoalchemy2.types import Geography, Geometry
