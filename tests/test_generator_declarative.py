@@ -1728,8 +1728,7 @@ def test_geoalchemy2_types(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-from typing import Optional
-import typing
+from typing import Any, Optional
 
 from geoalchemy2.types import Geography, Geometry
 from sqlalchemy import Index, Integer
@@ -1747,7 +1746,7 @@ class SpatialTable(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    geom: Mapped[typing.Any] = mapped_column(Geometry('POINT', 4326, 2, from_text='ST_GeomFromEWKT', name='geometry', nullable=False), nullable=False)
-    geog: Mapped[Optional[typing.Any]] = mapped_column(Geography('POLYGON', dimension=2, from_text='ST_GeogFromText', name='geography'))
+    geom: Mapped[Any] = mapped_column(Geometry('POINT', 4326, 2, from_text='ST_GeomFromEWKT', name='geometry', nullable=False), nullable=False)
+    geog: Mapped[Optional[Any]] = mapped_column(Geography('POLYGON', dimension=2, from_text='ST_GeogFromText', name='geography'))
 """,
     )
