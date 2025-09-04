@@ -1241,21 +1241,21 @@ class DeclarativeGenerator(TablesGenerator):
 
         def render_python_type(column_type: TypeEngine[Any]) -> str:
             if isinstance(column_type, DOMAIN):
-                python_type = column_type.data_type.python_type
-            else:
-                python_type = column_type.python_type
-
-            python_type_name = python_type.__name__
-            python_type_module = python_type.__module__
-            if python_type_module == "builtins":
-                return python_type_name
+                column_type = column_type.data_type
 
             try:
-                self.add_module_import(python_type_module)
-                return f"{python_type_module}.{python_type_name}"
+                python_type = column_type.python_type
+                python_type_module = python_type.__module__
+                python_type_name = python_type.__name__
             except NotImplementedError:
                 self.add_literal_import("typing", "Any")
                 return "Any"
+
+            if python_type_module == "builtins":
+                return python_type_name
+
+            self.add_module_import(python_type_module)
+            return f"{python_type_module}.{python_type_name}"
 
         pre, col_type, post = get_type_qualifiers()
         column_python_type = f"{pre}{render_python_type(col_type)}{post}"

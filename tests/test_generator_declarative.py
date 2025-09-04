@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import sys
+
 import pytest
 from _pytest.fixtures import FixtureRequest
+from geoalchemy2 import Geography, Geometry
 from sqlalchemy import BIGINT, PrimaryKeyConstraint
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSON, JSONB
@@ -1704,5 +1707,46 @@ class TestDomainJson(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     foo: Mapped[Optional[dict]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False))
+""",
+    )
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="This test assumes GeoAlchemy2 0.18.x and above, which does not support python 3.9",
+)
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_geoalchemy2_types(generator: CodeGenerator) -> None:
+    Table(
+        "spatial_table",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("geom", Geometry("POINT", srid=4326, dimension=2), nullable=False),
+        Column("geog", Geography("POLYGON", dimension=2)),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Any, Optional
+
+from geoalchemy2.types import Geography, Geometry
+from sqlalchemy import Index, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SpatialTable(Base):
+    __tablename__ = 'spatial_table'
+    __table_args__ = (
+        Index('idx_spatial_table_geog', 'geog'),
+        Index('idx_spatial_table_geom', 'geom')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    geom: Mapped[Any] = mapped_column(Geometry('POINT', 4326, 2, from_text='ST_GeomFromEWKT', name='geometry', nullable=False), nullable=False)
+    geog: Mapped[Optional[Any]] = mapped_column(Geography('POLYGON', dimension=2, from_text='ST_GeogFromText', name='geography'))
 """,
     )
