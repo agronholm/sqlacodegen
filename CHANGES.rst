@@ -1,6 +1,9 @@
 Version history
 ===============
 
+**UNRELEASED**
+- Fix Postgres ``DOMAIN`` adaptation regression introduced in SQLAlchemy 2.0.42 (PR by @sheinbergon)
+
 **3.1.1**
 
 - Fallback ``NotImplemented`` errors encountered when accessing ``python_type`` for

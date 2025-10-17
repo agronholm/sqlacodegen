@@ -718,6 +718,20 @@ class TablesGenerator(CodeGenerator):
                     if coltype.schema:
                         kw["schema"] = coltype.schema
 
+                # Hack to fix Postgres DOMAIN type adaptation, broken as of SQLAlchemy 2.0.42
+                # For additional information - https://github.com/agronholm/sqlacodegen/issues/416#issuecomment-3417480599
+                if supercls is DOMAIN:
+                    if coltype.default:
+                        kw["default"] = coltype.default
+                    if coltype.constraint_name is not None:
+                        kw["constraint_name"] = coltype.constraint_name
+                    if coltype.not_null:
+                        kw["not_null"] = coltype.not_null
+                    if coltype.check is not None:
+                        kw["check"] = coltype.check
+                    if coltype.create_type:
+                        kw["create_type"] = coltype.create_type
+
                 try:
                     new_coltype = coltype.adapt(supercls)
                 except TypeError:
