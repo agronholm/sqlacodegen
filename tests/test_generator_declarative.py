@@ -1585,7 +1585,7 @@ def test_named_foreign_key_constraints_with_noidsuffix(
     validate_code(
         generator.generate(),
         """\
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import ForeignKeyConstraint, Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -1599,7 +1599,7 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    simple_items: Mapped[List['SimpleItems']] = relationship('SimpleItems', \
+    simple_items: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
 back_populates='simple_containers')
 
 
@@ -1613,7 +1613,7 @@ name='foreignkeytest'),
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     container_id: Mapped[Optional[int]] = mapped_column(Integer)
 
-    simple_containers: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+    simple_containers: Mapped[Optional['SimpleContainers']] = relationship('SimpleContainers', \
 back_populates='simple_items')
 """,
     )
