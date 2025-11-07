@@ -21,18 +21,16 @@ classifiers = [
     "Topic :: Software Development :: Code Generators",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "SQLAlchemy >= 2.0.29",
     "inflect >= 4.0.0",
-    "importlib_metadata; python_version < '3.10'",
-    "stdlib-list; python_version < '3.10'"
 ]
 dynamic = ["version"]
 
@@ -95,7 +93,7 @@ relative_files = true
 show_missing = true
 
 [tool.tox]
-env_list = ["py39", "py310", "py311", "py312", "py313"]
+env_list = ["py310", "py311", "py312", "py313", "py314"]
 skip_missing_interpreters = true
 
 [tool.tox.env_run_base]

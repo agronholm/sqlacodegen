@@ -2,6 +2,8 @@ Version history
 ===============
 
 **UNRELEASED**
+
+- Dropped support for Python 3.9
 - Fix Postgres ``DOMAIN`` adaptation regression introduced in SQLAlchemy 2.0.42 (PR by @sheinbergon)
 
 **3.1.1**
