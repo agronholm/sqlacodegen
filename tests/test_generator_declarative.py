@@ -1563,6 +1563,62 @@ back_populates='simple_items')
     )
 
 
+@pytest.mark.parametrize("generator", [["noidsuffix"]], indirect=True)
+def test_named_foreign_key_constraints_with_noidsuffix(
+    generator: CodeGenerator,
+) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("container_id", INTEGER),
+        ForeignKeyConstraint(
+            ["container_id"], ["simple_containers.id"], name="foreignkeytest"
+        ),
+    )
+    Table(
+        "simple_containers",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import ForeignKeyConstraint, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    simple_items: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
+back_populates='simple_containers')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        ForeignKeyConstraint(['container_id'], ['simple_containers.id'], \
+name='foreignkeytest'),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    container_id: Mapped[Optional[int]] = mapped_column(Integer)
+
+    simple_containers: Mapped[Optional['SimpleContainers']] = relationship('SimpleContainers', \
+back_populates='simple_items')
+""",
+    )
+
+
 # @pytest.mark.xfail(strict=True)
 def test_colname_import_conflict(generator: CodeGenerator) -> None:
     Table(
