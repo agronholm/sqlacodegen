@@ -4,6 +4,7 @@ import argparse
 import ast
 import sys
 from contextlib import ExitStack
+from importlib.metadata import entry_points, version
 from typing import Any, TextIO
 
 from sqlalchemy.engine import create_engine
@@ -23,11 +24,6 @@ try:
     import pgvector.sqlalchemy
 except ImportError:
     pgvector = None
-
-if sys.version_info < (3, 10):
-    from importlib_metadata import entry_points, version
-else:
-    from importlib.metadata import entry_points, version
 
 
 def _parse_engine_arg(arg_str: str) -> tuple[str, Any]:

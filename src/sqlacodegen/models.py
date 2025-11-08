@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Union
+from typing import Any
 
 from sqlalchemy.sql.schema import Column, ForeignKeyConstraint, Table
 
@@ -52,7 +52,7 @@ class ColumnAttribute:
         return self.name
 
 
-JoinType = tuple[Model, Union[ColumnAttribute, str], Model, Union[ColumnAttribute, str]]
+JoinType = tuple[Model, ColumnAttribute | str, Model, ColumnAttribute | str]
 
 
 @dataclass
