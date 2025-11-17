@@ -100,6 +100,11 @@ class CodeGenerator(metaclass=ABCMeta):
         self.options: set[str] = set(options)
 
         # Common flags parsed once here so subclasses can rely on them
+        # will render the dialect options(kwargs) info in the __table_args__ of the table
+        self.include_dialect_options_info: bool = (
+            "include_dialect_options" in self.options or "include-dialect-options" in self.options
+        )
+        # will keep the dialect-specific column types instead of adapting to generic SQLAlchemy types
         self.keep_dialect_types: bool = (
             "keep_dialect_types" in self.options or "keep-dialect-types" in self.options
         )
@@ -131,6 +136,8 @@ class TablesGenerator(CodeGenerator):
         # accept both spellings
         "keep_dialect_types",
         "keep-dialect-types",
+        "include_dialect_options",
+        "include-dialect-options",
     }
     stdlib_module_names: ClassVar[set[str]] = get_stdlib_module_names()
 
@@ -405,8 +412,9 @@ class TablesGenerator(CodeGenerator):
         if table_comment:
             kwargs["comment"] = repr(table.comment)
 
-        # add info + dialect kwargs for callable context
-        self._add_info_and_dialect_kwargs(table, kwargs, values_for_dict=False)
+        # add info + dialect kwargs for callable context (opt-in)
+        if self.include_dialect_options_info:
+            self._add_dialect_kwargs_and_info(table, kwargs, values_for_dict=False)
 
         return render_callable("Table", *args, kwargs=kwargs, indentation="    ")
 
@@ -513,8 +521,9 @@ class TablesGenerator(CodeGenerator):
         if comment:
             kwargs["comment"] = repr(comment)
 
-        # add column info + dialect kwargs for callable context
-        self._add_info_and_dialect_kwargs(column, kwargs, values_for_dict=False)
+        # add column info + dialect kwargs for callable context (opt-in)
+        if self.include_dialect_options_info:
+            self._add_dialect_kwargs_and_info(column, kwargs, values_for_dict=False)
 
         return self.render_column_callable(is_table, *args, **kwargs)
 
@@ -633,7 +642,7 @@ class TablesGenerator(CodeGenerator):
 
         return render_callable(constraint.__class__.__name__, *args, kwargs=kwargs)
 
-    def _add_info_and_dialect_kwargs(
+    def _add_dialect_kwargs_and_info(
         self, obj: Any, target_kwargs: dict[str, object], *, values_for_dict: bool
     ) -> None:
         """
@@ -1280,8 +1289,9 @@ class DeclarativeGenerator(TablesGenerator):
         if table.comment:
             kwargs["comment"] = table.comment
 
-        # add info + dialect kwargs for dict context (__table_args__)
-        self._add_info_and_dialect_kwargs(table, kwargs, values_for_dict=True)
+        # add info + dialect kwargs for dict context (__table_args__) (opt-in)
+        if self.include_dialect_options_info:
+            self._add_dialect_kwargs_and_info(table, kwargs, values_for_dict=True)
 
         if kwargs:
             formatted_kwargs = pformat(kwargs)
