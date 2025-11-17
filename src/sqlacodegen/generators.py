@@ -102,7 +102,8 @@ class CodeGenerator(metaclass=ABCMeta):
         # Common flags parsed once here so subclasses can rely on them
         # will render the dialect options(kwargs) info in the __table_args__ of the table
         self.include_dialect_options_info: bool = (
-            "include_dialect_options" in self.options or "include-dialect-options" in self.options
+            "include_dialect_options" in self.options
+            or "include-dialect-options" in self.options
         )
         # will keep the dialect-specific column types instead of adapting to generic SQLAlchemy types
         self.keep_dialect_types: bool = (
@@ -679,7 +680,9 @@ class TablesGenerator(CodeGenerator):
                 else:
                     target_kwargs[key] = str(value)
             else:
-                if isinstance(value, type(None) | bool | int | float | str | dict | list):
+                if isinstance(
+                    value, type(None) | bool | int | float | str | dict | list
+                ):
                     target_kwargs[key] = repr(value)
                 else:
                     target_kwargs[key] = repr(str(value))
