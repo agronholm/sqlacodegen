@@ -1094,31 +1094,38 @@ schema='{expected_schema}'), primary_key=True),
 
 
 class StarRocksDialect(MySQLDialect_pymysql):
-    name = 'starrocks'
+    name = "starrocks"
     construct_arguments = [
-        (Column, {
-            "is_agg_key": None,
-            "agg_type": None,
-            "IS_AGG_KEY": None,
-            "AGG_TYPE": None,
-        }),
-        (Table, {
-            "primary_key": None,
-            "aggregate_key": None,
-            "unique_key": None,
-            "duplicate_key": None,
-            "engine": "OLAP",
-            "partition_by": None,
-            "order_by": None,
-            "security": None,
-            "properties": {},
-            "ENGINE": "OLAP",
-            "PARTITION_BY": None,
-            "ORDER_BY": None,
-            "SECURITY": None,
-            "PROPERTIES": {},
-        })
+        (
+            Column,
+            {
+                "is_agg_key": None,
+                "agg_type": None,
+                "IS_AGG_KEY": None,
+                "AGG_TYPE": None,
+            },
+        ),
+        (
+            Table,
+            {
+                "primary_key": None,
+                "aggregate_key": None,
+                "unique_key": None,
+                "duplicate_key": None,
+                "engine": "OLAP",
+                "partition_by": None,
+                "order_by": None,
+                "security": None,
+                "properties": {},
+                "ENGINE": "OLAP",
+                "PARTITION_BY": None,
+                "ORDER_BY": None,
+                "SECURITY": None,
+                "PROPERTIES": {},
+            },
+        ),
     ]
+
 
 # Register StarRocksDialect if it's not already registered
 try:

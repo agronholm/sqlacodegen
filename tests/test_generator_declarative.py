@@ -111,12 +111,12 @@ class SimpleItems(Base):
     )
 
 
-
 @pytest.mark.parametrize("generator", [["include_dialect_options"]], indirect=True)
 def test_include_dialect_options_and_info_table_and_column(
     generator: CodeGenerator,
 ) -> None:
     from .test_generator_tables import _PartitionInfo
+
     t_opts = Table(
         "t_opts",
         generator.metadata,
@@ -126,7 +126,10 @@ def test_include_dialect_options_and_info_table_and_column(
         starrocks_partition_by=_PartitionInfo("RANGE(id)"),
         starrocks_security="DEFINER",
         starrocks_PROPERTIES={"replication_num": "3", "storage_medium": "SSD"},
-        info={"table_kind": "MATERIALIZED VIEW", "definition": "SELECT id, name FROM t_opts_base_table"},
+        info={
+            "table_kind": "MATERIALIZED VIEW",
+            "definition": "SELECT id, name FROM t_opts_base_table",
+        },
     )
 
     validate_code(
@@ -163,7 +166,7 @@ def test_include_dialect_options_and_info_with_hyphen(generator: CodeGenerator) 
         generator.metadata,
         Column("id", INTEGER, primary_key=True),
         mysql_engine="InnoDB",
-        info = {"table_kind": "View"}
+        info={"table_kind": "View"},
     )
 
     validate_code(
@@ -187,10 +190,17 @@ class TOpts2(Base):
 
 def test_include_dialect_options_not_enabled_skips(generator: CodeGenerator) -> None:
     from .test_generator_tables import _PartitionInfo
+
     Table(
         "t_plain",
         generator.metadata,
-        Column("id", INTEGER, primary_key=True, info={"abc": True}, starrocks_is_agg_key=True),
+        Column(
+            "id",
+            INTEGER,
+            primary_key=True,
+            info={"abc": True},
+            starrocks_is_agg_key=True,
+        ),
         starrocks_engine="OLAP",
         starrocks_partition_by=_PartitionInfo("RANGE(id)"),
     )
@@ -213,7 +223,9 @@ class TPlain(Base):
     )
 
 
-def test_keep_dialect_types_adapts_mysql_integer_default(generator: CodeGenerator) -> None:
+def test_keep_dialect_types_adapts_mysql_integer_default(
+    generator: CodeGenerator,
+) -> None:
     from sqlalchemy.dialects.mysql import INTEGER as MYSQL_INTEGER
 
     Table(

@@ -151,8 +151,7 @@ class TablesGenerator(CodeGenerator):
         )
         # Keep dialect-specific types instead of adapting to generic SQLAlchemy types
         self.keep_dialect_types: bool = (
-            "keep_dialect_types" in self.options
-            or "keep-dialect-types" in self.options
+            "keep_dialect_types" in self.options or "keep-dialect-types" in self.options
         )
 
     @property
