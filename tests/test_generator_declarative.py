@@ -116,8 +116,7 @@ def test_include_dialect_options_and_info_table_and_column(
     generator: CodeGenerator,
 ) -> None:
     from .test_generator_tables import _PartitionInfo
-
-    t_opts = Table(
+    Table(
         "t_opts",
         generator.metadata,
         Column("id", INTEGER, primary_key=True, starrocks_is_agg_key=True),
@@ -161,7 +160,7 @@ class TOpts(Base):
 
 @pytest.mark.parametrize("generator", [["include-dialect-options"]], indirect=True)
 def test_include_dialect_options_and_info_with_hyphen(generator: CodeGenerator) -> None:
-    t_opts = Table(
+    Table(
         "t_opts2",
         generator.metadata,
         Column("id", INTEGER, primary_key=True),

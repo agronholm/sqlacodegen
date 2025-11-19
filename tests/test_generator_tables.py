@@ -1093,7 +1093,7 @@ schema='{expected_schema}'), primary_key=True),
     )
 
 
-class StarRocksDialect(MySQLDialect_pymysql):
+class MockStarRocksDialect(MySQLDialect_pymysql):
     name = "starrocks"
     construct_arguments = [
         (
@@ -1131,7 +1131,7 @@ class StarRocksDialect(MySQLDialect_pymysql):
 try:
     from starrocks.dialect import StarRocksDialect  # noqa: F401
 except ImportError:
-    registry.register("starrocks", __name__, "StarRocksDialect")
+    registry.register("starrocks", __name__, "MockStarRocksDialect")
 
 
 class _PartitionInfo:
