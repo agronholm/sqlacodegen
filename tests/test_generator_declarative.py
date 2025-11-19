@@ -116,6 +116,7 @@ def test_include_dialect_options_and_info_table_and_column(
     generator: CodeGenerator,
 ) -> None:
     from .test_generator_tables import _PartitionInfo
+
     Table(
         "t_opts",
         generator.metadata,
