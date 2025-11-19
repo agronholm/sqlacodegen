@@ -7,6 +7,8 @@ Version history
 - Fix Postgres ``DOMAIN`` adaptation regression introduced in SQLAlchemy 2.0.42 (PR by @sheinbergon)
 - Support disabling special naming logic for single column many-to-one and one-to-one relationships
   (PR by @Henkhogan, revised by @sheinbergon)
+- Add ``include-dialect-options`` option to render ``Table``/``Column`` dialect-specific kwargs and `info` in generated code. (PR by @jaogoy)
+- Add ``keep-dialect-types`` option to preserve dialect-specific column types instead of adapting to generic SQLAlchemy types. (PR by @jaogoy)
 
 **3.1.1**
 

@@ -5,7 +5,8 @@ from textwrap import dedent
 import pytest
 from _pytest.fixtures import FixtureRequest
 from sqlalchemy import TypeDecorator
-from sqlalchemy.dialects import mysql, postgresql
+from sqlalchemy.dialects import mysql, postgresql, registry
+from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
     CheckConstraint,
@@ -1087,6 +1088,84 @@ def test_postgresql_sequence_with_schema(
             Column('id', Integer, Sequence('test_seq', \
 schema='{expected_schema}'), primary_key=True),
             schema='{expected_schema}'
+        )
+        """,
+    )
+
+
+class StarRocksDialect(MySQLDialect_pymysql):
+    name = 'starrocks'
+    construct_arguments = [
+        (Column, {
+            "is_agg_key": None,
+            "agg_type": None,
+            "IS_AGG_KEY": None,
+            "AGG_TYPE": None,
+        }),
+        (Table, {
+            "primary_key": None,
+            "aggregate_key": None,
+            "unique_key": None,
+            "duplicate_key": None,
+            "engine": "OLAP",
+            "partition_by": None,
+            "order_by": None,
+            "security": None,
+            "properties": {},
+            "ENGINE": "OLAP",
+            "PARTITION_BY": None,
+            "ORDER_BY": None,
+            "SECURITY": None,
+            "PROPERTIES": {},
+        })
+    ]
+
+# Register StarRocksDialect if it's not already registered
+try:
+    from starrocks.dialect import StarRocksDialect  # noqa: F401
+except ImportError:
+    registry.register("starrocks", __name__, "StarRocksDialect")
+
+
+class _PartitionInfo:
+    def __init__(self, partition_by: str) -> None:
+        self.partition_by = partition_by
+
+    def __str__(self) -> str:
+        return self.partition_by
+
+    def __repr__(self) -> str:
+        return repr(self.partition_by)
+
+
+@pytest.mark.parametrize("generator", [["include_dialect_options"]], indirect=True)
+def test_include_dialect_options_starrocks_tables(generator: CodeGenerator) -> None:
+    Table(
+        "t_starrocks",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True, starrocks_is_agg_key=True),
+        starrocks_ENGINE="OLAP",
+        starrocks_PARTITION_BY=_PartitionInfo("RANGE(id)"),
+        starrocks_ORDER_BY="id, name",
+        starrocks_PROPERTIES={"replication_num": "3", "storage_medium": "SSD"},
+    ).info = {"table_kind": "TABLE"}
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        t_t_starrocks = Table(
+            't_starrocks', metadata,
+            Column('id', Integer, primary_key=True, starrocks_is_agg_key=True),
+            info={'table_kind': 'TABLE'},
+            starrocks_ENGINE='OLAP',
+            starrocks_ORDER_BY='id, name',
+            starrocks_PARTITION_BY='RANGE(id)',
+            starrocks_PROPERTIES={'replication_num': '3', 'storage_medium': 'SSD'}
         )
         """,
     )

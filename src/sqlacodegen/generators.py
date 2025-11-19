@@ -99,17 +99,6 @@ class CodeGenerator(metaclass=ABCMeta):
         self.bind: Connection | Engine = bind
         self.options: set[str] = set(options)
 
-        # Common flags parsed once here so subclasses can rely on them
-        # will render the dialect options(kwargs) info in the __table_args__ of the table
-        self.include_dialect_options_info: bool = (
-            "include_dialect_options" in self.options
-            or "include-dialect-options" in self.options
-        )
-        # will keep the dialect-specific column types instead of adapting to generic SQLAlchemy types
-        self.keep_dialect_types: bool = (
-            "keep_dialect_types" in self.options or "keep-dialect-types" in self.options
-        )
-
         # Validate options
         invalid_options = {opt for opt in options if opt not in self.valid_options}
         if invalid_options:
@@ -135,10 +124,10 @@ class TablesGenerator(CodeGenerator):
         "noconstraints",
         "nocomments",
         # accept both spellings
-        "keep_dialect_types",
-        "keep-dialect-types",
         "include_dialect_options",
         "include-dialect-options",
+        "keep_dialect_types",
+        "keep-dialect-types",
     }
     stdlib_module_names: ClassVar[set[str]] = get_stdlib_module_names()
 
@@ -154,6 +143,17 @@ class TablesGenerator(CodeGenerator):
         self.indentation: str = indentation
         self.imports: dict[str, set[str]] = defaultdict(set)
         self.module_imports: set[str] = set()
+
+        # Render SchemaItem.info and dialect kwargs (Table/Column) into output
+        self.include_dialect_options_and_info: bool = (
+            "include_dialect_options" in self.options
+            or "include-dialect-options" in self.options
+        )
+        # Keep dialect-specific types instead of adapting to generic SQLAlchemy types
+        self.keep_dialect_types: bool = (
+            "keep_dialect_types" in self.options
+            or "keep-dialect-types" in self.options
+        )
 
     @property
     def views_supported(self) -> bool:
@@ -414,7 +414,7 @@ class TablesGenerator(CodeGenerator):
             kwargs["comment"] = repr(table.comment)
 
         # add info + dialect kwargs for callable context (opt-in)
-        if self.include_dialect_options_info:
+        if self.include_dialect_options_and_info:
             self._add_dialect_kwargs_and_info(table, kwargs, values_for_dict=False)
 
         return render_callable("Table", *args, kwargs=kwargs, indentation="    ")
@@ -523,7 +523,7 @@ class TablesGenerator(CodeGenerator):
             kwargs["comment"] = repr(comment)
 
         # add column info + dialect kwargs for callable context (opt-in)
-        if self.include_dialect_options_info:
+        if self.include_dialect_options_and_info:
             self._add_dialect_kwargs_and_info(column, kwargs, values_for_dict=False)
 
         return self.render_column_callable(is_table, *args, **kwargs)
@@ -1293,7 +1293,7 @@ class DeclarativeGenerator(TablesGenerator):
             kwargs["comment"] = table.comment
 
         # add info + dialect kwargs for dict context (__table_args__) (opt-in)
-        if self.include_dialect_options_info:
+        if self.include_dialect_options_and_info:
             self._add_dialect_kwargs_and_info(table, kwargs, values_for_dict=True)
 
         if kwargs:
