@@ -142,7 +142,9 @@ class TablesGenerator(CodeGenerator):
         self.module_imports: set[str] = set()
 
         # Render SchemaItem.info and dialect kwargs (Table/Column) into output
-        self.include_dialect_options_and_info: bool = "include-dialect-options" in self.options
+        self.include_dialect_options_and_info: bool = (
+            "include-dialect-options" in self.options
+        )
         # Keep dialect-specific types instead of adapting to generic SQLAlchemy types
         self.keep_dialect_types: bool = "keep-dialect-types" in self.options
 
