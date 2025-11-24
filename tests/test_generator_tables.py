@@ -1145,7 +1145,7 @@ class _PartitionInfo:
         return repr(self.partition_by)
 
 
-@pytest.mark.parametrize("generator", [["include_dialect_options"]], indirect=True)
+@pytest.mark.parametrize("generator", [["include-dialect-options"]], indirect=True)
 def test_include_dialect_options_starrocks_tables(generator: CodeGenerator) -> None:
     Table(
         "t_starrocks",

@@ -123,10 +123,7 @@ class TablesGenerator(CodeGenerator):
         "noindexes",
         "noconstraints",
         "nocomments",
-        # accept both spellings
-        "include_dialect_options",
         "include-dialect-options",
-        "keep_dialect_types",
         "keep-dialect-types",
     }
     stdlib_module_names: ClassVar[set[str]] = get_stdlib_module_names()
@@ -145,14 +142,9 @@ class TablesGenerator(CodeGenerator):
         self.module_imports: set[str] = set()
 
         # Render SchemaItem.info and dialect kwargs (Table/Column) into output
-        self.include_dialect_options_and_info: bool = (
-            "include_dialect_options" in self.options
-            or "include-dialect-options" in self.options
-        )
+        self.include_dialect_options_and_info: bool = "include-dialect-options" in self.options
         # Keep dialect-specific types instead of adapting to generic SQLAlchemy types
-        self.keep_dialect_types: bool = (
-            "keep_dialect_types" in self.options or "keep-dialect-types" in self.options
-        )
+        self.keep_dialect_types: bool = "keep-dialect-types" in self.options
 
     @property
     def views_supported(self) -> bool:
@@ -666,6 +658,7 @@ class TablesGenerator(CodeGenerator):
                 value = dialect_kwargs[key]
             except Exception:
                 continue
+
             # Render values:
             # - callable context (values_for_dict=False): produce a string expression.
             #   primitives use repr(value); custom objects stringify then repr().

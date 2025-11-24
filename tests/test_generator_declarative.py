@@ -111,7 +111,7 @@ class SimpleItems(Base):
     )
 
 
-@pytest.mark.parametrize("generator", [["include_dialect_options"]], indirect=True)
+@pytest.mark.parametrize("generator", [["include-dialect-options"]], indirect=True)
 def test_include_dialect_options_and_info_table_and_column(
     generator: CodeGenerator,
 ) -> None:
@@ -254,7 +254,7 @@ class Num(Base):
     )
 
 
-@pytest.mark.parametrize("generator", [["keep_dialect_types"]], indirect=True)
+@pytest.mark.parametrize("generator", [["keep-dialect-types"]], indirect=True)
 def test_keep_dialect_types_keeps_mysql_integer(generator: CodeGenerator) -> None:
     from sqlalchemy.dialects.mysql import INTEGER as MYSQL_INTEGER
 
