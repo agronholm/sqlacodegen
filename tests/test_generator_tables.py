@@ -1127,11 +1127,8 @@ class MockStarRocksDialect(MySQLDialect_pymysql):
     ]
 
 
-# Register StarRocksDialect if it's not already registered
-try:
-    from starrocks.dialect import StarRocksDialect  # noqa: F401
-except ImportError:
-    registry.register("starrocks", __name__, "MockStarRocksDialect")
+# Register StarRocksDialect
+registry.register("starrocks", __name__, "MockStarRocksDialect")
 
 
 class _PartitionInfo:
