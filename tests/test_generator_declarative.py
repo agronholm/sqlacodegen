@@ -111,6 +111,180 @@ class SimpleItems(Base):
     )
 
 
+@pytest.mark.parametrize("generator", [["include_dialect_options"]], indirect=True)
+def test_include_dialect_options_and_info_table_and_column(
+    generator: CodeGenerator,
+) -> None:
+    from .test_generator_tables import _PartitionInfo
+
+    Table(
+        "t_opts",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True, starrocks_is_agg_key=True),
+        Column("name", VARCHAR, starrocks_agg_type="REPLACE"),
+        starrocks_aggregate_key="id",
+        starrocks_partition_by=_PartitionInfo("RANGE(id)"),
+        starrocks_security="DEFINER",
+        starrocks_PROPERTIES={"replication_num": "3", "storage_medium": "SSD"},
+        info={
+            "table_kind": "MATERIALIZED VIEW",
+            "definition": "SELECT id, name FROM t_opts_base_table",
+        },
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TOpts(Base):
+    __tablename__ = 't_opts'
+    __table_args__ = {'info': {'definition': 'SELECT id, name FROM t_opts_base_table',
+              'table_kind': 'MATERIALIZED VIEW'},
+     'starrocks_PROPERTIES': {'replication_num': '3', 'storage_medium': 'SSD'},
+     'starrocks_aggregate_key': 'id',
+     'starrocks_partition_by': 'RANGE(id)',
+     'starrocks_security': 'DEFINER'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, starrocks_is_agg_key=True)
+    name: Mapped[Optional[str]] = mapped_column(String, starrocks_agg_type='REPLACE')
+        """,
+    )
+
+
+@pytest.mark.parametrize("generator", [["include_dialect_options"]], indirect=True)
+def test_include_dialect_options_and_info_with_hyphen(generator: CodeGenerator) -> None:
+    Table(
+        "t_opts2",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        mysql_engine="InnoDB",
+        info={"table_kind": "View"},
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TOpts2(Base):
+    __tablename__ = 't_opts2'
+    __table_args__ = {'info': {'table_kind': 'View'}, 'mysql_engine': 'InnoDB'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+        """,
+    )
+
+
+def test_include_dialect_options_not_enabled_skips(generator: CodeGenerator) -> None:
+    from .test_generator_tables import _PartitionInfo
+
+    Table(
+        "t_plain",
+        generator.metadata,
+        Column(
+            "id",
+            INTEGER,
+            primary_key=True,
+            info={"abc": True},
+            starrocks_is_agg_key=True,
+        ),
+        starrocks_engine="OLAP",
+        starrocks_partition_by=_PartitionInfo("RANGE(id)"),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TPlain(Base):
+    __tablename__ = 't_plain'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+        """,
+    )
+
+
+def test_keep_dialect_types_adapts_mysql_integer_default(
+    generator: CodeGenerator,
+) -> None:
+    from sqlalchemy.dialects.mysql import INTEGER as MYSQL_INTEGER
+
+    Table(
+        "num",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("val", MYSQL_INTEGER(), nullable=False),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Num(Base):
+    __tablename__ = 'num'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    val: Mapped[int] = mapped_column(Integer, nullable=False)
+        """,
+    )
+
+
+@pytest.mark.parametrize("generator", [["keep_dialect_types"]], indirect=True)
+def test_keep_dialect_types_keeps_mysql_integer(generator: CodeGenerator) -> None:
+    from sqlalchemy.dialects.mysql import INTEGER as MYSQL_INTEGER
+
+    Table(
+        "num2",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("val", MYSQL_INTEGER(), nullable=False),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from sqlalchemy import INTEGER
+from sqlalchemy.dialects.mysql import INTEGER
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Num2(Base):
+    __tablename__ = 'num2'
+
+    id: Mapped[int] = mapped_column(INTEGER, primary_key=True)
+    val: Mapped[int] = mapped_column(INTEGER, nullable=False)
+        """,
+    )
+
+
 def test_onetomany(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
