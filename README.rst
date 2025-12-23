@@ -208,3 +208,11 @@ sqlalchemy_ room on Gitter.
 
 .. _sqlacodegen discussion forum: https://github.com/agronholm/sqlacodegen/discussions/categories/q-a
 .. _sqlalchemy: https://app.gitter.im/#/room/#sqlalchemy_community:gitter.im
+
+Security contact information
+============================
+
+To report a security vulnerability, please use the `Tidelift security contact`_.
+Tidelift will coordinate the fix and disclosure.
+
+.. _Tidelift security contact: https://tidelift.com/security
