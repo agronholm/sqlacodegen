@@ -39,13 +39,6 @@ dynamic = ["version"]
 "Source Code" = "https://github.com/agronholm/sqlacodegen"
 
 [project.optional-dependencies]
-test = [
-    "sqlacodegen[sqlmodel,pgvector,geoalchemy2]",
-    "pytest >= 7.4",
-    "coverage >= 7",
-    "psycopg[binary]",
-    "mysql-connector-python",
-]
 sqlmodel = ["sqlmodel >= 0.0.22"]
 citext = ["sqlalchemy-citext >= 1.7.0"]
 geoalchemy2 = ["geoalchemy2 >= 0.17.0"]
@@ -59,6 +52,14 @@ sqlmodels = "sqlacodegen.generators:SQLModelGenerator"
 
 [project.scripts]
 sqlacodegen = "sqlacodegen.cli:main"
+
+[dependency-groups]
+test = [
+    "pytest >= 7.4",
+    "coverage >= 7",
+    "psycopg[binary]",
+    "mysql-connector-python",
+]
 
 [tool.setuptools_scm]
 version_scheme = "post-release"
@@ -99,4 +100,5 @@ skip_missing_interpreters = true
 [tool.tox.env_run_base]
 package = "editable"
 commands = [["python", "-m", "pytest", { replace = "posargs", extend = true }]]
-extras = ["test"]
+dependency_groups = ["test"]
+extras = ["sqlmodel", "citext", "geoalchemy2", "pgvector"]
