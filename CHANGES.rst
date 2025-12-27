@@ -1,6 +1,11 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Fixed ``Index`` kwargs (e.g. ``mysql_length``) being ignored during code generation
+  (PR by @luliangce)
+
 **3.2.0**
 
 - Dropped support for Python 3.9
