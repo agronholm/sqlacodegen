@@ -2053,3 +2053,62 @@ def test_enum_noenums_option(generator: CodeGenerator) -> None:
             status: Mapped[str] = mapped_column(Enum('active', 'inactive'), nullable=False)
         """,
     )
+
+
+def test_enum_shared_values(generator: CodeGenerator) -> None:
+    """Test that named enums generate shared Python enum classes."""
+    from sqlalchemy import Enum as SAEnum
+
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "status",
+            SAEnum("active", "inactive", "pending", name="status_enum"),
+            nullable=False,
+        ),
+    )
+    Table(
+        "accounts",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "status",
+            SAEnum("active", "inactive", "pending", name="status_enum"),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class StatusEnum(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+            PENDING = 'pending'
+
+
+        class Accounts(Base):
+            __tablename__ = 'accounts'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum), nullable=False)
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum), nullable=False)
+        """,
+    )
