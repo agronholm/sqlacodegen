@@ -209,7 +209,6 @@ def test_json_default(generator: CodeGenerator) -> None:
 
 
 def test_check_constraint_preserved(generator: CodeGenerator) -> None:
-    """Test that CHECK constraints on varchar columns are NOT converted to enums."""
     Table(
         "simple_items",
         generator.metadata,

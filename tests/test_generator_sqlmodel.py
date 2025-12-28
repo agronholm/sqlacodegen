@@ -207,7 +207,6 @@ def test_uuid(generator: CodeGenerator) -> None:
 
 
 def test_check_constraint_not_converted_to_enum(generator: CodeGenerator) -> None:
-    """Test that CHECK constraints on varchar columns are NOT converted to enums."""
     Table(
         "users",
         generator.metadata,

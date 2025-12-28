@@ -1983,7 +1983,6 @@ class SpatialTable(Base):
 
 
 def test_check_constraint_not_converted_to_enum(generator: CodeGenerator) -> None:
-    """Test that CHECK constraints on varchar columns are NOT converted to enums."""
     Table(
         "users",
         generator.metadata,
@@ -2017,7 +2016,6 @@ def test_check_constraint_not_converted_to_enum(generator: CodeGenerator) -> Non
 
 
 def test_enum_noenums_option(generator: CodeGenerator) -> None:
-    """Test that noenums option disables Python enum generation for database ENUMs."""
     from sqlalchemy import Enum as SAEnum
 
     from sqlacodegen.generators import DeclarativeGenerator
@@ -2056,7 +2054,6 @@ def test_enum_noenums_option(generator: CodeGenerator) -> None:
 
 
 def test_enum_shared_values(generator: CodeGenerator) -> None:
-    """Test that named enums generate shared Python enum classes."""
     from sqlalchemy import Enum as SAEnum
 
     Table(
