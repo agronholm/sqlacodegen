@@ -204,3 +204,33 @@ def test_uuid(generator: CodeGenerator) -> None:
                 id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
         """,
     )
+
+
+def test_enum_generation(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", VARCHAR(20), nullable=False),
+        CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            import enum
+
+            from sqlalchemy import Column, Enum, Integer
+            from sqlmodel import Field, SQLModel
+
+            class UsersStatus(str, enum.Enum):
+                ACTIVE = 'active'
+                INACTIVE = 'inactive'
+                PENDING = 'pending'
+
+
+            class Users(SQLModel, table=True):
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+                status: UsersStatus = Field(sa_column=Column('status', Enum(UsersStatus), nullable=False))
+        """,
+    )

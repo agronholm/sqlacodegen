@@ -106,6 +106,7 @@ values must be delimited by commas, e.g. ``--options noconstraints,nobidi``):
   * ``noconstraints``: ignore constraints (foreign key, unique etc.)
   * ``nocomments``: ignore table/column comments
   * ``noindexes``: ignore indexes
+  * ``noenums``: don't generate Python enum classes for database enum types; use string-based SQLAlchemy Enum instead
   * ``noidsuffix``: prevent the special naming logic for single column many-to-one
     and one-to-one relationships (see `Relationship naming logic`_ for details)
   * ``include_dialect_options``: render a table' dialect options, such as ``starrocks_partition`` for StarRocks' specific options.

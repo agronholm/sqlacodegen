@@ -213,14 +213,22 @@ def test_enum_detection(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
+        import enum
+
         from sqlalchemy import Column, Enum, MetaData, Table
 
         metadata = MetaData()
 
 
+        class SimpleItemsEnum(str, enum.Enum):
+            A = 'A'
+            _B = '\\'B'
+            C = 'C'
+
+
         t_simple_items = Table(
             'simple_items', metadata,
-            Column('enum', Enum('A', "\\\\'B", 'C'))
+            Column('enum', Enum(SimpleItemsEnum))
         )
         """,
     )
@@ -1170,6 +1178,36 @@ def test_include_dialect_options_starrocks_tables(generator: CodeGenerator) -> N
             starrocks_ORDER_BY='id, name',
             starrocks_PARTITION_BY='RANGE(id)',
             starrocks_PROPERTIES={'replication_num': '3', 'storage_medium': 'SSD'}
+        )
+        """,
+    )
+
+
+def test_enum_detection_noenums_option(generator: CodeGenerator) -> None:
+    """Test that noenums option disables Python enum generation."""
+    from sqlacodegen.generators import TablesGenerator
+
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("enum", VARCHAR(255)),
+        CheckConstraint(r"simple_items.enum IN ('A', '\'B', 'C')"),
+    )
+
+    # Recreate generator with noenums option
+    generator = TablesGenerator(generator.metadata, generator.bind, ["noenums"])
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, Enum, MetaData, Table
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('enum', Enum('A', "\\\\'B", 'C'))
         )
         """,
     )
