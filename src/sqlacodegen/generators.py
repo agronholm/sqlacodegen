@@ -32,7 +32,6 @@ from sqlalchemy import (
     Index,
     MetaData,
     PrimaryKeyConstraint,
-    String,
     Table,
     Text,
     TypeDecorator,
@@ -67,8 +66,6 @@ from .utils import (
 
 _re_boolean_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \(0, 1\)")
 _re_column_name = re.compile(r'(?:(["`]?).*\1\.)?(["`]?)(.*)\2')
-_re_enum_check_constraint = re.compile(r"(?:.*?\.)?(.*?) IN \((.+)\)")
-_re_enum_item = re.compile(r"'(.*?)(?<!\\)'")
 _re_invalid_identifier = re.compile(r"(?u)\W")
 
 
@@ -828,31 +825,6 @@ class TablesGenerator(CodeGenerator):
                         table.constraints.remove(constraint)
                         table.c[colname].type = Boolean()
                         continue
-
-                # Turn any string-type column with a CheckConstraint like
-                # "column IN (...)" into an Enum
-                if match := _re_enum_check_constraint.match(sqltext):
-                    if colname_match := _re_column_name.match(match.group(1)):
-                        colname = colname_match.group(3)
-                        items = match.group(2)
-                        if isinstance(table.c[colname].type, String):
-                            table.constraints.remove(constraint)
-                            if not isinstance(table.c[colname].type, Enum):
-                                options = _re_enum_item.findall(items)
-                                # Create Python enum class (unless noenums option is set)
-                                if "noenums" not in self.options:
-                                    enum_class_name = self._create_enum_class(
-                                        table.name, colname, options
-                                    )
-                                    # Store the enum for this column
-                                    self.enum_classes[(table.name, colname)] = (
-                                        enum_class_name
-                                    )
-                                table.c[colname].type = Enum(
-                                    *options, native_enum=False
-                                )
-
-                            continue
 
         for column in table.c:
             # Handle native database Enum types (e.g., PostgreSQL ENUM)

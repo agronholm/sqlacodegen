@@ -206,7 +206,8 @@ def test_uuid(generator: CodeGenerator) -> None:
     )
 
 
-def test_enum_generation(generator: CodeGenerator) -> None:
+def test_check_constraint_not_converted_to_enum(generator: CodeGenerator) -> None:
+    """Test that CHECK constraints on varchar columns are NOT converted to enums."""
     Table(
         "users",
         generator.metadata,
@@ -218,19 +219,15 @@ def test_enum_generation(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-            import enum
-
-            from sqlalchemy import Column, Enum, Integer
+            from sqlalchemy import CheckConstraint, Column, Integer, String
             from sqlmodel import Field, SQLModel
 
-            class UsersStatus(str, enum.Enum):
-                ACTIVE = 'active'
-                INACTIVE = 'inactive'
-                PENDING = 'pending'
-
-
             class Users(SQLModel, table=True):
+                __table_args__ = (
+                    CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+                )
+
                 id: int = Field(sa_column=Column('id', Integer, primary_key=True))
-                status: UsersStatus = Field(sa_column=Column('status', Enum(UsersStatus), nullable=False))
+                status: str = Field(sa_column=Column('status', String(20), nullable=False))
         """,
     )
