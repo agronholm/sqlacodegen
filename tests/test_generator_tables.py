@@ -60,6 +60,7 @@ def test_fancy_coltypes(generator: CodeGenerator) -> None:
         generator.generate(),
         """\
         from tests.test_generator_tables import TIMESTAMP_DECORATOR
+        import enum
 
         from pgvector.sqlalchemy.vector import VECTOR
         from sqlalchemy import Boolean, Column, Enum, MetaData, Numeric, Table
@@ -67,9 +68,14 @@ def test_fancy_coltypes(generator: CodeGenerator) -> None:
         metadata = MetaData()
 
 
+        class Blah(str, enum.Enum):
+            A = 'A'
+            B = 'B'
+
+
         t_simple_items = Table(
             'simple_items', metadata,
-            Column('enum', Enum('A', 'B', name='blah', schema='someschema')),
+            Column('enum', Enum(Blah)),
             Column('bool', Boolean),
             Column('vector', VECTOR(3)),
             Column('number', Numeric(10, asdecimal=False)),
@@ -229,6 +235,53 @@ def test_enum_detection(generator: CodeGenerator) -> None:
         t_simple_items = Table(
             'simple_items', metadata,
             Column('enum', Enum(SimpleItemsEnum))
+        )
+        """,
+    )
+
+
+def test_enum_shared_values(generator: CodeGenerator) -> None:
+    from sqlalchemy import Enum as SAEnum
+
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", SAEnum("active", "inactive", "pending", name="status_enum")),
+    )
+    Table(
+        "accounts",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", SAEnum("active", "inactive", "pending", name="status_enum")),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import Column, Enum, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        class StatusEnum(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+            PENDING = 'pending'
+
+
+        t_accounts = Table(
+            'accounts', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('status', Enum(StatusEnum))
+        )
+
+        t_users = Table(
+            'users', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('status', Enum(StatusEnum))
         )
         """,
     )
