@@ -1980,3 +1980,76 @@ class SpatialTable(Base):
     geog: Mapped[Optional[Any]] = mapped_column(Geography('POLYGON', dimension=2, from_text='ST_GeogFromText', name='geography'))
 """,
     )
+
+
+def test_enum_python_enum_generation(generator: CodeGenerator) -> None:
+    """Test that enum columns generate Python enum classes."""
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("name", VARCHAR(50), nullable=False),
+        Column("status", VARCHAR(20), nullable=False),
+        CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import Enum, Integer, String
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class UsersStatus(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+            PENDING = 'pending'
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            name: Mapped[str] = mapped_column(String(50), nullable=False)
+            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus), nullable=False)
+        """,
+    )
+
+
+def test_enum_noenums_option(generator: CodeGenerator) -> None:
+    """Test that noenums option disables Python enum generation."""
+    from sqlacodegen.generators import DeclarativeGenerator
+
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", VARCHAR(20), nullable=False),
+        CheckConstraint("users.status IN ('active', 'inactive')"),
+    )
+
+    # Recreate generator with noenums option
+    generator = DeclarativeGenerator(generator.metadata, generator.bind, ["noenums"])
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            status: Mapped[str] = mapped_column(Enum('active', 'inactive'), nullable=False)
+        """,
+    )
