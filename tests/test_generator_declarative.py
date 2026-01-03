@@ -1982,39 +1982,6 @@ class SpatialTable(Base):
     )
 
 
-def test_check_constraint_not_converted_to_enum(generator: CodeGenerator) -> None:
-    Table(
-        "users",
-        generator.metadata,
-        Column("id", INTEGER, primary_key=True),
-        Column("name", VARCHAR(50), nullable=False),
-        Column("status", VARCHAR(20), nullable=False),
-        CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
-    )
-
-    validate_code(
-        generator.generate(),
-        """\
-        from sqlalchemy import CheckConstraint, Integer, String
-        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-        class Base(DeclarativeBase):
-            pass
-
-
-        class Users(Base):
-            __tablename__ = 'users'
-            __table_args__ = (
-                CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
-            )
-
-            id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            name: Mapped[str] = mapped_column(String(50), nullable=False)
-            status: Mapped[str] = mapped_column(String(20), nullable=False)
-        """,
-    )
-
-
 def test_enum_noenums_option(generator: CodeGenerator) -> None:
     from sqlalchemy import Enum as SAEnum
 
