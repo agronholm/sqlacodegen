@@ -2109,3 +2109,169 @@ def test_enum_shared_values(generator: CodeGenerator) -> None:
             status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum), nullable=False)
         """,
     )
+
+
+def test_enum_unnamed(generator: CodeGenerator) -> None:
+    from sqlalchemy import Enum as SAEnum
+
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "status",
+            SAEnum("active", "inactive", "pending"),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class UsersStatus(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+            PENDING = 'pending'
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus), nullable=False)
+        """,
+    )
+
+
+def test_enum_unnamed_reuse_same_values(generator: CodeGenerator) -> None:
+    from sqlalchemy import Enum as SAEnum
+
+    # table "a_b", column "c" -> A + B + C = ABC
+    # table "a", column "b_c" -> A + B + C = ABC
+    # Both generate same name with same values, so reuse
+    Table(
+        "a_b",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "c",
+            SAEnum("active", "inactive"),
+            nullable=False,
+        ),
+    )
+    Table(
+        "a",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "b_c",
+            SAEnum("active", "inactive"),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class ABC(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+
+
+        class A(Base):
+            __tablename__ = 'a'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            b_c: Mapped[ABC] = mapped_column(Enum(ABC), nullable=False)
+
+
+        class AB(Base):
+            __tablename__ = 'a_b'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            c: Mapped[ABC] = mapped_column(Enum(ABC), nullable=False)
+        """,
+    )
+
+
+def test_enum_unnamed_name_collision_different_values(generator: CodeGenerator) -> None:
+    from sqlalchemy import Enum as SAEnum
+
+    # table "a_b", column "c" -> A + B + C = ABC
+    # table "a", column "b_c" -> A + B + C = ABC
+    # Same name but different values, so append counter
+    Table(
+        "a_b",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "c",
+            SAEnum("active", "inactive"),
+            nullable=False,
+        ),
+    )
+    Table(
+        "a",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "b_c",
+            SAEnum("pending", "complete"),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class ABC(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+
+
+        class ABC1(str, enum.Enum):
+            PENDING = 'pending'
+            COMPLETE = 'complete'
+
+
+        class A(Base):
+            __tablename__ = 'a'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            b_c: Mapped[ABC1] = mapped_column(Enum(ABC1), nullable=False)
+
+
+        class AB(Base):
+            __tablename__ = 'a_b'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            c: Mapped[ABC] = mapped_column(Enum(ABC), nullable=False)
+        """,
+    )
