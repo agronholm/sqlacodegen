@@ -216,6 +216,11 @@ def test_check_constraint_preserved(generator: CodeGenerator) -> None:
         CheckConstraint(r"simple_items.enum IN ('A', '\'B', 'C')"),
     )
 
+    # Recreate generator with nosyntheticenums option to preserve constraints
+    generator = TablesGenerator(
+        generator.metadata, generator.bind, ["nosyntheticenums"]
+    )
+
     validate_code(
         generator.generate(),
         """\
@@ -228,6 +233,41 @@ def test_check_constraint_preserved(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('enum', String(255)),
             CheckConstraint("simple_items.enum IN ('A', '\\\\'B', 'C')")
+        )
+        """,
+    )
+
+
+def test_synthetic_enum_generation(generator: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", VARCHAR(20)),
+        CheckConstraint("simple_items.status IN ('active', 'inactive', 'pending')"),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import CheckConstraint, Column, Enum, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        class SimpleItemsStatus(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+            PENDING = 'pending'
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('status', Enum(SimpleItemsStatus)),
+            CheckConstraint("simple_items.status IN ('active', 'inactive', 'pending')")
         )
         """,
     )

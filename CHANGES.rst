@@ -3,8 +3,11 @@ Version history
 
 **4.0.0rc1**
 
-- Added native Python enum generation for database enum types (columns with CHECK constraints
-  or native ENUM types). Use ``--options noenums`` to restore the old string-based behavior (PR by @sheinbergon)
+- Added python enum generation for native database ENUM types (e.g., PostgreSQL / MySQL ENUM)
+  Refactored synthetic Python enum generation from CHECK constraints with IN clauses (e.g., ``column IN ('val1', 'val2', ...)``)
+  Use ``--options nonativeenums`` to disable enum generation for native database enums
+  Use ``--options nosyntheticenums`` to disable CHECK constraint → enum conversion
+  (PR by @sheinbergon)
 
 **3.2.0**
 

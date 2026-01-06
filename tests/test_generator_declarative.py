@@ -6,6 +6,7 @@ import pytest
 from _pytest.fixtures import FixtureRequest
 from geoalchemy2 import Geography, Geometry
 from sqlalchemy import BIGINT, PrimaryKeyConstraint
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSON, JSONB
 from sqlalchemy.engine import Engine
@@ -1982,11 +1983,7 @@ class SpatialTable(Base):
     )
 
 
-def test_enum_noenums_option(generator: CodeGenerator) -> None:
-    from sqlalchemy import Enum as SAEnum
-
-    from sqlacodegen.generators import DeclarativeGenerator
-
+def test_enum_nonativeenums_option(generator: CodeGenerator) -> None:
     Table(
         "users",
         generator.metadata,
@@ -1998,8 +1995,10 @@ def test_enum_noenums_option(generator: CodeGenerator) -> None:
         ),
     )
 
-    # Recreate generator with noenums option
-    generator = DeclarativeGenerator(generator.metadata, generator.bind, ["noenums"])
+    # Recreate generator with nonativeenums option
+    generator = DeclarativeGenerator(
+        generator.metadata, generator.bind, ["nonativeenums"]
+    )
 
     validate_code(
         generator.generate(),
@@ -2021,8 +2020,6 @@ def test_enum_noenums_option(generator: CodeGenerator) -> None:
 
 
 def test_enum_shared_values(generator: CodeGenerator) -> None:
-    from sqlalchemy import Enum as SAEnum
-
     Table(
         "users",
         generator.metadata,
@@ -2079,8 +2076,6 @@ def test_enum_shared_values(generator: CodeGenerator) -> None:
 
 
 def test_enum_unnamed(generator: CodeGenerator) -> None:
-    from sqlalchemy import Enum as SAEnum
-
     Table(
         "users",
         generator.metadata,
@@ -2120,8 +2115,6 @@ def test_enum_unnamed(generator: CodeGenerator) -> None:
 
 
 def test_enum_unnamed_reuse_same_values(generator: CodeGenerator) -> None:
-    from sqlalchemy import Enum as SAEnum
-
     # table "a_b", column "c" -> A + B + C = ABC
     # table "a", column "b_c" -> A + B + C = ABC
     # Both generate same name with same values, so reuse
@@ -2180,8 +2173,6 @@ def test_enum_unnamed_reuse_same_values(generator: CodeGenerator) -> None:
 
 
 def test_enum_unnamed_name_collision_different_values(generator: CodeGenerator) -> None:
-    from sqlalchemy import Enum as SAEnum
-
     # table "a_b", column "c" -> A + B + C = ABC
     # table "a", column "b_c" -> A + B + C = ABC
     # Same name but different values, so append counter
@@ -2240,5 +2231,142 @@ def test_enum_unnamed_name_collision_different_values(generator: CodeGenerator) 
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
             c: Mapped[ABC] = mapped_column(Enum(ABC), nullable=False)
+        """,
+    )
+
+
+def test_synthetic_enum_generation(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", VARCHAR(20), nullable=False),
+        CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import CheckConstraint, Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class UsersStatus(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+            PENDING = 'pending'
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+            __table_args__ = (
+                CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+            )
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus), nullable=False)
+        """,
+    )
+
+
+def test_synthetic_enum_nosyntheticenums_option(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", VARCHAR(20), nullable=False),
+        CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+    )
+
+    # Recreate generator with nosyntheticenums option
+    generator = DeclarativeGenerator(
+        generator.metadata, generator.bind, ["nosyntheticenums"]
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import CheckConstraint, Integer, String
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+            __table_args__ = (
+                CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+            )
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            status: Mapped[str] = mapped_column(String(20), nullable=False)
+        """,
+    )
+
+
+def test_synthetic_enum_shared_values(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", VARCHAR(20), nullable=False),
+        CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+    )
+    Table(
+        "accounts",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", VARCHAR(20), nullable=False),
+        CheckConstraint("accounts.status IN ('active', 'inactive', 'pending')"),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import CheckConstraint, Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class AccountsStatus(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+            PENDING = 'pending'
+
+
+        class UsersStatus(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+            PENDING = 'pending'
+
+
+        class Accounts(Base):
+            __tablename__ = 'accounts'
+            __table_args__ = (
+                CheckConstraint("accounts.status IN ('active', 'inactive', 'pending')"),
+            )
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            status: Mapped[AccountsStatus] = mapped_column(Enum(AccountsStatus), nullable=False)
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+            __table_args__ = (
+                CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+            )
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus), nullable=False)
         """,
     )
