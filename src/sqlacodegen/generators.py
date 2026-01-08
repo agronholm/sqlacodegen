@@ -753,6 +753,7 @@ class TablesGenerator(CodeGenerator):
         for part in table_name.split("_"):
             if part:
                 parts.append(part.capitalize())
+
         for part in column_name.split("_"):
             if part:
                 parts.append(part.capitalize())
