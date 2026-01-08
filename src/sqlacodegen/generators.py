@@ -768,6 +768,7 @@ class TablesGenerator(CodeGenerator):
             if self.enum_values[enum_class_name] == values:
                 # Reuse existing enum class
                 return enum_class_name
+
             enum_class_name = f"{base_name}{counter}"
             counter += 1
 
