@@ -544,7 +544,9 @@ class TablesGenerator(CodeGenerator):
     ) -> str:
         # Check if this is an enum column with a Python enum class
         if isinstance(coltype, Enum) and column is not None:
-            if enum_class_name := self.enum_classes.get((column.table.name, column.name)):
+            if enum_class_name := self.enum_classes.get(
+                (column.table.name, column.name)
+            ):
                 # Import SQLAlchemy Enum (will be handled in collect_imports)
                 self.add_import(Enum)
                 # Return the Python enum class as the type parameter
