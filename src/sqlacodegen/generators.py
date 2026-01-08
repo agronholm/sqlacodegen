@@ -736,6 +736,7 @@ class TablesGenerator(CodeGenerator):
         for part in enum_name.split("_"):
             if part:
                 parts.append(part.capitalize())
+
         return "".join(parts)
 
     def _create_enum_class(
