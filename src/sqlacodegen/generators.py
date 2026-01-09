@@ -733,12 +733,7 @@ class TablesGenerator(CodeGenerator):
 
     def _enum_name_to_class_name(self, enum_name: str) -> str:
         """Convert a database enum name to a Python class name (PascalCase)."""
-        parts = []
-        for part in enum_name.split("_"):
-            if part:
-                parts.append(part.capitalize())
-
-        return "".join(parts)
+        return "".join(part.capitalize() for part in enum_name.split("_") if part)
 
     def _create_enum_class(
         self, table_name: str, column_name: str, values: list[str]
