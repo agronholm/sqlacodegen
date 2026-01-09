@@ -814,7 +814,7 @@ class TablesGenerator(CodeGenerator):
             )
             enum_defs.append(enum_def)
 
-        return "\n\n".join(enum_defs)
+        return "\n\n\n".join(enum_defs)
 
     def fix_column_types(self, table: Table) -> None:
         """Adjust the reflected column types."""
