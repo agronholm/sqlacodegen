@@ -334,8 +334,7 @@ class TablesGenerator(CodeGenerator):
             return collection
 
         for package in sorted(self.imports):
-            imports_list = sorted(self.imports[package])
-            imports = ", ".join(imports_list)
+            imports = ", ".join(sorted(self.imports[package]))
 
             collection = get_collection(package)
             collection.append(f"from {package} import {imports}")
