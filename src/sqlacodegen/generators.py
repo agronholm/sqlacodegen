@@ -745,16 +745,11 @@ class TablesGenerator(CodeGenerator):
         """
         # Generate enum class name from table and column names
         # Convert to PascalCase: user_status -> UserStatus
-        parts = []
-        for part in table_name.split("_"):
-            if part:
-                parts.append(part.capitalize())
-
-        for part in column_name.split("_"):
-            if part:
-                parts.append(part.capitalize())
-
-        base_name = "".join(parts)
+        base_name = "".join(
+            part.capitalize()
+            for part in table_name.split("_") + column_name.split("_")
+            if part
+        )
 
         # Ensure uniqueness
         enum_class_name = base_name
