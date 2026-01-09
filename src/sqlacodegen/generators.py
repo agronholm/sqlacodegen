@@ -834,26 +834,25 @@ class TablesGenerator(CodeGenerator):
 
                 # Turn VARCHAR columns with CHECK constraints like "column IN ('a', 'b')"
                 # into synthetic Enum types with Python enum classes
-                if "nosyntheticenums" not in self.options:
-                    if match := _re_enum_check_constraint.match(sqltext):
-                        if colname_match := _re_column_name.match(match.group(1)):
-                            colname = colname_match.group(3)
-                            items = match.group(2)
-                            if isinstance(table.c[colname].type, String):
-                                if not isinstance(table.c[colname].type, Enum):
-                                    options = _re_enum_item.findall(items)
-                                    # Create Python enum class
-                                    enum_class_name = self._create_enum_class(
-                                        table.name, colname, options
-                                    )
-                                    self.enum_classes[(table.name, colname)] = (
-                                        enum_class_name
-                                    )
-                                    # Convert to Enum type but KEEP the constraint
-                                    table.c[colname].type = Enum(
-                                        *options, native_enum=False
-                                    )
-                                    continue
+                if (
+                    "nosyntheticenums" not in self.options
+                    and (match := _re_enum_check_constraint.match(sqltext))
+                    and (colname_match := _re_column_name.match(match.group(1)))
+                ):
+                    colname = colname_match.group(3)
+                    items = match.group(2)
+                    if isinstance(table.c[colname].type, String) and not isinstance(
+                        table.c[colname].type, Enum
+                    ):
+                        options = _re_enum_item.findall(items)
+                        # Create Python enum class
+                        enum_class_name = self._create_enum_class(
+                            table.name, colname, options
+                        )
+                        self.enum_classes[(table.name, colname)] = enum_class_name
+                        # Convert to Enum type but KEEP the constraint
+                        table.c[colname].type = Enum(*options, native_enum=False)
+                        continue
 
         for column in table.c:
             # Handle native database Enum types (e.g., PostgreSQL ENUM)
