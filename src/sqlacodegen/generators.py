@@ -858,7 +858,6 @@ class TablesGenerator(CodeGenerator):
             # Handle native database Enum types (e.g., PostgreSQL ENUM)
             if (
                 "nonativeenums" not in self.options
-                and "noenums" not in self.options
                 and isinstance(column.type, Enum)
                 and column.type.enums
             ):
