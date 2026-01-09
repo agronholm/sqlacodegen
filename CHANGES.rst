@@ -3,7 +3,9 @@ Version history
 
 **4.0.0rc1**
 
-- **BACKWARD INCOMPATIBLE** Added Python enum generation for native database ENUM types (e.g., PostgreSQL / MySQL ENUM).
+- **BACKWARD INCOMPATIBLE** Generated models for tables containing native database ENUM type columns
+  will now see these columns mapped using generated native python enum classes instead of using ``str``
+- Added Python enum generation for native database ENUM types (e.g., PostgreSQL / MySQL ENUM).
   Retained synthetic Python enum generation from CHECK constraints with
   IN clauses (e.g., ``column IN ('val1', 'val2', ...)``). Use ``--options nonativeenums`` to
   disable enum generation for native database enums. Use ``--options nosyntheticenums`` to
