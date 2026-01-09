@@ -478,7 +478,7 @@ class TablesGenerator(CodeGenerator):
         # Render the column type if there are no foreign keys on it or any of them
         # points back to itself
         if not dedicated_fks or any(fk.column is column for fk in dedicated_fks):
-            args.append(self.render_column_type(column.type, column))
+            args.append(self.render_column_type(column))
 
         for fk in dedicated_fks:
             args.append(self.render_constraint(fk))
@@ -539,11 +539,10 @@ class TablesGenerator(CodeGenerator):
         else:
             return render_callable("mapped_column", *args, kwargs=kwargs)
 
-    def render_column_type(
-        self, coltype: TypeEngine[Any], column: Column[Any] | None = None
-    ) -> str:
+    def render_column_type(self, column: Column[Any]) -> str:
+        column_type = column.type
         # Check if this is an enum column with a Python enum class
-        if isinstance(coltype, Enum) and column is not None:
+        if isinstance(column_type, Enum) and column is not None:
             if enum_class_name := self.enum_classes.get(
                 (column.table.name, column.name)
             ):
@@ -554,7 +553,7 @@ class TablesGenerator(CodeGenerator):
 
         args = []
         kwargs: dict[str, Any] = {}
-        sig = inspect.signature(coltype.__class__.__init__)
+        sig = inspect.signature(column_type.__class__.__init__)
         defaults = {param.name: param.default for param in sig.parameters.values()}
         missing = object()
         use_kwargs = False
@@ -566,7 +565,7 @@ class TablesGenerator(CodeGenerator):
                 use_kwargs = True
                 continue
 
-            value = getattr(coltype, param.name, missing)
+            value = getattr(column_type, param.name, missing)
 
             if isinstance(value, (JSONB, JSON)):
                 # Remove astext_type if it's the default
@@ -600,28 +599,28 @@ class TablesGenerator(CodeGenerator):
             ),
             None,
         )
-        if vararg and hasattr(coltype, vararg):
-            varargs_repr = [repr(arg) for arg in getattr(coltype, vararg)]
+        if vararg and hasattr(column_type, vararg):
+            varargs_repr = [repr(arg) for arg in getattr(column_type, vararg)]
             args.extend(varargs_repr)
 
         # These arguments cannot be autodetected from the Enum initializer
-        if isinstance(coltype, Enum):
+        if isinstance(column_type, Enum):
             for colname in "name", "schema":
-                if (value := getattr(coltype, colname)) is not None:
+                if (value := getattr(column_type, colname)) is not None:
                     kwargs[colname] = repr(value)
 
-        if isinstance(coltype, (JSONB, JSON)):
+        if isinstance(column_type, (JSONB, JSON)):
             # Remove astext_type if it's the default
             if (
-                isinstance(coltype.astext_type, Text)
-                and coltype.astext_type.length is None
+                isinstance(column_type.astext_type, Text)
+                and column_type.astext_type.length is None
             ):
                 del kwargs["astext_type"]
 
         if args or kwargs:
-            return render_callable(coltype.__class__.__name__, *args, kwargs=kwargs)
+            return render_callable(column_type.__class__.__name__, *args, kwargs=kwargs)
         else:
-            return coltype.__class__.__name__
+            return column_type.__class__.__name__
 
     def render_constraint(self, constraint: Constraint | ForeignKey) -> str:
         def add_fk_options(*opts: Any) -> None:
@@ -802,12 +801,12 @@ class TablesGenerator(CodeGenerator):
                     member_name = "_" + member_name
                 elif iskeyword(member_name):
                     member_name += "_"
-
-                # Re-escape for Python string literal
-                python_escaped = unescaped_value.replace("\\", "\\\\").replace(
-                    "'", "\\'"
-                )
-                members.append(f"    {member_name} = '{python_escaped}'")
+                #
+                # # Re-escape for Python string literal
+                # python_escaped = unescaped_value.replace("\\", "\\\\").replace(
+                #     "'", "\\'"
+                # )
+                members.append(f"    {member_name} = {unescaped_value!r}")
 
             enum_def = f"class {enum_class_name}(str, enum.Enum):\n" + "\n".join(
                 members
