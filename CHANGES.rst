@@ -3,8 +3,7 @@ Version history
 
 **4.0.0rc1**
 
-- **BACKWARD INCOMPATIBLE** Generated models for tables with native database ENUM columns
-  now use Python enum classes instead of ``str``
+- **BACKWARD INCOMPATIBLE** ``TablesGenerator.render_column_type()`` was changed to receive the ``Column`` object instead of the column type object as its sole argument
 - Added Python enum generation for native database ENUM types (e.g., PostgreSQL / MySQL ENUM).
   Retained synthetic Python enum generation from CHECK constraints with
   IN clauses (e.g., ``column IN ('val1', 'val2', ...)``). Use ``--options nonativeenums`` to
