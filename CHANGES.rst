@@ -3,18 +3,18 @@ Version history
 
 **4.0.0rc1**
 
-- Added Python enum generation for native database ENUM types (e.g., PostgreSQL / MySQL ENUM)
-  Retained synthetic Python enum generation from CHECK constraints with IN clauses (e.g., ``column IN ('val1', 'val2', ...)``)
-  Use ``--options nonativeenums`` to disable enum generation for native database enums
-  Use ``--options nosyntheticenums`` to disable enum generation for synthetic database enums (VARCHAR columns with check constraints)
-  (PR by @sheinbergon)
+- | Added Python enum generation for native database ENUM types (e.g., PostgreSQL / MySQL ENUM)
+  | Retained synthetic Python enum generation from CHECK constraints with IN clauses (e.g., ``column IN ('val1', 'val2', ...)``)
+  | Use ``--options nonativeenums`` to disable enum generation for native database enums
+  | Use ``--options nosyntheticenums`` to disable enum generation for synthetic database enums (VARCHAR columns with check constraints)
+  | (PR by @sheinbergon)
 
 **3.2.0**
 
 - Dropped support for Python 3.9
 - Fix Postgres ``DOMAIN`` adaptation regression introduced in SQLAlchemy 2.0.42 (PR by @sheinbergon)
 - Support disabling special naming logic for single column many-to-one and one-to-one relationships
-  (PR by @Henkhogan, revised by @sheinbergon)
+    (PR by @Henkhogan, revised by @sheinbergon)
 - Add ``include_dialect_options`` option to render ``Table`` and ``Column``
   dialect-specific kwargs and ``info`` in generated code. (PR by @jaogoy)
 - Add ``keep_dialect_types`` option to preserve dialect-specific column types instead of
