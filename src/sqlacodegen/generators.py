@@ -752,15 +752,16 @@ class TablesGenerator(CodeGenerator):
 
         # Ensure uniqueness
         enum_class_name = base_name
-        counter = 1
-        while enum_class_name in self.enum_values:
+        for counter in count(1):
+            if enum_class_name not in self.enum_values:
+                break
+
             # Check if it's the same enum (same values)
             if self.enum_values[enum_class_name] == values:
                 # Reuse existing enum class
                 return enum_class_name
 
             enum_class_name = f"{base_name}{counter}"
-            counter += 1
 
         # Register the new enum class
         self.enum_values[enum_class_name] = values
