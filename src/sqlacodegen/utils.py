@@ -210,10 +210,4 @@ def decode_postgresql_sequence(clause: TextClause) -> tuple[str | None, str | No
 
 
 def get_stdlib_module_names() -> set[str]:
-    major, minor = sys.version_info.major, sys.version_info.minor
-    if (major, minor) > (3, 9):
-        return set(sys.builtin_module_names) | set(sys.stdlib_module_names)
-    else:
-        from stdlib_list import stdlib_list
-
-        return set(sys.builtin_module_names) | set(stdlib_list(f"{major}.{minor}"))
+    return set(sys.builtin_module_names) | set(sys.stdlib_module_names)

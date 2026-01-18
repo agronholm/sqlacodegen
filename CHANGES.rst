@@ -1,6 +1,17 @@
 Version history
 ===============
 
+**4.0.0rc1**
+
+- **BACKWARD INCOMPATIBLE** ``TablesGenerator.render_column_type()`` was changed to
+  receive the ``Column`` object instead of the column type object as its sole argument
+- Added Python enum generation for native database ENUM types (e.g., PostgreSQL / MySQL ENUM).
+  Retained synthetic Python enum generation from CHECK constraints with
+  IN clauses (e.g., ``column IN ('val1', 'val2', ...)``). Use ``--options nonativeenums`` to
+  disable enum generation for native database enums. Use ``--options nosyntheticenums`` to
+  disable enum generation for synthetic database enums (VARCHAR columns with check constraints).
+  (PR by @sheinbergon)
+
 **3.2.0**
 
 - Dropped support for Python 3.9

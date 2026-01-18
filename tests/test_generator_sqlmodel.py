@@ -204,3 +204,68 @@ def test_uuid(generator: CodeGenerator) -> None:
                 id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
         """,
     )
+
+
+def test_check_constraint_not_converted_to_enum(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", VARCHAR(20), nullable=False),
+        CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+    )
+
+    # Recreate generator with nosyntheticenums option to preserve constraints
+    generator = SQLModelGenerator(
+        generator.metadata, generator.bind, ["nosyntheticenums"]
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from sqlalchemy import CheckConstraint, Column, Integer, String
+            from sqlmodel import Field, SQLModel
+
+            class Users(SQLModel, table=True):
+                __table_args__ = (
+                    CheckConstraint("users.status IN ('active', 'inactive', 'pending')"),
+                )
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+                status: str = Field(sa_column=Column('status', String(20), nullable=False))
+        """,
+    )
+
+
+def test_synthetic_enum_generation(generator: CodeGenerator) -> None:
+    Table(
+        "accounts",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("status", VARCHAR(20), nullable=False),
+        CheckConstraint("accounts.status IN ('active', 'inactive', 'pending')"),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            import enum
+
+            from sqlalchemy import CheckConstraint, Column, Enum, Integer
+            from sqlmodel import Field, SQLModel
+
+            class AccountsStatus(str, enum.Enum):
+                ACTIVE = 'active'
+                INACTIVE = 'inactive'
+                PENDING = 'pending'
+
+
+            class Accounts(SQLModel, table=True):
+                __table_args__ = (
+                    CheckConstraint("accounts.status IN ('active', 'inactive', 'pending')"),
+                )
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+                status: AccountsStatus = Field(sa_column=Column('status', Enum(AccountsStatus), nullable=False))
+        """,
+    )
