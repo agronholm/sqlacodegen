@@ -1,6 +1,12 @@
 Version history
 ===============
 
+**Unreleased**
+
+- Improved relationship naming when multiple foreign keys point to the same table.
+  Reverse relationships now use FK column names as qualifiers (e.g., ``simple_items_parent_container``
+  instead of ``simple_items_``). Use ``--options nofknames`` to revert to old behavior.
+
 **4.0.0rc2**
 
 - Add ``values_callable`` lambda to generated native enums column definitions.

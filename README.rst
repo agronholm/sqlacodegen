@@ -126,7 +126,7 @@ values must be delimited by commas, e.g. ``--options noconstraints,nobidi``):
     relationships when multiple foreign keys point to the same table. By
     default, relationship names are derived from FK column names (e.g.,
     ``simple_items_parent_container`` instead of ``simple_items_``). Use this
-    option to revert to the old generic naming with numeric suffixes.
+    option to revert to the old naming technique.
 
 * ``dataclasses``
 
