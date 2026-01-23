@@ -547,8 +547,11 @@ class TablesGenerator(CodeGenerator):
             ):
                 # Import SQLAlchemy Enum (will be handled in collect_imports)
                 self.add_import(Enum)
-                # Return the Python enum class as the type parameter
-                return f"Enum({enum_class_name})"
+                # Only add values_callable for native enums, not synthetic ones
+                if column_type.native_enum:
+                    return f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls])"
+                else:
+                    return f"Enum({enum_class_name})"
 
         args = []
         kwargs: dict[str, Any] = {}
