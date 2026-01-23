@@ -2063,14 +2063,14 @@ def test_enum_shared_values(generator: CodeGenerator) -> None:
             __tablename__ = 'accounts'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum), nullable=False)
+            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
 
 
         class Users(Base):
             __tablename__ = 'users'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum), nullable=False)
+            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
         """,
     )
 
@@ -2109,7 +2109,7 @@ def test_enum_unnamed(generator: CodeGenerator) -> None:
             __tablename__ = 'users'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus), nullable=False)
+            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
         """,
     )
 
@@ -2160,14 +2160,14 @@ def test_enum_unnamed_reuse_same_values(generator: CodeGenerator) -> None:
             __tablename__ = 'a'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            b_c: Mapped[ABC] = mapped_column(Enum(ABC), nullable=False)
+            b_c: Mapped[ABC] = mapped_column(Enum(ABC, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
 
 
         class AB(Base):
             __tablename__ = 'a_b'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            c: Mapped[ABC] = mapped_column(Enum(ABC), nullable=False)
+            c: Mapped[ABC] = mapped_column(Enum(ABC, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
         """,
     )
 
@@ -2223,14 +2223,14 @@ def test_enum_unnamed_name_collision_different_values(generator: CodeGenerator) 
             __tablename__ = 'a'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            b_c: Mapped[ABC1] = mapped_column(Enum(ABC1), nullable=False)
+            b_c: Mapped[ABC1] = mapped_column(Enum(ABC1, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
 
 
         class AB(Base):
             __tablename__ = 'a_b'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            c: Mapped[ABC] = mapped_column(Enum(ABC), nullable=False)
+            c: Mapped[ABC] = mapped_column(Enum(ABC, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
         """,
     )
 
@@ -2269,7 +2269,7 @@ def test_synthetic_enum_generation(generator: CodeGenerator) -> None:
             )
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus), nullable=False)
+            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
         """,
     )
 
@@ -2357,7 +2357,7 @@ def test_synthetic_enum_shared_values(generator: CodeGenerator) -> None:
             )
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[AccountsStatus] = mapped_column(Enum(AccountsStatus), nullable=False)
+            status: Mapped[AccountsStatus] = mapped_column(Enum(AccountsStatus, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
 
 
         class Users(Base):
@@ -2367,6 +2367,6 @@ def test_synthetic_enum_shared_values(generator: CodeGenerator) -> None:
             )
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus), nullable=False)
+            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
         """,
     )
