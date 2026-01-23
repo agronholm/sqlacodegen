@@ -123,6 +123,8 @@ class TablesGenerator(CodeGenerator):
         "noindexes",
         "noconstraints",
         "nocomments",
+        "nonativeenums",
+        "nosyntheticenums",
         "include_dialect_options",
         "keep_dialect_types",
     }
@@ -147,6 +149,11 @@ class TablesGenerator(CodeGenerator):
         )
         # Keep dialect-specific types instead of adapting to generic SQLAlchemy types
         self.keep_dialect_types: bool = "keep_dialect_types" in self.options
+
+        # Track Python enum classes: maps (table_name, column_name) -> enum_class_name
+        self.enum_classes: dict[tuple[str, str], str] = {}
+        # Track enum values: maps enum_class_name -> list of values
+        self.enum_values: dict[str, list[str]] = {}
 
     @property
     def views_supported(self) -> bool:
@@ -192,19 +199,22 @@ class TablesGenerator(CodeGenerator):
         models: list[Model] = self.generate_models()
 
         # Render module level variables
-        variables = self.render_module_variables(models)
-        if variables:
+        if variables := self.render_module_variables(models):
             sections.append(variables + "\n")
 
+        # Render enum classes
+        if enum_classes := self.render_enum_classes():
+            sections.append(enum_classes + "\n")
+
         # Render models
-        rendered_models = self.render_models(models)
-        if rendered_models:
+        if rendered_models := self.render_models(models):
             sections.append(rendered_models)
 
         # Render collected imports
         groups = self.group_imports()
-        imports = "\n\n".join("\n".join(line for line in group) for group in groups)
-        if imports:
+        if imports := "\n\n".join(
+            "\n".join(line for line in group) for group in groups
+        ):
             sections.insert(0, imports)
 
         return "\n\n".join(sections) + "\n"
@@ -470,7 +480,7 @@ class TablesGenerator(CodeGenerator):
         # Render the column type if there are no foreign keys on it or any of them
         # points back to itself
         if not dedicated_fks or any(fk.column is column for fk in dedicated_fks):
-            args.append(self.render_column_type(column.type))
+            args.append(self.render_column_type(column))
 
         for fk in dedicated_fks:
             args.append(self.render_constraint(fk))
@@ -531,10 +541,20 @@ class TablesGenerator(CodeGenerator):
         else:
             return render_callable("mapped_column", *args, kwargs=kwargs)
 
-    def render_column_type(self, coltype: TypeEngine[Any]) -> str:
+    def render_column_type(self, column: Column[Any]) -> str:
+        column_type = column.type
+        # Check if this is an enum column with a Python enum class
+        if isinstance(column_type, Enum) and column is not None:
+            if enum_class_name := self.enum_classes.get(
+                (column.table.name, column.name)
+            ):
+                # Import SQLAlchemy Enum (will be handled in collect_imports)
+                self.add_import(Enum)
+                return f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls])"
+
         args = []
         kwargs: dict[str, Any] = {}
-        sig = inspect.signature(coltype.__class__.__init__)
+        sig = inspect.signature(column_type.__class__.__init__)
         defaults = {param.name: param.default for param in sig.parameters.values()}
         missing = object()
         use_kwargs = False
@@ -546,7 +566,7 @@ class TablesGenerator(CodeGenerator):
                 use_kwargs = True
                 continue
 
-            value = getattr(coltype, param.name, missing)
+            value = getattr(column_type, param.name, missing)
 
             if isinstance(value, (JSONB, JSON)):
                 # Remove astext_type if it's the default
@@ -580,28 +600,28 @@ class TablesGenerator(CodeGenerator):
             ),
             None,
         )
-        if vararg and hasattr(coltype, vararg):
-            varargs_repr = [repr(arg) for arg in getattr(coltype, vararg)]
+        if vararg and hasattr(column_type, vararg):
+            varargs_repr = [repr(arg) for arg in getattr(column_type, vararg)]
             args.extend(varargs_repr)
 
         # These arguments cannot be autodetected from the Enum initializer
-        if isinstance(coltype, Enum):
+        if isinstance(column_type, Enum):
             for colname in "name", "schema":
-                if (value := getattr(coltype, colname)) is not None:
+                if (value := getattr(column_type, colname)) is not None:
                     kwargs[colname] = repr(value)
 
-        if isinstance(coltype, (JSONB, JSON)):
+        if isinstance(column_type, (JSONB, JSON)):
             # Remove astext_type if it's the default
             if (
-                isinstance(coltype.astext_type, Text)
-                and coltype.astext_type.length is None
+                isinstance(column_type.astext_type, Text)
+                and column_type.astext_type.length is None
             ):
                 del kwargs["astext_type"]
 
         if args or kwargs:
-            return render_callable(coltype.__class__.__name__, *args, kwargs=kwargs)
+            return render_callable(column_type.__class__.__name__, *args, kwargs=kwargs)
         else:
-            return coltype.__class__.__name__
+            return column_type.__class__.__name__
 
     def render_constraint(self, constraint: Constraint | ForeignKey) -> str:
         def add_fk_options(*opts: Any) -> None:
@@ -712,6 +732,81 @@ class TablesGenerator(CodeGenerator):
 
         return name
 
+    def _enum_name_to_class_name(self, enum_name: str) -> str:
+        """Convert a database enum name to a Python class name (PascalCase)."""
+        return "".join(part.capitalize() for part in enum_name.split("_") if part)
+
+    def _create_enum_class(
+        self, table_name: str, column_name: str, values: list[str]
+    ) -> str:
+        """
+        Create a Python enum class name and register it.
+
+        Returns the enum class name to use in generated code.
+        """
+        # Generate enum class name from table and column names
+        # Convert to PascalCase: user_status -> UserStatus
+        base_name = "".join(
+            part.capitalize()
+            for part in table_name.split("_") + column_name.split("_")
+            if part
+        )
+
+        # Ensure uniqueness
+        enum_class_name = base_name
+        for counter in count(1):
+            if enum_class_name not in self.enum_values:
+                break
+
+            # Check if it's the same enum (same values)
+            if self.enum_values[enum_class_name] == values:
+                # Reuse existing enum class
+                return enum_class_name
+
+            enum_class_name = f"{base_name}{counter}"
+
+        # Register the new enum class
+        self.enum_values[enum_class_name] = values
+        return enum_class_name
+
+    def render_enum_classes(self) -> str:
+        """Render Python enum class definitions."""
+        if not self.enum_values:
+            return ""
+
+        self.add_module_import("enum")
+
+        enum_defs = []
+        for enum_class_name, values in sorted(self.enum_values.items()):
+            # Create enum members with valid Python identifiers
+            members = []
+            for value in values:
+                # Unescape SQL escape sequences (e.g., \' -> ')
+                # The value from the CHECK constraint has SQL escaping
+                unescaped_value = value.replace("\\'", "'").replace("\\\\", "\\")
+
+                # Create a valid identifier from the enum value
+                member_name = _re_invalid_identifier.sub("_", unescaped_value).upper()
+                if not member_name:
+                    member_name = "EMPTY"
+                elif member_name[0].isdigit():
+                    member_name = "_" + member_name
+                elif iskeyword(member_name):
+                    member_name += "_"
+                #
+                # # Re-escape for Python string literal
+                # python_escaped = unescaped_value.replace("\\", "\\\\").replace(
+                #     "'", "\\'"
+                # )
+                members.append(f"    {member_name} = {unescaped_value!r}")
+
+            enum_def = f"class {enum_class_name}(str, enum.Enum):\n" + "\n".join(
+                members
+            )
+            enum_defs.append(enum_def)
+
+        return "\n\n\n".join(enum_defs)
+
     def fix_column_types(self, table: Table) -> None:
         """Adjust the reflected column types."""
         # Detect check constraints for boolean and enum columns
@@ -721,34 +816,74 @@ class TablesGenerator(CodeGenerator):
 
                 # Turn any integer-like column with a CheckConstraint like
                 # "column IN (0, 1)" into a Boolean
-                match = _re_boolean_check_constraint.match(sqltext)
-                if match:
-                    colname_match = _re_column_name.match(match.group(1))
-                    if colname_match:
+                if match := _re_boolean_check_constraint.match(sqltext):
+                    if colname_match := _re_column_name.match(match.group(1)):
                         colname = colname_match.group(3)
                         table.constraints.remove(constraint)
                         table.c[colname].type = Boolean()
                         continue
 
-                # Turn any string-type column with a CheckConstraint like
-                # "column IN (...)" into an Enum
-                match = _re_enum_check_constraint.match(sqltext)
-                if match:
-                    colname_match = _re_column_name.match(match.group(1))
-                    if colname_match:
-                        colname = colname_match.group(3)
-                        items = match.group(2)
-                        if isinstance(table.c[colname].type, String):
-                            table.constraints.remove(constraint)
-                            if not isinstance(table.c[colname].type, Enum):
-                                options = _re_enum_item.findall(items)
-                                table.c[colname].type = Enum(
-                                    *options, native_enum=False
-                                )
-
-                            continue
+                # Turn VARCHAR columns with CHECK constraints like "column IN ('a', 'b')"
+                # into synthetic Enum types with Python enum classes
+                if (
+                    "nosyntheticenums" not in self.options
+                    and (match := _re_enum_check_constraint.match(sqltext))
+                    and (colname_match := _re_column_name.match(match.group(1)))
+                ):
+                    colname = colname_match.group(3)
+                    items = match.group(2)
+                    if isinstance(table.c[colname].type, String) and not isinstance(
+                        table.c[colname].type, Enum
+                    ):
+                        options = _re_enum_item.findall(items)
+                        # Create Python enum class
+                        enum_class_name = self._create_enum_class(
+                            table.name, colname, options
+                        )
+                        self.enum_classes[(table.name, colname)] = enum_class_name
+                        # Convert to Enum type but KEEP the constraint
+                        table.c[colname].type = Enum(*options, native_enum=False)
+                        continue
 
         for column in table.c:
+            # Handle native database Enum types (e.g., PostgreSQL ENUM)
+            if (
+                "nonativeenums" not in self.options
+                and isinstance(column.type, Enum)
+                and column.type.enums
+            ):
+                if column.type.name:
+                    # Named enum - create shared enum class if not already created
+                    if (table.name, column.name) not in self.enum_classes:
+                        # Check if we've already created an enum for this name
+                        existing_class = None
+                        for (t, c), cls in self.enum_classes.items():
+                            if cls == self._enum_name_to_class_name(column.type.name):
+                                existing_class = cls
+                                break
+
+                        if existing_class:
+                            enum_class_name = existing_class
+                        else:
+                            # Create new enum class from the enum's name
+                            enum_class_name = self._enum_name_to_class_name(
+                                column.type.name
+                            )
+                            # Register the enum values if not already registered
+                            if enum_class_name not in self.enum_values:
+                                self.enum_values[enum_class_name] = list(
+                                    column.type.enums
+                                )
+
+                        self.enum_classes[(table.name, column.name)] = enum_class_name
+                else:
+                    # Unnamed enum - create enum class per column
+                    if (table.name, column.name) not in self.enum_classes:
+                        enum_class_name = self._create_enum_class(
+                            table.name, column.name, list(column.type.enums)
+                        )
+                        self.enum_classes[(table.name, column.name)] = enum_class_name
+
             if not self.keep_dialect_types:
                 try:
                     column.type = self.get_adapted_type(column.type)
@@ -1329,6 +1464,14 @@ class DeclarativeGenerator(TablesGenerator):
             return "".join(pre), column_type, "]" * post_size
 
         def render_python_type(column_type: TypeEngine[Any]) -> str:
+            # Check if this is an enum column with a Python enum class
+            if isinstance(column_type, Enum):
+                table_name = column.table.name
+                column_name = column.name
+                if (table_name, column_name) in self.enum_classes:
+                    enum_class_name = self.enum_classes[(table_name, column_name)]
+                    return enum_class_name
+
             if isinstance(column_type, DOMAIN):
                 column_type = column_type.data_type
 
