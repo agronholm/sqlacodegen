@@ -266,6 +266,6 @@ def test_synthetic_enum_generation(generator: CodeGenerator) -> None:
                 )
 
                 id: int = Field(sa_column=Column('id', Integer, primary_key=True))
-                status: AccountsStatus = Field(sa_column=Column('status', Enum(AccountsStatus), nullable=False))
+                status: AccountsStatus = Field(sa_column=Column('status', Enum(AccountsStatus, values_callable=lambda cls: [member.value for member in cls]), nullable=False))
         """,
     )

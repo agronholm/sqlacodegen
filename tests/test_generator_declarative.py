@@ -2269,7 +2269,7 @@ def test_synthetic_enum_generation(generator: CodeGenerator) -> None:
             )
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus), nullable=False)
+            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
         """,
     )
 
@@ -2357,7 +2357,7 @@ def test_synthetic_enum_shared_values(generator: CodeGenerator) -> None:
             )
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[AccountsStatus] = mapped_column(Enum(AccountsStatus), nullable=False)
+            status: Mapped[AccountsStatus] = mapped_column(Enum(AccountsStatus, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
 
 
         class Users(Base):
@@ -2367,6 +2367,6 @@ def test_synthetic_enum_shared_values(generator: CodeGenerator) -> None:
             )
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus), nullable=False)
+            status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
         """,
     )

@@ -266,7 +266,7 @@ def test_synthetic_enum_generation(generator: CodeGenerator) -> None:
         t_simple_items = Table(
             'simple_items', metadata,
             Column('id', Integer, primary_key=True),
-            Column('status', Enum(SimpleItemsStatus)),
+            Column('status', Enum(SimpleItemsStatus, values_callable=lambda cls: [member.value for member in cls])),
             CheckConstraint("simple_items.status IN ('active', 'inactive', 'pending')")
         )
         """,
