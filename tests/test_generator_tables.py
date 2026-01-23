@@ -75,7 +75,7 @@ def test_fancy_coltypes(generator: CodeGenerator) -> None:
 
         t_simple_items = Table(
             'simple_items', metadata,
-            Column('enum', Enum(Blah)),
+            Column('enum', Enum(Blah, values_callable=lambda cls: [member.value for member in cls])),
             Column('bool', Boolean),
             Column('vector', VECTOR(3)),
             Column('number', Numeric(10, asdecimal=False)),
@@ -308,13 +308,13 @@ def test_enum_shared_values(generator: CodeGenerator) -> None:
         t_accounts = Table(
             'accounts', metadata,
             Column('id', Integer, primary_key=True),
-            Column('status', Enum(StatusEnum))
+            Column('status', Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls]))
         )
 
         t_users = Table(
             'users', metadata,
             Column('id', Integer, primary_key=True),
-            Column('status', Enum(StatusEnum))
+            Column('status', Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls]))
         )
         """,
     )
