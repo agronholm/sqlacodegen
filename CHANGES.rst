@@ -1,6 +1,11 @@
 Version history
 ===============
 
+**4.0.0rc2**
+
+ - Add ``values_callable`` lambda to generated native enums column definitions.
+   This allows for proper enum value insertion when working with ORM models (PR by @sheinbergon)
+
 **4.0.0rc1**
 
 - **BACKWARD INCOMPATIBLE** ``TablesGenerator.render_column_type()`` was changed to
