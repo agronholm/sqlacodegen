@@ -508,6 +508,64 @@ class SimpleContainers(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
+    simple_items_parent_container: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
+foreign_keys='[SimpleItems.parent_container_id]', back_populates='parent_container')
+    simple_items_top_container: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
+foreign_keys='[SimpleItems.top_container_id]', back_populates='top_container')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    top_container_id: Mapped[int] = \
+mapped_column(ForeignKey('simple_containers.id'), nullable=False)
+    parent_container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
+
+    parent_container: Mapped[Optional['SimpleContainers']] = relationship('SimpleContainers', \
+foreign_keys=[parent_container_id], back_populates='simple_items_parent_container')
+    top_container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+foreign_keys=[top_container_id], back_populates='simple_items_top_container')
+        """,
+    )
+
+
+@pytest.mark.parametrize("generator", [["nofknames"]], indirect=True)
+def test_onetomany_multiref_with_nofknames(generator: CodeGenerator) -> None:
+    """Test backwards compatibility with nofknames option."""
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("parent_container_id", INTEGER),
+        Column("top_container_id", INTEGER, nullable=False),
+        ForeignKeyConstraint(["parent_container_id"], ["simple_containers.id"]),
+        ForeignKeyConstraint(["top_container_id"], ["simple_containers.id"]),
+    )
+    Table(
+        "simple_containers",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
     simple_items: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
 foreign_keys='[SimpleItems.parent_container_id]', back_populates='parent_container')
     simple_items_: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
@@ -527,6 +585,195 @@ mapped_column(ForeignKey('simple_containers.id'))
 foreign_keys=[parent_container_id], back_populates='simple_items')
     top_container: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
 foreign_keys=[top_container_id], back_populates='simple_items_')
+        """,
+    )
+
+
+def test_onetomany_multiref_no_id_suffix(generator: CodeGenerator) -> None:
+    """Test FK-based naming when FK columns don't end with _id."""
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("parent_container", INTEGER),
+        Column("top_container", INTEGER, nullable=False),
+        ForeignKeyConstraint(["parent_container"], ["simple_containers.id"]),
+        ForeignKeyConstraint(["top_container"], ["simple_containers.id"]),
+    )
+    Table(
+        "simple_containers",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    simple_items_parent_container: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
+foreign_keys='[SimpleItems.parent_container]', back_populates='simple_containers')
+    simple_items_top_container: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
+foreign_keys='[SimpleItems.top_container]', back_populates='simple_containers_')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    top_container: Mapped[int] = mapped_column(ForeignKey('simple_containers.id'), nullable=False)
+    parent_container: Mapped[Optional[int]] = mapped_column(ForeignKey('simple_containers.id'))
+
+    simple_containers: Mapped[Optional['SimpleContainers']] = relationship('SimpleContainers', \
+foreign_keys=[parent_container], back_populates='simple_items_parent_container')
+    simple_containers_: Mapped['SimpleContainers'] = relationship('SimpleContainers', \
+foreign_keys=[top_container], back_populates='simple_items_top_container')
+        """,
+    )
+
+
+def test_onetomany_multiref_composite(generator: CodeGenerator) -> None:
+    """Test FK-based naming with composite (multi-column) foreign keys."""
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("parent_id1", INTEGER),
+        Column("parent_id2", INTEGER),
+        Column("top_id1", INTEGER),
+        Column("top_id2", INTEGER),
+        ForeignKeyConstraint(
+            ["parent_id1", "parent_id2"],
+            ["simple_containers.id1", "simple_containers.id2"],
+        ),
+        ForeignKeyConstraint(
+            ["top_id1", "top_id2"], ["simple_containers.id1", "simple_containers.id2"]
+        ),
+    )
+    Table(
+        "simple_containers",
+        generator.metadata,
+        Column("id1", INTEGER, primary_key=True),
+        Column("id2", INTEGER, primary_key=True),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import ForeignKeyConstraint, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SimpleContainers(Base):
+    __tablename__ = 'simple_containers'
+
+    id1: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id2: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    simple_items_parent_id1_parent_id2: Mapped[list['SimpleItems']] = \
+relationship('SimpleItems', foreign_keys='[SimpleItems.parent_id1, SimpleItems.parent_id2]', \
+back_populates='simple_containers')
+    simple_items_top_id1_top_id2: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
+foreign_keys='[SimpleItems.top_id1, SimpleItems.top_id2]', \
+back_populates='simple_containers_')
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        ForeignKeyConstraint(['parent_id1', 'parent_id2'], \
+['simple_containers.id1', 'simple_containers.id2']),
+        ForeignKeyConstraint(['top_id1', 'top_id2'], \
+['simple_containers.id1', 'simple_containers.id2'])
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    parent_id1: Mapped[Optional[int]] = mapped_column(Integer)
+    parent_id2: Mapped[Optional[int]] = mapped_column(Integer)
+    top_id1: Mapped[Optional[int]] = mapped_column(Integer)
+    top_id2: Mapped[Optional[int]] = mapped_column(Integer)
+
+    simple_containers: Mapped[Optional['SimpleContainers']] = \
+relationship('SimpleContainers', foreign_keys=[parent_id1, parent_id2], \
+back_populates='simple_items_parent_id1_parent_id2')
+    simple_containers_: Mapped[Optional['SimpleContainers']] = \
+relationship('SimpleContainers', foreign_keys=[top_id1, top_id2], \
+back_populates='simple_items_top_id1_top_id2')
+        """,
+    )
+
+
+@pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
+def test_onetomany_multiref_with_inflect(generator: CodeGenerator) -> None:
+    """Test FK-based naming with use_inflect option."""
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("parent_container_id", INTEGER),
+        Column("top_container_id", INTEGER, nullable=False),
+        ForeignKeyConstraint(["parent_container_id"], ["simple_containers.id"]),
+        ForeignKeyConstraint(["top_container_id"], ["simple_containers.id"]),
+    )
+    Table(
+        "simple_containers",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SimpleContainer(Base):
+    __tablename__ = 'simple_containers'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    simple_items_parent_containers: Mapped[list['SimpleItem']] = relationship('SimpleItem', \
+foreign_keys='[SimpleItem.parent_container_id]', back_populates='parent_container')
+    simple_items_top_containers: Mapped[list['SimpleItem']] = relationship('SimpleItem', \
+foreign_keys='[SimpleItem.top_container_id]', back_populates='top_container')
+
+
+class SimpleItem(Base):
+    __tablename__ = 'simple_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    top_container_id: Mapped[int] = \
+mapped_column(ForeignKey('simple_containers.id'), nullable=False)
+    parent_container_id: Mapped[Optional[int]] = \
+mapped_column(ForeignKey('simple_containers.id'))
+
+    parent_container: Mapped[Optional['SimpleContainer']] = relationship('SimpleContainer', \
+foreign_keys=[parent_container_id], back_populates='simple_items_parent_containers')
+    top_container: Mapped['SimpleContainer'] = relationship('SimpleContainer', \
+foreign_keys=[top_container_id], back_populates='simple_items_top_containers')
         """,
     )
 

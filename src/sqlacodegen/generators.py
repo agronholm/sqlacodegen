@@ -969,6 +969,7 @@ class DeclarativeGenerator(TablesGenerator):
         "nojoined",
         "nobidi",
         "noidsuffix",
+        "nofknames",
     }
 
     def __init__(
@@ -1303,9 +1304,37 @@ class DeclarativeGenerator(TablesGenerator):
         else:
             preferred_name = relationship.target.table.name
 
+            # For reverse relationships with multiple FKs to the same table, use the FK
+            # column name to create a more descriptive relationship name
+            use_fk_based_naming = (
+                "nofknames" not in self.options
+                and relationship.constraint
+                and relationship.type
+                in (RelationshipType.ONE_TO_MANY, RelationshipType.ONE_TO_ONE)
+                and relationship.foreign_keys
+            )
+
+            if use_fk_based_naming and relationship.constraint:
+                column_names = [c.name for c in relationship.constraint.columns]
+
+                if len(column_names) == 1:
+                    # Single column FK: strip _id suffix if present
+                    fk_qualifier = column_names[0]
+                    if fk_qualifier.endswith("_id"):
+                        fk_qualifier = fk_qualifier[:-3]
+                else:
+                    # Multi-column FK: concatenate all column names (strip _id from each)
+                    parts = []
+                    for col_name in column_names:
+                        part = col_name[:-3] if col_name.endswith("_id") else col_name
+                        parts.append(part)
+                    fk_qualifier = "_".join(parts)
+
+                preferred_name = f"{relationship.target.table.name}_{fk_qualifier}"
+
             # If there's a constraint with a single column that ends with "_id", use the
             # preceding part as the relationship name
-            if relationship.constraint and "noidsuffix" not in self.options:
+            elif relationship.constraint and "noidsuffix" not in self.options:
                 is_source = relationship.source.table is relationship.constraint.table
                 if is_source or relationship.type not in (
                     RelationshipType.ONE_TO_ONE,
