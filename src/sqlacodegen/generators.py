@@ -1328,6 +1328,7 @@ class DeclarativeGenerator(TablesGenerator):
                     for col_name in column_names:
                         part = col_name[:-3] if col_name.endswith("_id") else col_name
                         parts.append(part)
+
                     fk_qualifier = "_".join(parts)
 
                 preferred_name = f"{relationship.target.table.name}_{fk_qualifier}"
