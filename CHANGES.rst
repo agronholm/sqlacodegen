@@ -1,13 +1,14 @@
 Version history
 ===============
 
-**Unreleased**
+**UNRELEASED**
 
 - **BACKWARD INCOMPATIBLE** Reverse relationship names changed when multiple foreign keys point
   to the same table. Regenerating models will break code referencing the old relationship names.
 - Improved relationship naming when multiple foreign keys point to the same table.
-  Reverse relationships now use FK column names as qualifiers (e.g., ``simple_items_parent_container``
-  instead of ``simple_items_``). Use ``--options nofknames`` to revert to old behavior.
+  Reverse relationships now use FK column names as qualifiers (e.g.,
+  ``simple_items_parent_container`` instead of ``simple_items_``). Use ``--options nofknames``
+  to revert to old behavior.
 
 **4.0.0rc2**
 
