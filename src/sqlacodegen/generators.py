@@ -1350,6 +1350,20 @@ class DeclarativeGenerator(TablesGenerator):
                         # Only use the stripped name if it actually changed (had _id in it)
                         if stripped_name != column_names[0]:
                             preferred_name = stripped_name
+                    else:
+                        # For composite FKs, check if there are multiple FKs to the same target
+                        target_relationships = [
+                            r
+                            for r in relationship.source.relationships
+                            if r.target is relationship.target
+                            and r.type == relationship.type
+                        ]
+                        if len(target_relationships) > 1:
+                            # Multiple FKs to same table - use concatenated column names
+                            parts = [
+                                strip_id_suffix(col_name) for col_name in column_names
+                            ]
+                            preferred_name = "_".join(parts)
 
             if "use_inflect" in self.options:
                 inflected_name: str | Literal[False]

@@ -689,10 +689,10 @@ class SimpleContainers(Base):
 
     simple_items_parent_id1_parent_id2: Mapped[list['SimpleItems']] = \
 relationship('SimpleItems', foreign_keys='[SimpleItems.parent_id1, SimpleItems.parent_id2]', \
-back_populates='simple_containers')
+back_populates='parent_id1_parent_id2')
     simple_items_top_id1_top_id2: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
 foreign_keys='[SimpleItems.top_id1, SimpleItems.top_id2]', \
-back_populates='simple_containers_')
+back_populates='top_id1_top_id2')
 
 
 class SimpleItems(Base):
@@ -710,10 +710,10 @@ class SimpleItems(Base):
     top_id1: Mapped[Optional[int]] = mapped_column(Integer)
     top_id2: Mapped[Optional[int]] = mapped_column(Integer)
 
-    simple_containers: Mapped[Optional['SimpleContainers']] = \
+    parent_id1_parent_id2: Mapped[Optional['SimpleContainers']] = \
 relationship('SimpleContainers', foreign_keys=[parent_id1, parent_id2], \
 back_populates='simple_items_parent_id1_parent_id2')
-    simple_containers_: Mapped[Optional['SimpleContainers']] = \
+    top_id1_top_id2: Mapped[Optional['SimpleContainers']] = \
 relationship('SimpleContainers', foreign_keys=[top_id1, top_id2], \
 back_populates='simple_items_top_id1_top_id2')
         """,
