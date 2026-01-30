@@ -1327,8 +1327,9 @@ class DeclarativeGenerator(TablesGenerator):
                     fk_qualifier = strip_id_suffix(column_names[0])
                 else:
                     # Multi-column FK: concatenate all column names (strip _id from each)
-                    parts = [strip_id_suffix(col_name) for col_name in column_names]
-                    fk_qualifier = "_".join(parts)
+                    fk_qualifier = "_".join(
+                        strip_id_suffix(col_name) for col_name in column_names
+                    )
 
                 # For self-referential relationships, don't prepend the table name
                 if relationship.source is relationship.target:
@@ -1360,10 +1361,9 @@ class DeclarativeGenerator(TablesGenerator):
                         ]
                         if len(target_relationships) > 1:
                             # Multiple FKs to same table - use concatenated column names
-                            parts = [
+                            preferred_name = "_".join(
                                 strip_id_suffix(col_name) for col_name in column_names
-                            ]
-                            preferred_name = "_".join(parts)
+                            )
 
             if "use_inflect" in self.options:
                 inflected_name: str | Literal[False]
