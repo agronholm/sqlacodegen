@@ -1054,9 +1054,9 @@ class Courses(Base):
     title: Mapped[Optional[str]] = mapped_column(String)
 
     registrations_course_1: Mapped[list['Registrations']] = relationship('Registrations', \
-foreign_keys='[Registrations.course_id_1]', back_populates='courses')
+foreign_keys='[Registrations.course_id_1]', back_populates='course_1')
     registrations_course_2: Mapped[list['Registrations']] = relationship('Registrations', \
-foreign_keys='[Registrations.course_id_2]', back_populates='courses_')
+foreign_keys='[Registrations.course_id_2]', back_populates='course_2')
 
 
 class Students(Base):
@@ -1077,9 +1077,9 @@ class Registrations(Base):
     course_id_1: Mapped[Optional[int]] = mapped_column(ForeignKey('courses.course_id'))
     course_id_2: Mapped[Optional[int]] = mapped_column(ForeignKey('courses.course_id'))
 
-    courses: Mapped[Optional['Courses']] = relationship('Courses', \
+    course_1: Mapped[Optional['Courses']] = relationship('Courses', \
 foreign_keys=[course_id_1], back_populates='registrations_course_1')
-    courses_: Mapped[Optional['Courses']] = relationship('Courses', \
+    course_2: Mapped[Optional['Courses']] = relationship('Courses', \
 foreign_keys=[course_id_2], back_populates='registrations_course_2')
     student: Mapped[Optional['Students']] = relationship('Students', back_populates='registrations')
         """,

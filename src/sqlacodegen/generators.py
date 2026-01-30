@@ -1291,6 +1291,11 @@ class DeclarativeGenerator(TablesGenerator):
         global_names: set[str],
         local_names: set[str],
     ) -> None:
+        def strip_id_suffix(name: str) -> str:
+            # Strip _id only if at the end or followed by underscore (e.g., "course_id" -> "course", "course_id_1" -> "course_1")
+            # But don't strip from "parent_id1" (where id is followed by a digit without underscore)
+            return re.sub(r"_id(?=_|$)", "", name)
+
         # Self referential reverse relationships
         preferred_name: str
         if (
@@ -1317,11 +1322,6 @@ class DeclarativeGenerator(TablesGenerator):
             if use_fk_based_naming and relationship.constraint:
                 column_names = [c.name for c in relationship.constraint.columns]
 
-                def strip_id_suffix(name: str) -> str:
-                    # Strip _id only if at the end or followed by underscore (e.g., "course_id" -> "course", "course_id_1" -> "course_1")
-                    # But don't strip from "parent_id1" (where id is followed by a digit without underscore)
-                    return re.sub(r"_id(?=_|$)", "", name)
-
                 if len(column_names) == 1:
                     # Single column FK: strip _id suffix if present
                     fk_qualifier = strip_id_suffix(column_names[0])
@@ -1330,10 +1330,14 @@ class DeclarativeGenerator(TablesGenerator):
                     parts = [strip_id_suffix(col_name) for col_name in column_names]
                     fk_qualifier = "_".join(parts)
 
-                preferred_name = f"{relationship.target.table.name}_{fk_qualifier}"
+                # For self-referential relationships, don't prepend the table name
+                if relationship.source is relationship.target:
+                    preferred_name = fk_qualifier
+                else:
+                    preferred_name = f"{relationship.target.table.name}_{fk_qualifier}"
 
-            # If there's a constraint with a single column that ends with "_id", use the
-            # preceding part as the relationship name
+            # If there's a constraint with a single column that contains "_id", use the
+            # stripped version as the relationship name
             elif relationship.constraint and "noidsuffix" not in self.options:
                 is_source = relationship.source.table is relationship.constraint.table
                 if is_source or relationship.type not in (
@@ -1341,8 +1345,11 @@ class DeclarativeGenerator(TablesGenerator):
                     RelationshipType.ONE_TO_MANY,
                 ):
                     column_names = [c.name for c in relationship.constraint.columns]
-                    if len(column_names) == 1 and column_names[0].endswith("_id"):
-                        preferred_name = column_names[0][:-3]
+                    if len(column_names) == 1:
+                        stripped_name = strip_id_suffix(column_names[0])
+                        # Only use the stripped name if it actually changed (had _id in it)
+                        if stripped_name != column_names[0]:
+                            preferred_name = stripped_name
 
             if "use_inflect" in self.options:
                 inflected_name: str | Literal[False]
