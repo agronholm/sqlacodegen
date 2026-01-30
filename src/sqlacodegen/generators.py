@@ -1317,18 +1317,17 @@ class DeclarativeGenerator(TablesGenerator):
             if use_fk_based_naming and relationship.constraint:
                 column_names = [c.name for c in relationship.constraint.columns]
 
+                def strip_id_suffix(name: str) -> str:
+                    # Strip _id only if at the end or followed by underscore (e.g., "course_id" -> "course", "course_id_1" -> "course_1")
+                    # But don't strip from "parent_id1" (where id is followed by a digit without underscore)
+                    return re.sub(r"_id(?=_|$)", "", name)
+
                 if len(column_names) == 1:
                     # Single column FK: strip _id suffix if present
-                    fk_qualifier = column_names[0]
-                    if fk_qualifier.endswith("_id"):
-                        fk_qualifier = fk_qualifier[:-3]
+                    fk_qualifier = strip_id_suffix(column_names[0])
                 else:
                     # Multi-column FK: concatenate all column names (strip _id from each)
-                    parts = []
-                    for col_name in column_names:
-                        part = col_name[:-3] if col_name.endswith("_id") else col_name
-                        parts.append(part)
-
+                    parts = [strip_id_suffix(col_name) for col_name in column_names]
                     fk_qualifier = "_".join(parts)
 
                 preferred_name = f"{relationship.target.table.name}_{fk_qualifier}"

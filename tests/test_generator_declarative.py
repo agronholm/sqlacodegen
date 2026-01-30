@@ -1009,6 +1009,83 @@ mapped_column(ForeignKey('simple_containers.id'))
     )
 
 
+def test_manytomany_multi(generator: CodeGenerator) -> None:
+    """Test FK-based naming when multiple FKs point to the same table (non-many-to-many)."""
+    Table(
+        "students",
+        generator.metadata,
+        Column("student_id", INTEGER, primary_key=True),
+        Column("name", VARCHAR),
+    )
+
+    Table(
+        "courses",
+        generator.metadata,
+        Column("course_id", INTEGER, primary_key=True),
+        Column("title", VARCHAR),
+    )
+
+    Table(
+        "registrations",
+        generator.metadata,
+        Column("registration_id", INTEGER, primary_key=True),
+        Column("student_id", INTEGER, ForeignKey("students.student_id")),
+        # Multiple FKs referencing the same parent table
+        Column("course_id_1", INTEGER, ForeignKey("courses.course_id")),
+        Column("course_id_2", INTEGER, ForeignKey("courses.course_id")),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Courses(Base):
+    __tablename__ = 'courses'
+
+    course_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[Optional[str]] = mapped_column(String)
+
+    registrations_course_1: Mapped[list['Registrations']] = relationship('Registrations', \
+foreign_keys='[Registrations.course_id_1]', back_populates='courses')
+    registrations_course_2: Mapped[list['Registrations']] = relationship('Registrations', \
+foreign_keys='[Registrations.course_id_2]', back_populates='courses_')
+
+
+class Students(Base):
+    __tablename__ = 'students'
+
+    student_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[Optional[str]] = mapped_column(String)
+
+    registrations: Mapped[list['Registrations']] = relationship('Registrations', \
+back_populates='student')
+
+
+class Registrations(Base):
+    __tablename__ = 'registrations'
+
+    registration_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[Optional[int]] = mapped_column(ForeignKey('students.student_id'))
+    course_id_1: Mapped[Optional[int]] = mapped_column(ForeignKey('courses.course_id'))
+    course_id_2: Mapped[Optional[int]] = mapped_column(ForeignKey('courses.course_id'))
+
+    courses: Mapped[Optional['Courses']] = relationship('Courses', \
+foreign_keys=[course_id_1], back_populates='registrations_course_1')
+    courses_: Mapped[Optional['Courses']] = relationship('Courses', \
+foreign_keys=[course_id_2], back_populates='registrations_course_2')
+    student: Mapped[Optional['Students']] = relationship('Students', back_populates='registrations')
+        """,
+    )
+
+
 def test_manytomany(generator: CodeGenerator) -> None:
     Table("left_table", generator.metadata, Column("id", INTEGER, primary_key=True))
     Table(
