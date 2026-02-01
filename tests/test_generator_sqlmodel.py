@@ -142,6 +142,65 @@ back_populates='simple_goods')
     )
 
 
+def test_onetomany_multiref(generator: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("parent_container_id", INTEGER),
+        Column("top_container_id", INTEGER, nullable=False),
+        ForeignKeyConstraint(["parent_container_id"], ["simple_containers.id"]),
+        ForeignKeyConstraint(["top_container_id"], ["simple_containers.id"]),
+    )
+    Table(
+        "simple_containers",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from typing import Optional
+
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlalchemy.orm import RelationshipProperty
+            from sqlmodel import Field, Relationship, SQLModel
+
+            class SimpleContainers(SQLModel, table=True):
+                __tablename__ = 'simple_containers'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+
+                simple_items: list['SimpleItems'] = Relationship(\
+sa_relationship=RelationshipProperty('SimpleItems', \
+foreign_keys='[SimpleItems.parent_container_id]', back_populates='parent_container'))
+                simple_items_: list['SimpleItems'] = Relationship(\
+sa_relationship=RelationshipProperty('SimpleItems', \
+foreign_keys='[SimpleItems.top_container_id]', back_populates='top_container'))
+
+
+            class SimpleItems(SQLModel, table=True):
+                __tablename__ = 'simple_items'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+                top_container_id: int = \
+Field(sa_column=Column('top_container_id', ForeignKey('simple_containers.id'), \
+nullable=False))
+                parent_container_id: Optional[int] = \
+Field(default=None, sa_column=Column('parent_container_id', \
+ForeignKey('simple_containers.id')))
+
+                parent_container: Optional['SimpleContainers'] = Relationship(\
+sa_relationship=RelationshipProperty('SimpleContainers', \
+foreign_keys=['SimpleContainers.parent_container_id'], back_populates='simple_items'))
+                top_container: Optional['SimpleContainers'] = Relationship(\
+sa_relationship=RelationshipProperty('SimpleContainers', \
+foreign_keys=['SimpleContainers.top_container_id'], back_populates='simple_items_'))
+        """,
+    )
+
+
 def test_onetoone(generator: CodeGenerator) -> None:
     Table(
         "simple_onetoone",

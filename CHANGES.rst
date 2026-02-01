@@ -14,6 +14,8 @@ Version history
   ``students_enrollments``). Use ``--options nofknames`` to revert to old behavior. (PR by @sheinbergon)
 - Fixed ``Index`` kwargs (e.g. ``mysql_length``) being ignored during code generation
   (PR by @luliangce)
+- Fixed the SQLModel generator not adding the ``foreign_keys`` parameters when
+  generating multiple relationships between the same two tables
 
 **4.0.0rc2**
 

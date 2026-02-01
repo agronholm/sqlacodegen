@@ -1812,6 +1812,7 @@ class SQLModelGenerator(DeclarativeGenerator):
 
             if model.relationships:
                 self.add_literal_import("sqlmodel", "Relationship")
+                self.add_literal_import("sqlalchemy.orm", "RelationshipProperty")
 
     def render_module_variables(self, models: list[Model]) -> str:
         declarations: list[str] = []
@@ -1876,16 +1877,7 @@ class SQLModelGenerator(DeclarativeGenerator):
         return f"{relationship.name}: {annotation} = {rendered_field}"
 
     def render_relationship_args(self, arguments: str) -> list[str]:
-        argument_list = arguments.split(",")
-        # delete ')' and ' ' from args
-        argument_list[-1] = argument_list[-1][:-1]
-        argument_list = [argument[1:] for argument in argument_list]
-
-        rendered_args: list[str] = []
-        for arg in argument_list:
-            if "back_populates" in arg:
-                rendered_args.append(arg)
-            if "uselist=False" in arg:
-                rendered_args.append("sa_relationship_kwargs={'uselist': False}")
-
-        return rendered_args
+        return [
+            "sa_relationship="
+            + arguments.replace("relationship", "RelationshipProperty", 1)
+        ]
