@@ -1296,18 +1296,68 @@ class DeclarativeGenerator(TablesGenerator):
             # But don't strip from "parent_id1" (where id is followed by a digit without underscore)
             return re.sub(r"_id(?=_|$)", "", name)
 
-        # Self referential reverse relationships
-        preferred_name: str
-        if (
-            relationship.type
-            in (RelationshipType.ONE_TO_MANY, RelationshipType.ONE_TO_ONE)
-            and relationship.source is relationship.target
-            and relationship.backref
-            and relationship.backref.name
-        ):
-            preferred_name = relationship.backref.name + "_reverse"
-        else:
-            preferred_name = relationship.target.table.name
+        def get_m2m_qualified_name(default_name: str) -> str:
+            """Generate qualified name for many-to-many relationship when multiple junction tables exist."""
+            # Check if there are multiple M2M relationships to the same target
+            target_m2m_relationships = [
+                r
+                for r in relationship.source.relationships
+                if r.target is relationship.target
+                and r.type == RelationshipType.MANY_TO_MANY
+            ]
+
+            # Only use junction-based naming when there are multiple M2M to same target
+            if len(target_m2m_relationships) > 1:
+                if relationship.source is relationship.target:
+                    # Self-referential: use FK column name from junction table
+                    # (e.g., "parent_id" -> "parent", "child_id" -> "child")
+                    if relationship.constraint:
+                        column_names = [c.name for c in relationship.constraint.columns]
+                        if len(column_names) == 1:
+                            fk_qualifier = strip_id_suffix(column_names[0])
+                        else:
+                            fk_qualifier = "_".join(
+                                strip_id_suffix(col_name) for col_name in column_names
+                            )
+                        return fk_qualifier
+                elif relationship.association_table:
+                    # Normal: use junction table name as qualifier
+                    junction_name = relationship.association_table.table.name
+                    fk_qualifier = strip_id_suffix(junction_name)
+                    return f"{relationship.target.table.name}_{fk_qualifier}"
+            else:
+                # Single M2M: use simple name from junction table FK column
+                # (e.g., "right_id" -> "right" instead of "right_table")
+                if relationship.constraint and "noidsuffix" not in self.options:
+                    column_names = [c.name for c in relationship.constraint.columns]
+                    if len(column_names) == 1:
+                        stripped_name = strip_id_suffix(column_names[0])
+                        if stripped_name != column_names[0]:
+                            return stripped_name
+
+            return default_name
+
+        def get_fk_qualified_name(constraint: ForeignKeyConstraint) -> str:
+            """Generate qualified name for one-to-many/one-to-one relationship using FK column names."""
+            column_names = [c.name for c in constraint.columns]
+
+            if len(column_names) == 1:
+                # Single column FK: strip _id suffix if present
+                fk_qualifier = strip_id_suffix(column_names[0])
+            else:
+                # Multi-column FK: concatenate all column names (strip _id from each)
+                fk_qualifier = "_".join(
+                    strip_id_suffix(col_name) for col_name in column_names
+                )
+
+            # For self-referential relationships, don't prepend the table name
+            if relationship.source is relationship.target:
+                return fk_qualifier
+            else:
+                return f"{relationship.target.table.name}_{fk_qualifier}"
+
+        def resolve_preferred_name() -> str:
+            resolved_name = relationship.target.table.name
 
             # For reverse relationships with multiple FKs to the same table, use the FK
             # column name to create a more descriptive relationship name
@@ -1327,68 +1377,9 @@ class DeclarativeGenerator(TablesGenerator):
 
             if use_fk_based_naming:
                 if relationship.type == RelationshipType.MANY_TO_MANY:
-                    # Check if there are multiple M2M relationships to the same target
-                    target_m2m_relationships = [
-                        r
-                        for r in relationship.source.relationships
-                        if r.target is relationship.target
-                        and r.type == RelationshipType.MANY_TO_MANY
-                    ]
-
-                    # Only use junction-based naming when there are multiple M2M to same target
-                    if len(target_m2m_relationships) > 1:
-                        if relationship.source is relationship.target:
-                            # Self-referential: use FK column name from junction table
-                            # (e.g., "parent_id" -> "parent", "child_id" -> "child")
-                            if relationship.constraint:
-                                column_names = [
-                                    c.name for c in relationship.constraint.columns
-                                ]
-                                if len(column_names) == 1:
-                                    fk_qualifier = strip_id_suffix(column_names[0])
-                                else:
-                                    fk_qualifier = "_".join(
-                                        strip_id_suffix(col_name)
-                                        for col_name in column_names
-                                    )
-                                preferred_name = fk_qualifier
-                        elif relationship.association_table:
-                            # Normal: use junction table name as qualifier
-                            junction_name = relationship.association_table.table.name
-                            fk_qualifier = strip_id_suffix(junction_name)
-                            preferred_name = (
-                                f"{relationship.target.table.name}_{fk_qualifier}"
-                            )
-                    else:
-                        # Single M2M: use simple name from junction table FK column
-                        # (e.g., "right_id" -> "right" instead of "right_table")
-                        if relationship.constraint and "noidsuffix" not in self.options:
-                            column_names = [
-                                c.name for c in relationship.constraint.columns
-                            ]
-                            if len(column_names) == 1:
-                                stripped_name = strip_id_suffix(column_names[0])
-                                if stripped_name != column_names[0]:
-                                    preferred_name = stripped_name
+                    resolved_name = get_m2m_qualified_name(resolved_name)
                 elif relationship.constraint:
-                    column_names = [c.name for c in relationship.constraint.columns]
-
-                    if len(column_names) == 1:
-                        # Single column FK: strip _id suffix if present
-                        fk_qualifier = strip_id_suffix(column_names[0])
-                    else:
-                        # Multi-column FK: concatenate all column names (strip _id from each)
-                        fk_qualifier = "_".join(
-                            strip_id_suffix(col_name) for col_name in column_names
-                        )
-
-                    # For self-referential relationships, don't prepend the table name
-                    if relationship.source is relationship.target:
-                        preferred_name = fk_qualifier
-                    else:
-                        preferred_name = (
-                            f"{relationship.target.table.name}_{fk_qualifier}"
-                        )
+                    resolved_name = get_fk_qualified_name(relationship.constraint)
 
             # If there's a constraint with a single column that contains "_id", use the
             # stripped version as the relationship name
@@ -1403,7 +1394,7 @@ class DeclarativeGenerator(TablesGenerator):
                         stripped_name = strip_id_suffix(column_names[0])
                         # Only use the stripped name if it actually changed (had _id in it)
                         if stripped_name != column_names[0]:
-                            preferred_name = stripped_name
+                            resolved_name = stripped_name
                     else:
                         # For composite FKs, check if there are multiple FKs to the same target
                         target_relationships = [
@@ -1414,7 +1405,7 @@ class DeclarativeGenerator(TablesGenerator):
                         ]
                         if len(target_relationships) > 1:
                             # Multiple FKs to same table - use concatenated column names
-                            preferred_name = "_".join(
+                            resolved_name = "_".join(
                                 strip_id_suffix(col_name) for col_name in column_names
                             )
 
@@ -1424,12 +1415,25 @@ class DeclarativeGenerator(TablesGenerator):
                     RelationshipType.ONE_TO_MANY,
                     RelationshipType.MANY_TO_MANY,
                 ):
-                    if not self.inflect_engine.singular_noun(preferred_name):
-                        preferred_name = self.inflect_engine.plural_noun(preferred_name)
+                    if not self.inflect_engine.singular_noun(resolved_name):
+                        resolved_name = self.inflect_engine.plural_noun(resolved_name)
                 else:
-                    inflected_name = self.inflect_engine.singular_noun(preferred_name)
+                    inflected_name = self.inflect_engine.singular_noun(resolved_name)
                     if inflected_name:
-                        preferred_name = inflected_name
+                        resolved_name = inflected_name
+
+            return resolved_name
+
+        if (
+            relationship.type
+            in (RelationshipType.ONE_TO_MANY, RelationshipType.ONE_TO_ONE)
+            and relationship.source is relationship.target
+            and relationship.backref
+            and relationship.backref.name
+        ):
+            preferred_name = relationship.backref.name + "_reverse"
+        else:
+            preferred_name = resolve_preferred_name()
 
         relationship.name = self.find_free_name(
             preferred_name, global_names, local_names
