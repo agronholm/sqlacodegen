@@ -10,7 +10,7 @@ Version history
   ``students_enrollments``). Use ``--options nofknames`` to revert to old behavior. (PR by @sheinbergon)
 - Fixed ``Index`` kwargs (e.g. ``mysql_length``) being ignored during code generation
   (PR by @luliangce)
-  
+
 **4.0.0rc2**
 
 - Add ``values_callable`` lambda to generated native enums column definitions.
