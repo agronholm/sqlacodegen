@@ -533,7 +533,6 @@ foreign_keys=[top_container_id], back_populates='simple_items_top_container')
 
 @pytest.mark.parametrize("generator", [["nofknames"]], indirect=True)
 def test_onetomany_multiref_with_nofknames(generator: CodeGenerator) -> None:
-    """Test backwards compatibility with nofknames option."""
     Table(
         "simple_items",
         generator.metadata,
@@ -590,7 +589,6 @@ foreign_keys=[top_container_id], back_populates='simple_items_')
 
 
 def test_onetomany_multiref_no_id_suffix(generator: CodeGenerator) -> None:
-    """Test FK-based naming when FK columns don't end with _id."""
     Table(
         "simple_items",
         generator.metadata,
@@ -645,7 +643,6 @@ foreign_keys=[top_container], back_populates='simple_items_top_container')
 
 
 def test_onetomany_multiref_composite(generator: CodeGenerator) -> None:
-    """Test FK-based naming with composite (multi-column) foreign keys."""
     Table(
         "simple_items",
         generator.metadata,
@@ -722,7 +719,6 @@ back_populates='simple_items_top_id1_top_id2')
 
 @pytest.mark.parametrize("generator", [["use_inflect"]], indirect=True)
 def test_onetomany_multiref_with_inflect(generator: CodeGenerator) -> None:
-    """Test FK-based naming with use_inflect option."""
     Table(
         "simple_items",
         generator.metadata,
@@ -1010,7 +1006,6 @@ mapped_column(ForeignKey('simple_containers.id'))
 
 
 def test_manytomany_multi(generator: CodeGenerator) -> None:
-    """Test multiple many-to-many relationships between same tables using separate junction tables."""
     Table(
         "students",
         generator.metadata,
@@ -1095,7 +1090,6 @@ t_waitlist = Table(
 
 @pytest.mark.parametrize("generator", [["nofknames"]], indirect=True)
 def test_manytomany_multi_with_nofknames(generator: CodeGenerator) -> None:
-    """Test backwards compatibility with nofknames option for M2M relationships."""
     Table(
         "students",
         generator.metadata,
