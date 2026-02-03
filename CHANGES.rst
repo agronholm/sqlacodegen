@@ -3,12 +3,11 @@ Version history
 
 **UNRELEASED**
 
-- **BACKWARD INCOMPATIBLE** Reverse relationship names changed when multiple foreign keys point
-  to the same table. Regenerating models will break code referencing the old relationship names.
-- Improved relationship naming when multiple foreign keys point to the same table.
-  Reverse relationships now use FK column names as qualifiers (e.g.,
-  ``simple_items_parent_container`` instead of ``simple_items_``). Use ``--options nofknames``
-  to revert to old behavior.
+- **BACKWARD INCOMPATIBLE** Relationship names changed when multiple FKs or junction tables
+  connect to the same target table. Regenerating models will break existing code.
+- Improved relationship naming: one-to-many uses FK column names (e.g.,
+  ``simple_items_parent_container``), many-to-many uses junction table names (e.g.,
+  ``students_enrollments``). Use ``--options nofknames`` to revert to old behavior.
 
 **4.0.0rc2**
 

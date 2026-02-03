@@ -1010,7 +1010,7 @@ mapped_column(ForeignKey('simple_containers.id'))
 
 
 def test_manytomany_multi(generator: CodeGenerator) -> None:
-    """Test FK-based naming when multiple FKs point to the same table (non-many-to-many)."""
+    """Test multiple many-to-many relationships between same tables using separate junction tables."""
     Table(
         "students",
         generator.metadata,
@@ -1025,14 +1025,20 @@ def test_manytomany_multi(generator: CodeGenerator) -> None:
         Column("title", VARCHAR),
     )
 
+    # First many-to-many relationship (enrollments)
     Table(
-        "registrations",
+        "enrollments",
         generator.metadata,
-        Column("registration_id", INTEGER, primary_key=True),
         Column("student_id", INTEGER, ForeignKey("students.student_id")),
-        # Multiple FKs referencing the same parent table
-        Column("course_id_1", INTEGER, ForeignKey("courses.course_id")),
-        Column("course_id_2", INTEGER, ForeignKey("courses.course_id")),
+        Column("course_id", INTEGER, ForeignKey("courses.course_id")),
+    )
+
+    # Second many-to-many relationship (waitlist)
+    Table(
+        "waitlist",
+        generator.metadata,
+        Column("student_id", INTEGER, ForeignKey("students.student_id")),
+        Column("course_id", INTEGER, ForeignKey("courses.course_id")),
     )
 
     validate_code(
@@ -1040,7 +1046,7 @@ def test_manytomany_multi(generator: CodeGenerator) -> None:
         """\
 from typing import Optional
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
@@ -1053,10 +1059,10 @@ class Courses(Base):
     course_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[Optional[str]] = mapped_column(String)
 
-    registrations_course_1: Mapped[list['Registrations']] = relationship('Registrations', \
-foreign_keys='[Registrations.course_id_1]', back_populates='course_1')
-    registrations_course_2: Mapped[list['Registrations']] = relationship('Registrations', \
-foreign_keys='[Registrations.course_id_2]', back_populates='course_2')
+    students_enrollments: Mapped[list['Students']] = relationship('Students', \
+secondary='enrollments', back_populates='courses_enrollments')
+    students_waitlist: Mapped[list['Students']] = relationship('Students', \
+secondary='waitlist', back_populates='courses_waitlist')
 
 
 class Students(Base):
@@ -1065,23 +1071,109 @@ class Students(Base):
     student_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[Optional[str]] = mapped_column(String)
 
-    registrations: Mapped[list['Registrations']] = relationship('Registrations', \
+    courses_enrollments: Mapped[list['Courses']] = relationship('Courses', \
+secondary='enrollments', back_populates='students_enrollments')
+    courses_waitlist: Mapped[list['Courses']] = relationship('Courses', \
+secondary='waitlist', back_populates='students_waitlist')
+
+
+t_enrollments = Table(
+    'enrollments', Base.metadata,
+    Column('student_id', ForeignKey('students.student_id')),
+    Column('course_id', ForeignKey('courses.course_id'))
+)
+
+
+t_waitlist = Table(
+    'waitlist', Base.metadata,
+    Column('student_id', ForeignKey('students.student_id')),
+    Column('course_id', ForeignKey('courses.course_id'))
+)
+        """,
+    )
+
+
+@pytest.mark.parametrize("generator", [["nofknames"]], indirect=True)
+def test_manytomany_multi_with_nofknames(generator: CodeGenerator) -> None:
+    """Test backwards compatibility with nofknames option for M2M relationships."""
+    Table(
+        "students",
+        generator.metadata,
+        Column("student_id", INTEGER, primary_key=True),
+        Column("name", VARCHAR),
+    )
+
+    Table(
+        "courses",
+        generator.metadata,
+        Column("course_id", INTEGER, primary_key=True),
+        Column("title", VARCHAR),
+    )
+
+    # First many-to-many relationship (enrollments)
+    Table(
+        "enrollments",
+        generator.metadata,
+        Column("student_id", INTEGER, ForeignKey("students.student_id")),
+        Column("course_id", INTEGER, ForeignKey("courses.course_id")),
+    )
+
+    # Second many-to-many relationship (waitlist)
+    Table(
+        "waitlist",
+        generator.metadata,
+        Column("student_id", INTEGER, ForeignKey("students.student_id")),
+        Column("course_id", INTEGER, ForeignKey("courses.course_id")),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import Column, ForeignKey, Integer, String, Table
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Courses(Base):
+    __tablename__ = 'courses'
+
+    course_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[Optional[str]] = mapped_column(String)
+
+    student: Mapped[list['Students']] = relationship('Students', secondary='enrollments', \
+back_populates='course')
+    student_: Mapped[list['Students']] = relationship('Students', secondary='waitlist', \
+back_populates='course_')
+
+
+class Students(Base):
+    __tablename__ = 'students'
+
+    student_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[Optional[str]] = mapped_column(String)
+
+    course: Mapped[list['Courses']] = relationship('Courses', secondary='enrollments', \
 back_populates='student')
+    course_: Mapped[list['Courses']] = relationship('Courses', secondary='waitlist', \
+back_populates='student_')
 
 
-class Registrations(Base):
-    __tablename__ = 'registrations'
+t_enrollments = Table(
+    'enrollments', Base.metadata,
+    Column('student_id', ForeignKey('students.student_id')),
+    Column('course_id', ForeignKey('courses.course_id'))
+)
 
-    registration_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    student_id: Mapped[Optional[int]] = mapped_column(ForeignKey('students.student_id'))
-    course_id_1: Mapped[Optional[int]] = mapped_column(ForeignKey('courses.course_id'))
-    course_id_2: Mapped[Optional[int]] = mapped_column(ForeignKey('courses.course_id'))
 
-    course_1: Mapped[Optional['Courses']] = relationship('Courses', \
-foreign_keys=[course_id_1], back_populates='registrations_course_1')
-    course_2: Mapped[Optional['Courses']] = relationship('Courses', \
-foreign_keys=[course_id_2], back_populates='registrations_course_2')
-    student: Mapped[Optional['Students']] = relationship('Students', back_populates='registrations')
+t_waitlist = Table(
+    'waitlist', Base.metadata,
+    Column('student_id', ForeignKey('students.student_id')),
+    Column('course_id', ForeignKey('courses.course_id'))
+)
         """,
     )
 

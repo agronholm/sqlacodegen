@@ -122,11 +122,11 @@ values must be delimited by commas, e.g. ``--options noconstraints,nobidi``):
   * ``nobidi``: generate relationships in a unidirectional fashion, so only the
     many-to-one or first side of many-to-many relationships gets a relationship
     attribute, as on v2.X
-  * ``nofknames``: disable the improved relationship naming for reverse
-    relationships when multiple foreign keys point to the same table. By
-    default, relationship names are derived from FK column names (e.g.,
-    ``simple_items_parent_container`` instead of ``simple_items_``). Use this
-    option to revert to the old naming technique.
+  * ``nofknames``: disable improved relationship naming when multiple FKs or
+    junction tables connect to the same target. By default, uses FK column names
+    for one-to-many (e.g., ``simple_items_parent_container``) and junction table
+    names for many-to-many (e.g., ``students_enrollments``). Reverts to
+    underscore suffixes (``simple_items_``, ``student_``).
 
 * ``dataclasses``
 
@@ -194,14 +194,13 @@ due to that ``_id`` suffix.
 For self referential relationships, the reverse side of the relationship will be named
 with the ``_reverse`` suffix appended to it.
 
-When multiple foreign key constraints point to the same target table, the reverse
-side relationships are named using the foreign key column name as a qualifier. For
-example, if ``simple_items`` has both ``parent_container_id`` and
-``top_container_id`` pointing to ``simple_containers``, the reverse relationships
-would be named ``simple_items_parent_container`` and ``simple_items_top_container``
-respectively. This behavior can be disabled using the ``nofknames`` option, which
-reverts to the old behavior of adding underscore and numeric suffixes
-(``simple_items``, ``simple_items_``, ``simple_items_1``, etc.).
+When multiple foreign keys or junction tables connect to the same target table,
+relationships use qualifiers for disambiguation. One-to-many relationships use FK
+column names (e.g., ``simple_items_parent_container``, ``simple_items_top_container``).
+Many-to-many relationships use junction table names (e.g., ``students_enrollments``,
+``students_waitlist``), except for self-referential cases which use FK column names
+(e.g., ``parent``, ``child``). The ``nofknames`` option reverts to underscore suffixes
+(``simple_items_``, ``student_``).
 
 Customizing code generation logic
 =================================
