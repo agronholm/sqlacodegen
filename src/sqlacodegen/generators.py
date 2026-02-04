@@ -426,7 +426,7 @@ class TablesGenerator(CodeGenerator):
         extra_args = [repr(col.name) for col in index.columns]
         kwargs = {
             key: repr(value) if isinstance(value, str) else value
-            for key, value in sorted(index.kwargs.items())
+            for key, value in sorted(index.kwargs.items(), key=lambda item: item[0])
         }
         if index.unique:
             kwargs["unique"] = True
