@@ -77,6 +77,41 @@ class SimpleItems(Base):
     )
 
 
+def test_index_with_kwargs(generator: CodeGenerator) -> None:
+    simple_items = Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("name", VARCHAR),
+    )
+    simple_items.indexes.add(
+        Index("idx_name", simple_items.c.name, postgresql_using="gist", mysql_length=10)
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import Index, Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        Index('idx_name', 'name', mysql_length=10, postgresql_using='gist'),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[Optional[str]] = mapped_column(String)
+        """,
+    )
+
+
 def test_constraints(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
@@ -2382,8 +2417,8 @@ class Base(DeclarativeBase):
 class SpatialTable(Base):
     __tablename__ = 'spatial_table'
     __table_args__ = (
-        Index('idx_spatial_table_geog', 'geog'),
-        Index('idx_spatial_table_geom', 'geom')
+        Index('idx_spatial_table_geog', 'geog', postgresql_using='gist'),
+        Index('idx_spatial_table_geom', 'geom', postgresql_using='gist')
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
