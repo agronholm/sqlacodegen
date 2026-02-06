@@ -2815,3 +2815,235 @@ def test_synthetic_enum_shared_values(generator: CodeGenerator) -> None:
             status: Mapped[UsersStatus] = mapped_column(Enum(UsersStatus, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
         """,
     )
+
+
+def test_array_enum_named(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "roles",
+            ARRAY(SAEnum("admin", "user", "moderator", name="role_enum")),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import ARRAY, Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class RoleEnum(str, enum.Enum):
+            ADMIN = 'admin'
+            USER = 'user'
+            MODERATOR = 'moderator'
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            roles: Mapped[list[RoleEnum]] = mapped_column(ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])), nullable=False)
+        """,
+    )
+
+
+def test_array_enum_unnamed(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "roles",
+            ARRAY(SAEnum("admin", "user")),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import ARRAY, Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class UsersRoles(str, enum.Enum):
+            ADMIN = 'admin'
+            USER = 'user'
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            roles: Mapped[list[UsersRoles]] = mapped_column(ARRAY(Enum(UsersRoles, values_callable=lambda cls: [member.value for member in cls])), nullable=False)
+        """,
+    )
+
+
+def test_array_enum_nullable(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "roles",
+            ARRAY(SAEnum("admin", "user", name="role_enum")),
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from typing import Optional
+        import enum
+
+        from sqlalchemy import ARRAY, Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class RoleEnum(str, enum.Enum):
+            ADMIN = 'admin'
+            USER = 'user'
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            roles: Mapped[Optional[list[RoleEnum]]] = mapped_column(ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
+        """,
+    )
+
+
+def test_array_enum_with_dimensions(generator: CodeGenerator) -> None:
+    Table(
+        "items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "tag_matrix",
+            ARRAY(SAEnum("a", "b", name="tag_enum"), dimensions=2),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import ARRAY, Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class TagEnum(str, enum.Enum):
+            A = 'a'
+            B = 'b'
+
+
+        class Items(Base):
+            __tablename__ = 'items'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            tag_matrix: Mapped[list[list[TagEnum]]] = mapped_column(ARRAY(Enum(TagEnum, values_callable=lambda cls: [member.value for member in cls]), dimensions=2), nullable=False)
+        """,
+    )
+
+
+def test_array_enum_nonativeenums_option(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "roles",
+            ARRAY(SAEnum("admin", "user", name="role_enum")),
+            nullable=False,
+        ),
+    )
+
+    generator = DeclarativeGenerator(
+        generator.metadata, generator.bind, ["nonativeenums"]
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import ARRAY, Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            roles: Mapped[list[str]] = mapped_column(ARRAY(Enum('admin', 'user', name='role_enum')), nullable=False)
+        """,
+    )
+
+
+def test_array_enum_shared_with_regular_enum(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "primary_role",
+            SAEnum("admin", "user", name="role_enum"),
+            nullable=False,
+        ),
+        Column(
+            "all_roles",
+            ARRAY(SAEnum("admin", "user", name="role_enum")),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import ARRAY, Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class RoleEnum(str, enum.Enum):
+            ADMIN = 'admin'
+            USER = 'user'
+
+
+        class Users(Base):
+            __tablename__ = 'users'
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            primary_role: Mapped[RoleEnum] = mapped_column(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
+            all_roles: Mapped[list[RoleEnum]] = mapped_column(ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])), nullable=False)
+        """,
+    )

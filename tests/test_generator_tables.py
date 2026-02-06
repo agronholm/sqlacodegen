@@ -320,6 +320,89 @@ def test_enum_shared_values(generator: CodeGenerator) -> None:
     )
 
 
+def test_array_enum_named(generator: CodeGenerator) -> None:
+    from sqlalchemy import Enum as SAEnum
+    from sqlalchemy.types import ARRAY
+
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("roles", ARRAY(SAEnum("admin", "user", "moderator", name="role_enum"))),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import ARRAY, Column, Enum, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        class RoleEnum(str, enum.Enum):
+            ADMIN = 'admin'
+            USER = 'user'
+            MODERATOR = 'moderator'
+
+
+        t_users = Table(
+            'users', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
+        )
+        """,
+    )
+
+
+def test_array_enum_shared(generator: CodeGenerator) -> None:
+    from sqlalchemy import Enum as SAEnum
+    from sqlalchemy.types import ARRAY
+
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("roles", ARRAY(SAEnum("admin", "user", name="role_enum"))),
+    )
+    Table(
+        "groups",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("allowed_roles", ARRAY(SAEnum("admin", "user", name="role_enum"))),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import ARRAY, Column, Enum, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        class RoleEnum(str, enum.Enum):
+            ADMIN = 'admin'
+            USER = 'user'
+
+
+        t_groups = Table(
+            'groups', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('allowed_roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
+        )
+
+        t_users = Table(
+            'users', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
+        )
+        """,
+    )
+
+
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_domain_text(generator: CodeGenerator) -> None:
     Table(

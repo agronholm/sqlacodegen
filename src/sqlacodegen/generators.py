@@ -554,6 +554,19 @@ class TablesGenerator(CodeGenerator):
 
         args = []
         kwargs: dict[str, Any] = {}
+
+        # Check if this is an ARRAY column with an Enum item type mapped to a Python enum class
+        if isinstance(column_type, ARRAY) and isinstance(column_type.item_type, Enum):
+            if enum_class_name := self.enum_classes.get(
+                (column.table.name, column.name)
+            ):
+                self.add_import(ARRAY)
+                self.add_import(Enum)
+                rendered_enum = f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls])"
+                if column_type.dimensions is not None:
+                    kwargs["dimensions"] = repr(column_type.dimensions)
+                return render_callable("ARRAY", rendered_enum, kwargs=kwargs)
+
         sig = inspect.signature(column_type.__class__.__init__)
         defaults = {param.name: param.default for param in sig.parameters.values()}
         missing = object()
@@ -881,6 +894,43 @@ class TablesGenerator(CodeGenerator):
                     if (table.name, column.name) not in self.enum_classes:
                         enum_class_name = self._create_enum_class(
                             table.name, column.name, list(column.type.enums)
+                        )
+                        self.enum_classes[(table.name, column.name)] = enum_class_name
+
+            # Handle ARRAY columns with Enum item types (e.g., PostgreSQL ARRAY(ENUM))
+            elif (
+                "nonativeenums" not in self.options
+                and isinstance(column.type, ARRAY)
+                and isinstance(column.type.item_type, Enum)
+                and column.type.item_type.enums
+            ):
+                enum_type = column.type.item_type
+                if enum_type.name:
+                    # Named enum inside ARRAY - create shared enum class
+                    if (table.name, column.name) not in self.enum_classes:
+                        existing_class = None
+                        for (t, c), cls in self.enum_classes.items():
+                            if cls == self._enum_name_to_class_name(enum_type.name):
+                                existing_class = cls
+                                break
+
+                        if existing_class:
+                            enum_class_name = existing_class
+                        else:
+                            enum_class_name = self._enum_name_to_class_name(
+                                enum_type.name
+                            )
+                            if enum_class_name not in self.enum_values:
+                                self.enum_values[enum_class_name] = list(
+                                    enum_type.enums
+                                )
+
+                        self.enum_classes[(table.name, column.name)] = enum_class_name
+                else:
+                    # Unnamed enum inside ARRAY - create enum class per column
+                    if (table.name, column.name) not in self.enum_classes:
+                        enum_class_name = self._create_enum_class(
+                            table.name, column.name, list(enum_type.enums)
                         )
                         self.enum_classes[(table.name, column.name)] = enum_class_name
 
