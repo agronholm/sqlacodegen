@@ -3,10 +3,6 @@ Version history
 
 **4.0.0rc3**
 
-- Added support for generating Python enum classes for ``ARRAY(Enum(...))`` columns
-  (e.g., PostgreSQL ``ARRAY(ENUM)``). Supports named/unnamed enums, shared enums across
-  columns, and multi-dimensional arrays. Respects ``--options nonativeenums``.
-  (PR by @sheinbergon)
 - **BACKWARD INCOMPATIBLE** Relationship names changed when multiple FKs or junction tables
   connect to the same target table. Regenerating models will break existing code.
 - Improved relationship naming: one-to-many uses FK column names (e.g.,
@@ -14,6 +10,10 @@ Version history
   ``students_enrollments``). Use ``--options nofknames`` to revert to old behavior. (PR by @sheinbergon)
 - Fixed ``Index`` kwargs (e.g. ``mysql_length``) being ignored during code generation
   (PR by @luliangce)
+- Added support for generating Python enum classes for ``ARRAY(Enum(...))`` columns
+  (e.g., PostgreSQL ``ARRAY(ENUM)``). Supports named/unnamed enums, shared enums across
+  columns, and multi-dimensional arrays. Respects ``--options nonativeenums``.
+  (PR by @sheinbergon)
 
 **4.0.0rc2**
 
