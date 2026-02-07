@@ -1,10 +1,14 @@
 Version history
 ===============
 
-**UNRELEASED**
+**4.0.0rc3**
 
 - **BACKWARD INCOMPATIBLE** Relationship names changed when multiple FKs or junction tables
   connect to the same target table. Regenerating models will break existing code.
+- Added support for generating Python enum classes for ``ARRAY(Enum(...))`` columns
+  (e.g., PostgreSQL ``ARRAY(ENUM)``). Supports named/unnamed enums, shared enums across
+  columns, and multi-dimensional arrays. Respects ``--options nonativeenums``.
+  (PR by @sheinbergon)
 - Improved relationship naming: one-to-many uses FK column names (e.g.,
   ``simple_items_parent_container``), many-to-many uses junction table names (e.g.,
   ``students_enrollments``). Use ``--options nofknames`` to revert to old behavior. (PR by @sheinbergon)

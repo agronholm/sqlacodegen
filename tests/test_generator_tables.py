@@ -4,6 +4,7 @@ from textwrap import dedent
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy import TypeDecorator
 from sqlalchemy.dialects import mysql, postgresql, registry
 from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql
@@ -21,7 +22,7 @@ from sqlalchemy.schema import (
 )
 from sqlalchemy.sql.expression import text
 from sqlalchemy.sql.sqltypes import DateTime, NullType
-from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
+from sqlalchemy.types import ARRAY, INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, TablesGenerator
 
@@ -315,6 +316,83 @@ def test_enum_shared_values(generator: CodeGenerator) -> None:
             'users', metadata,
             Column('id', Integer, primary_key=True),
             Column('status', Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls]))
+        )
+        """,
+    )
+
+
+def test_array_enum_named(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("roles", ARRAY(SAEnum("admin", "user", "moderator", name="role_enum"))),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import ARRAY, Column, Enum, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        class RoleEnum(str, enum.Enum):
+            ADMIN = 'admin'
+            USER = 'user'
+            MODERATOR = 'moderator'
+
+
+        t_users = Table(
+            'users', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
+        )
+        """,
+    )
+
+
+def test_array_enum_shared(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("roles", ARRAY(SAEnum("admin", "user", name="role_enum"))),
+    )
+    Table(
+        "groups",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("allowed_roles", ARRAY(SAEnum("admin", "user", name="role_enum"))),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import ARRAY, Column, Enum, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        class RoleEnum(str, enum.Enum):
+            ADMIN = 'admin'
+            USER = 'user'
+
+
+        t_groups = Table(
+            'groups', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('allowed_roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
+        )
+
+        t_users = Table(
+            'users', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
         )
         """,
     )
