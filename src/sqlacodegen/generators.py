@@ -892,6 +892,7 @@ class TablesGenerator(CodeGenerator):
                 and column.type.enums
             ):
                 fix_enum_column(column.name, column.type)
+
             # Handle ARRAY columns with Enum item types (e.g., PostgreSQL ARRAY(ENUM))
             elif (
                 "nonativeenums" not in self.options
