@@ -830,7 +830,7 @@ class TablesGenerator(CodeGenerator):
 
             if enum_type.name:
                 existing_class = None
-                for (t, c), cls in self.enum_classes.items():
+                for (_, _), cls in self.enum_classes.items():
                     if cls == self._enum_name_to_class_name(enum_type.name):
                         existing_class = cls
                         break
