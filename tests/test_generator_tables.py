@@ -4,6 +4,7 @@ from textwrap import dedent
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy import TypeDecorator
 from sqlalchemy.dialects import mysql, postgresql, registry
 from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql
@@ -21,7 +22,7 @@ from sqlalchemy.schema import (
 )
 from sqlalchemy.sql.expression import text
 from sqlalchemy.sql.sqltypes import DateTime, NullType
-from sqlalchemy.types import INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
+from sqlalchemy.types import ARRAY, INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, TablesGenerator
 
@@ -321,9 +322,6 @@ def test_enum_shared_values(generator: CodeGenerator) -> None:
 
 
 def test_array_enum_named(generator: CodeGenerator) -> None:
-    from sqlalchemy import Enum as SAEnum
-    from sqlalchemy.types import ARRAY
-
     Table(
         "users",
         generator.metadata,
@@ -357,9 +355,6 @@ def test_array_enum_named(generator: CodeGenerator) -> None:
 
 
 def test_array_enum_shared(generator: CodeGenerator) -> None:
-    from sqlalchemy import Enum as SAEnum
-    from sqlalchemy.types import ARRAY
-
     Table(
         "users",
         generator.metadata,
