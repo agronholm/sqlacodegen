@@ -823,6 +823,31 @@ class TablesGenerator(CodeGenerator):
 
     def fix_column_types(self, table: Table) -> None:
         """Adjust the reflected column types."""
+
+        def fix_enum_column(col_name: str, enum_type: Enum) -> None:
+            if (table.name, col_name) in self.enum_classes:
+                return
+
+            if enum_type.name:
+                existing_class = None
+                for (t, c), cls in self.enum_classes.items():
+                    if cls == self._enum_name_to_class_name(enum_type.name):
+                        existing_class = cls
+                        break
+
+                if existing_class:
+                    enum_class_name = existing_class
+                else:
+                    enum_class_name = self._enum_name_to_class_name(enum_type.name)
+                    if enum_class_name not in self.enum_values:
+                        self.enum_values[enum_class_name] = list(enum_type.enums)
+            else:
+                enum_class_name = self._create_enum_class(
+                    table.name, col_name, list(enum_type.enums)
+                )
+
+            self.enum_classes[(table.name, col_name)] = enum_class_name
+
         # Detect check constraints for boolean and enum columns
         for constraint in table.constraints.copy():
             if isinstance(constraint, CheckConstraint):
@@ -866,37 +891,7 @@ class TablesGenerator(CodeGenerator):
                 and isinstance(column.type, Enum)
                 and column.type.enums
             ):
-                if column.type.name:
-                    # Named enum - create shared enum class if not already created
-                    if (table.name, column.name) not in self.enum_classes:
-                        # Check if we've already created an enum for this name
-                        existing_class = None
-                        for (t, c), cls in self.enum_classes.items():
-                            if cls == self._enum_name_to_class_name(column.type.name):
-                                existing_class = cls
-                                break
-
-                        if existing_class:
-                            enum_class_name = existing_class
-                        else:
-                            # Create new enum class from the enum's name
-                            enum_class_name = self._enum_name_to_class_name(
-                                column.type.name
-                            )
-                            # Register the enum values if not already registered
-                            if enum_class_name not in self.enum_values:
-                                self.enum_values[enum_class_name] = list(
-                                    column.type.enums
-                                )
-
-                        self.enum_classes[(table.name, column.name)] = enum_class_name
-                else:
-                    # Unnamed enum - create enum class per column
-                    if (table.name, column.name) not in self.enum_classes:
-                        enum_class_name = self._create_enum_class(
-                            table.name, column.name, list(column.type.enums)
-                        )
-                        self.enum_classes[(table.name, column.name)] = enum_class_name
+                fix_enum_column(column.name, column.type)
             # Handle ARRAY columns with Enum item types (e.g., PostgreSQL ARRAY(ENUM))
             elif (
                 "nonativeenums" not in self.options
@@ -904,35 +899,7 @@ class TablesGenerator(CodeGenerator):
                 and isinstance(column.type.item_type, Enum)
                 and column.type.item_type.enums
             ):
-                enum_type = column.type.item_type
-                if enum_type.name:
-                    # Named enum inside ARRAY - create shared enum class
-                    if (table.name, column.name) not in self.enum_classes:
-                        existing_class = None
-                        for (t, c), cls in self.enum_classes.items():
-                            if cls == self._enum_name_to_class_name(enum_type.name):
-                                existing_class = cls
-                                break
-
-                        if existing_class:
-                            enum_class_name = existing_class
-                        else:
-                            enum_class_name = self._enum_name_to_class_name(
-                                enum_type.name
-                            )
-                            if enum_class_name not in self.enum_values:
-                                self.enum_values[enum_class_name] = list(
-                                    enum_type.enums
-                                )
-
-                        self.enum_classes[(table.name, column.name)] = enum_class_name
-                else:
-                    # Unnamed enum inside ARRAY - create enum class per column
-                    if (table.name, column.name) not in self.enum_classes:
-                        enum_class_name = self._create_enum_class(
-                            table.name, column.name, list(enum_type.enums)
-                        )
-                        self.enum_classes[(table.name, column.name)] = enum_class_name
+                fix_enum_column(column.name, column.type.item_type)
 
             if not self.keep_dialect_types:
                 try:
