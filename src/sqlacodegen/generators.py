@@ -565,6 +565,7 @@ class TablesGenerator(CodeGenerator):
                 rendered_enum = f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls])"
                 if column_type.dimensions is not None:
                     kwargs["dimensions"] = repr(column_type.dimensions)
+
                 return render_callable("ARRAY", rendered_enum, kwargs=kwargs)
 
         sig = inspect.signature(column_type.__class__.__init__)
