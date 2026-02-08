@@ -5,6 +5,20 @@ Version history
 
 - **BACKWARD INCOMPATIBLE** Relationship names changed when multiple FKs or junction tables
   connect to the same target table. Regenerating models will break existing code.
+- **BACKWARD INCOMPATIBLE** API changes (for those who customize code generation by
+  subclassing the existing generators):
+
+  * Added new optional keyword argument, ``explicit_foreign_keys`` to
+    ``DeclarativeGenerator``, to force foreign keys to be rendered as
+    ``ClassName.attribute_name`` string references
+  * Removed the ``render_relationship_args()`` method from the SQLModel generator
+  * Added two new methods for customizing relationship rendering in
+    ``DeclarativeGenerator``:
+
+    * ``render_relationship_annotation()``: returns the appropriate type annotation
+      (without the ``Mapped`` wrapper) for the relationship
+    * ``render_relationship_arguments()``: returns a dictionary of keyword arguments to
+      ``sqlalchemy.orm.relationship()``
 - Added support for generating Python enum classes for ``ARRAY(Enum(...))`` columns
   (e.g., PostgreSQL ``ARRAY(ENUM)``). Supports named/unnamed enums, shared enums across
   columns, and multi-dimensional arrays. Respects ``--options nonativeenums``.

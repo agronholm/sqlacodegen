@@ -5,7 +5,7 @@ import re
 import sys
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from collections.abc import Collection, Iterable, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from importlib import import_module
 from inspect import Parameter
@@ -1001,10 +1001,12 @@ class DeclarativeGenerator(TablesGenerator):
         *,
         indentation: str = "    ",
         base_class_name: str = "Base",
+        explicit_foreign_keys: bool = False,
     ):
         super().__init__(metadata, bind, options, indentation=indentation)
         self.base_class_name: str = base_class_name
         self.inflect_engine = inflect.engine()
+        self.explicit_foreign_keys = explicit_foreign_keys
 
     def generate_base(self) -> None:
         self.base = Base(
@@ -1626,6 +1628,40 @@ class DeclarativeGenerator(TablesGenerator):
         return f"{column_attr.name}: Mapped[{rendered_column_python_type}] = {rendered_column}"
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
+        kwargs = self.render_relationship_arguments(relationship)
+        annotation = self.render_relationship_annotation(relationship)
+        rendered_relationship = render_callable(
+            "relationship", repr(relationship.target.name), kwargs=kwargs
+        )
+        return f"{relationship.name}: Mapped[{annotation}] = {rendered_relationship}"
+
+    def render_relationship_annotation(
+        self, relationship: RelationshipAttribute
+    ) -> str:
+        if relationship.type == RelationshipType.ONE_TO_MANY:
+            inner_type = f"list[{relationship.target.name!r}]"
+        elif relationship.type in (
+            RelationshipType.ONE_TO_ONE,
+            RelationshipType.MANY_TO_ONE,
+        ):
+            if relationship.constraint and any(
+                col.nullable for col in relationship.constraint.columns
+            ):
+                self.add_literal_import("typing", "Optional")
+                inner_type = f"Optional[{relationship.target.name!r}]"
+            else:
+                inner_type = f"'{relationship.target.name}'"
+        elif relationship.type == RelationshipType.MANY_TO_MANY:
+            inner_type = f"list[{relationship.target.name!r}]"
+        else:
+            self.add_literal_import("typing", "Any")
+            inner_type = "Any"
+
+        return inner_type
+
+    def render_relationship_arguments(
+        self, relationship: RelationshipAttribute
+    ) -> Mapping[str, Any]:
         def render_column_attrs(column_attrs: list[ColumnAttribute]) -> str:
             rendered = []
             for attr in column_attrs:
@@ -1641,7 +1677,7 @@ class DeclarativeGenerator(TablesGenerator):
             render_as_string = False
             # Assume that column_attrs are all in relationship.source or none
             for attr in column_attrs:
-                if attr.model is relationship.source:
+                if not self.explicit_foreign_keys and attr.model is relationship.source:
                     rendered.append(attr.name)
                 else:
                     rendered.append(f"{attr.model.name}.{attr.name}")
@@ -1697,33 +1733,7 @@ class DeclarativeGenerator(TablesGenerator):
         if relationship.backref:
             kwargs["back_populates"] = repr(relationship.backref.name)
 
-        rendered_relationship = render_callable(
-            "relationship", repr(relationship.target.name), kwargs=kwargs
-        )
-
-        relationship_type: str
-        if relationship.type == RelationshipType.ONE_TO_MANY:
-            relationship_type = f"list['{relationship.target.name}']"
-        elif relationship.type in (
-            RelationshipType.ONE_TO_ONE,
-            RelationshipType.MANY_TO_ONE,
-        ):
-            relationship_type = f"'{relationship.target.name}'"
-            if relationship.constraint and any(
-                col.nullable for col in relationship.constraint.columns
-            ):
-                self.add_literal_import("typing", "Optional")
-                relationship_type = f"Optional[{relationship_type}]"
-        elif relationship.type == RelationshipType.MANY_TO_MANY:
-            relationship_type = f"list['{relationship.target.name}']"
-        else:
-            self.add_literal_import("typing", "Any")
-            relationship_type = "Any"
-
-        return (
-            f"{relationship.name}: Mapped[{relationship_type}] "
-            f"= {rendered_relationship}"
-        )
+        return kwargs
 
 
 class DataclassGenerator(DeclarativeGenerator):
@@ -1778,6 +1788,7 @@ class SQLModelGenerator(DeclarativeGenerator):
             options,
             indentation=indentation,
             base_class_name=base_class_name,
+            explicit_foreign_keys=True,
         )
 
     @property
@@ -1812,7 +1823,6 @@ class SQLModelGenerator(DeclarativeGenerator):
 
             if model.relationships:
                 self.add_literal_import("sqlmodel", "Relationship")
-                self.add_literal_import("sqlalchemy.orm", "RelationshipProperty")
 
     def render_module_variables(self, models: list[Model]) -> str:
         declarations: list[str] = []
@@ -1859,25 +1869,27 @@ class SQLModelGenerator(DeclarativeGenerator):
         return f"{column_attr.name}: {rendered_column_python_type} = {rendered_field}"
 
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
-        rendered = super().render_relationship(relationship).partition(" = ")[2]
-        args = self.render_relationship_args(rendered)
-        kwargs: dict[str, Any] = {}
-        annotation = repr(relationship.target.name)
+        kwargs = self.render_relationship_arguments(relationship)
+        annotation = self.render_relationship_annotation(relationship)
 
-        if relationship.type in (
-            RelationshipType.ONE_TO_MANY,
-            RelationshipType.MANY_TO_MANY,
-        ):
-            annotation = f"list[{annotation}]"
-        else:
-            self.add_literal_import("typing", "Optional")
-            annotation = f"Optional[{annotation}]"
+        native_kwargs: dict[str, Any] = {}
+        non_native_kwargs: dict[str, Any] = {}
+        for key, value in kwargs.items():
+            # The following keyword arguments are natively supported in Relationship
+            if key in ("back_populates", "cascade_delete", "passive_deletes"):
+                native_kwargs[key] = value
+            else:
+                non_native_kwargs[key] = value
 
-        rendered_field = render_callable("Relationship", *args, kwargs=kwargs)
+        if non_native_kwargs:
+            rendered = (
+                "{"
+                + ", ".join(
+                    f"{key!r}: {value}" for key, value in non_native_kwargs.items()
+                )
+                + "}"
+            )
+            native_kwargs["sa_relationship_kwargs"] = rendered
+
+        rendered_field = render_callable("Relationship", kwargs=native_kwargs)
         return f"{relationship.name}: {annotation} = {rendered_field}"
-
-    def render_relationship_args(self, arguments: str) -> list[str]:
-        return [
-            "sa_relationship="
-            + arguments.replace("relationship", "RelationshipProperty", 1)
-        ]
