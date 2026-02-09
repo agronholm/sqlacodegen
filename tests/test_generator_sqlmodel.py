@@ -142,6 +142,66 @@ back_populates='simple_goods')
     )
 
 
+def test_onetomany_multiref(generator: CodeGenerator) -> None:
+    Table(
+        "simple_items_multiref",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("parent_container_id", INTEGER),
+        Column("top_container_id", INTEGER, nullable=False),
+        ForeignKeyConstraint(
+            ["parent_container_id"], ["simple_containers_multiref.id"]
+        ),
+        ForeignKeyConstraint(["top_container_id"], ["simple_containers_multiref.id"]),
+    )
+    Table(
+        "simple_containers_multiref",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from typing import Optional
+
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlmodel import Field, Relationship, SQLModel
+
+            class SimpleContainersMultiref(SQLModel, table=True):
+                __tablename__ = 'simple_containers_multiref'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+
+                simple_items_multiref_parent_container: list['SimpleItemsMultiref'] = \
+Relationship(back_populates='parent_container', sa_relationship_kwargs={\
+'foreign_keys': '[SimpleItemsMultiref.parent_container_id]'})
+                simple_items_multiref_top_container: list['SimpleItemsMultiref'] = \
+Relationship(back_populates='top_container', sa_relationship_kwargs={'foreign_keys': \
+'[SimpleItemsMultiref.top_container_id]'})
+
+
+            class SimpleItemsMultiref(SQLModel, table=True):
+                __tablename__ = 'simple_items_multiref'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+                top_container_id: int = \
+Field(sa_column=Column('top_container_id', \
+ForeignKey('simple_containers_multiref.id'), nullable=False))
+                parent_container_id: Optional[int] = \
+Field(default=None, sa_column=Column('parent_container_id', \
+ForeignKey('simple_containers_multiref.id')))
+
+                parent_container: Optional['SimpleContainersMultiref'] = Relationship(\
+back_populates='simple_items_multiref_parent_container', sa_relationship_kwargs={\
+'foreign_keys': '[SimpleItemsMultiref.parent_container_id]'})
+                top_container: 'SimpleContainersMultiref' = Relationship(\
+back_populates='simple_items_multiref_top_container', sa_relationship_kwargs={\
+'foreign_keys': '[SimpleItemsMultiref.top_container_id]'})
+        """,
+    )
+
+
 def test_onetoone(generator: CodeGenerator) -> None:
     Table(
         "simple_onetoone",
@@ -167,7 +227,7 @@ def test_onetoone(generator: CodeGenerator) -> None:
                 id: int = Field(sa_column=Column('id', Integer, primary_key=True))
 
                 simple_onetoone: Optional['SimpleOnetoone'] = Relationship(\
-sa_relationship_kwargs={'uselist': False}, back_populates='other_item')
+back_populates='other_item', sa_relationship_kwargs={'uselist': False})
 
 
             class SimpleOnetoone(SQLModel, table=True):

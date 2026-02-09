@@ -1,6 +1,23 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- **BACKWARD INCOMPATIBLE** API changes (for those who customize code generation by
+  subclassing the existing generators):
+
+  * Added new optional keyword argument, ``explicit_foreign_keys`` to
+    ``DeclarativeGenerator``, to force foreign keys to be rendered as
+    ``ClassName.attribute_name`` string references
+  * Removed the ``render_relationship_args()`` method from the SQLModel generator
+  * Added two new methods for customizing relationship rendering in
+    ``DeclarativeGenerator``:
+
+    * ``render_relationship_annotation()``: returns the appropriate type annotation
+      (without the ``Mapped`` wrapper) for the relationship
+    * ``render_relationship_arguments()``: returns a dictionary of keyword arguments to
+      ``sqlalchemy.orm.relationship()``
+
 **4.0.0rc3**
 
 - **BACKWARD INCOMPATIBLE** Relationship names changed when multiple FKs or junction tables
@@ -14,6 +31,8 @@ Version history
   ``students_enrollments``). Use ``--options nofknames`` to revert to old behavior. (PR by @sheinbergon)
 - Fixed ``Index`` kwargs (e.g. ``mysql_length``) being ignored during code generation
   (PR by @luliangce)
+- Fixed the SQLModel generator not adding the ``foreign_keys`` parameters when
+  generating multiple relationships between the same two tables
 
 **4.0.0rc2**
 
