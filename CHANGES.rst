@@ -1,10 +1,8 @@
 Version history
 ===============
 
-**4.0.0rc3**
+**UNRELEASED**
 
-- **BACKWARD INCOMPATIBLE** Relationship names changed when multiple FKs or junction tables
-  connect to the same target table. Regenerating models will break existing code.
 - **BACKWARD INCOMPATIBLE** API changes (for those who customize code generation by
   subclassing the existing generators):
 
@@ -19,6 +17,11 @@ Version history
       (without the ``Mapped`` wrapper) for the relationship
     * ``render_relationship_arguments()``: returns a dictionary of keyword arguments to
       ``sqlalchemy.orm.relationship()``
+
+**4.0.0rc3**
+
+- **BACKWARD INCOMPATIBLE** Relationship names changed when multiple FKs or junction tables
+  connect to the same target table. Regenerating models will break existing code.
 - Added support for generating Python enum classes for ``ARRAY(Enum(...))`` columns
   (e.g., PostgreSQL ``ARRAY(ENUM)``). Supports named/unnamed enums, shared enums across
   columns, and multi-dimensional arrays. Respects ``--options nonativeenums``.
