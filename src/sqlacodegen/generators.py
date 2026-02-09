@@ -1638,26 +1638,19 @@ class DeclarativeGenerator(TablesGenerator):
     def render_relationship_annotation(
         self, relationship: RelationshipAttribute
     ) -> str:
-        if relationship.type == RelationshipType.ONE_TO_MANY:
-            inner_type = f"list[{relationship.target.name!r}]"
-        elif relationship.type in (
-            RelationshipType.ONE_TO_ONE,
-            RelationshipType.MANY_TO_ONE,
-        ):
-            if relationship.constraint and any(
-                col.nullable for col in relationship.constraint.columns
-            ):
-                self.add_literal_import("typing", "Optional")
-                inner_type = f"Optional[{relationship.target.name!r}]"
-            else:
-                inner_type = f"'{relationship.target.name}'"
-        elif relationship.type == RelationshipType.MANY_TO_MANY:
-            inner_type = f"list[{relationship.target.name!r}]"
-        else:
-            self.add_literal_import("typing", "Any")
-            inner_type = "Any"
-
-        return inner_type
+        match relationship.type:
+            case RelationshipType.ONE_TO_MANY:
+                return f"list[{relationship.target.name!r}]"
+            case RelationshipType.ONE_TO_ONE | RelationshipType.MANY_TO_ONE:
+                if relationship.constraint and any(
+                    col.nullable for col in relationship.constraint.columns
+                ):
+                    self.add_literal_import("typing", "Optional")
+                    return f"Optional[{relationship.target.name!r}]"
+                else:
+                    return f"'{relationship.target.name}'"
+            case RelationshipType.MANY_TO_MANY:
+                return f"list[{relationship.target.name!r}]"
 
     def render_relationship_arguments(
         self, relationship: RelationshipAttribute
@@ -1882,14 +1875,13 @@ class SQLModelGenerator(DeclarativeGenerator):
                 non_native_kwargs[key] = value
 
         if non_native_kwargs:
-            rendered = (
+            native_kwargs["sa_relationship_kwargs"] = (
                 "{"
                 + ", ".join(
                     f"{key!r}: {value}" for key, value in non_native_kwargs.items()
                 )
                 + "}"
             )
-            native_kwargs["sa_relationship_kwargs"] = rendered
 
         rendered_field = render_callable("Relationship", kwargs=native_kwargs)
         return f"{relationship.name}: {annotation} = {rendered_field}"
