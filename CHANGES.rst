@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**4.0.0**
 
 - **BACKWARD INCOMPATIBLE** API changes (for those who customize code generation by
   subclassing the existing generators):
