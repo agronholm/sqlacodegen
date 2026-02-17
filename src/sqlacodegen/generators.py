@@ -550,7 +550,12 @@ class TablesGenerator(CodeGenerator):
             ):
                 # Import SQLAlchemy Enum (will be handled in collect_imports)
                 self.add_import(Enum)
-                return f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls])"
+                extra_kwargs = ""
+                if column_type.name is not None:
+                    extra_kwargs += f", name={column_type.name!r}"
+                if column_type.schema is not None:
+                    extra_kwargs += f", schema={column_type.schema!r}"
+                return f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls]{extra_kwargs})"
 
         args = []
         kwargs: dict[str, Any] = {}
@@ -562,7 +567,12 @@ class TablesGenerator(CodeGenerator):
             ):
                 self.add_import(ARRAY)
                 self.add_import(Enum)
-                rendered_enum = f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls])"
+                extra_kwargs = ""
+                if column_type.item_type.name is not None:
+                    extra_kwargs += f", name={column_type.item_type.name!r}"
+                if column_type.item_type.schema is not None:
+                    extra_kwargs += f", schema={column_type.item_type.schema!r}"
+                rendered_enum = f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls]{extra_kwargs})"
                 if column_type.dimensions is not None:
                     kwargs["dimensions"] = repr(column_type.dimensions)
 

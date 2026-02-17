@@ -1,6 +1,11 @@
 Version history
 ===============
 
+**4.0.1**
+
+- Fix enum column definitions to explicitly include schema and name if reflected
+  via SQLAlchemy's Metadata (pr by @sheinbergon)
+
 **4.0.0**
 
 - **BACKWARD INCOMPATIBLE** API changes (for those who customize code generation by
