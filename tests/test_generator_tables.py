@@ -603,6 +603,34 @@ def test_mysql_column_types(generator: CodeGenerator) -> None:
     )
 
 
+@pytest.mark.parametrize("engine", ["mysql"], indirect=["engine"])
+@pytest.mark.parametrize("generator", [["keep_dialect_types"]], indirect=True)
+def test_mysql_char_collation_keep_dialect_types(generator: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", mysql.INTEGER, primary_key=True),
+        Column("result_code", mysql.CHAR(1, collation="utf8mb3_bin"), nullable=False),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, MetaData, Table
+        from sqlalchemy.dialects.mysql import CHAR, INTEGER
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('id', INTEGER, primary_key=True),
+            Column('result_code', CHAR(1, collation='utf8mb3_bin'), nullable=False)
+        )
+        """,
+    )
+
+
 def test_constraints(generator: CodeGenerator) -> None:
     Table(
         "simple_items",

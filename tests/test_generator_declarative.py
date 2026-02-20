@@ -321,6 +321,40 @@ class Num2(Base):
     )
 
 
+@pytest.mark.parametrize("engine", ["mysql"], indirect=["engine"])
+@pytest.mark.parametrize("generator", [["keep_dialect_types"]], indirect=True)
+def test_keep_dialect_types_keeps_mysql_char_collation(
+    generator: CodeGenerator,
+) -> None:
+    from sqlalchemy.dialects.mysql import CHAR as MYSQL_CHAR
+    from sqlalchemy.dialects.mysql import INTEGER as MYSQL_INTEGER
+
+    Table(
+        "result_logs",
+        generator.metadata,
+        Column("id", MYSQL_INTEGER, primary_key=True),
+        Column("result_code", MYSQL_CHAR(1, collation="utf8mb3_bin"), nullable=False),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from sqlalchemy.dialects.mysql import CHAR, INTEGER
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class ResultLogs(Base):
+    __tablename__ = 'result_logs'
+
+    id: Mapped[int] = mapped_column(INTEGER, primary_key=True)
+    result_code: Mapped[str] = mapped_column(CHAR(1, collation='utf8mb3_bin'), nullable=False)
+        """,
+    )
+
+
 def test_onetomany(generator: CodeGenerator) -> None:
     Table(
         "simple_items",
