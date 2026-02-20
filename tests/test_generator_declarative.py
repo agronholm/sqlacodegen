@@ -2508,14 +2508,14 @@ def test_enum_shared_values(generator: CodeGenerator) -> None:
             __tablename__ = 'accounts'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
+            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls], name='status_enum'), nullable=False)
 
 
         class Users(Base):
             __tablename__ = 'users'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
+            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls], name='status_enum'), nullable=False)
         """,
     )
 
@@ -2851,7 +2851,7 @@ def test_array_enum_named(generator: CodeGenerator) -> None:
             __tablename__ = 'users'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            roles: Mapped[list[RoleEnum]] = mapped_column(ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])), nullable=False)
+            roles: Mapped[list[RoleEnum]] = mapped_column(ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls], name='role_enum')), nullable=False)
         """,
     )
 
@@ -2927,7 +2927,7 @@ def test_array_enum_nullable(generator: CodeGenerator) -> None:
             __tablename__ = 'users'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            roles: Mapped[Optional[list[RoleEnum]]] = mapped_column(ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
+            roles: Mapped[Optional[list[RoleEnum]]] = mapped_column(ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls], name='role_enum')))
         """,
     )
 
@@ -2965,7 +2965,7 @@ def test_array_enum_with_dimensions(generator: CodeGenerator) -> None:
             __tablename__ = 'items'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            tag_matrix: Mapped[list[list[TagEnum]]] = mapped_column(ARRAY(Enum(TagEnum, values_callable=lambda cls: [member.value for member in cls]), dimensions=2), nullable=False)
+            tag_matrix: Mapped[list[list[TagEnum]]] = mapped_column(ARRAY(Enum(TagEnum, values_callable=lambda cls: [member.value for member in cls], name='tag_enum'), dimensions=2), nullable=False)
         """,
     )
 
@@ -3043,7 +3043,87 @@ def test_array_enum_shared_with_regular_enum(generator: CodeGenerator) -> None:
             __tablename__ = 'users'
 
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
-            primary_role: Mapped[RoleEnum] = mapped_column(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls]), nullable=False)
-            all_roles: Mapped[list[RoleEnum]] = mapped_column(ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])), nullable=False)
+            primary_role: Mapped[RoleEnum] = mapped_column(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls], name='role_enum'), nullable=False)
+            all_roles: Mapped[list[RoleEnum]] = mapped_column(ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls], name='role_enum')), nullable=False)
+        """,
+    )
+
+
+def test_enum_named_with_schema(generator: CodeGenerator) -> None:
+    Table(
+        "my_table",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "status",
+            SAEnum("active", "inactive", name="status_enum", schema="custom_schema"),
+            nullable=False,
+        ),
+        schema="custom_schema",
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class StatusEnum(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+
+
+        class MyTable(Base):
+            __tablename__ = 'my_table'
+            __table_args__ = {'schema': 'custom_schema'}
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            status: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls], name='status_enum', schema='custom_schema'), nullable=False)
+        """,
+    )
+
+
+def test_array_enum_named_with_schema(generator: CodeGenerator) -> None:
+    Table(
+        "my_table",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "tags",
+            ARRAY(SAEnum("a", "b", name="tag_enum", schema="custom_schema")),
+            nullable=False,
+        ),
+        schema="custom_schema",
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import ARRAY, Enum, Integer
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            pass
+
+
+        class TagEnum(str, enum.Enum):
+            A = 'a'
+            B = 'b'
+
+
+        class MyTable(Base):
+            __tablename__ = 'my_table'
+            __table_args__ = {'schema': 'custom_schema'}
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            tags: Mapped[list[TagEnum]] = mapped_column(ARRAY(Enum(TagEnum, values_callable=lambda cls: [member.value for member in cls], name='tag_enum', schema='custom_schema')), nullable=False)
         """,
     )

@@ -76,7 +76,7 @@ def test_fancy_coltypes(generator: CodeGenerator) -> None:
 
         t_simple_items = Table(
             'simple_items', metadata,
-            Column('enum', Enum(Blah, values_callable=lambda cls: [member.value for member in cls])),
+            Column('enum', Enum(Blah, values_callable=lambda cls: [member.value for member in cls], name='blah', schema='someschema')),
             Column('bool', Boolean),
             Column('vector', VECTOR(3)),
             Column('number', Numeric(10, asdecimal=False)),
@@ -309,13 +309,13 @@ def test_enum_shared_values(generator: CodeGenerator) -> None:
         t_accounts = Table(
             'accounts', metadata,
             Column('id', Integer, primary_key=True),
-            Column('status', Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls]))
+            Column('status', Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls], name='status_enum'))
         )
 
         t_users = Table(
             'users', metadata,
             Column('id', Integer, primary_key=True),
-            Column('status', Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls]))
+            Column('status', Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls], name='status_enum'))
         )
         """,
     )
@@ -348,7 +348,7 @@ def test_array_enum_named(generator: CodeGenerator) -> None:
         t_users = Table(
             'users', metadata,
             Column('id', Integer, primary_key=True),
-            Column('roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
+            Column('roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls], name='role_enum')))
         )
         """,
     )
@@ -386,13 +386,87 @@ def test_array_enum_shared(generator: CodeGenerator) -> None:
         t_groups = Table(
             'groups', metadata,
             Column('id', Integer, primary_key=True),
-            Column('allowed_roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
+            Column('allowed_roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls], name='role_enum')))
         )
 
         t_users = Table(
             'users', metadata,
             Column('id', Integer, primary_key=True),
-            Column('roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls])))
+            Column('roles', ARRAY(Enum(RoleEnum, values_callable=lambda cls: [member.value for member in cls], name='role_enum')))
+        )
+        """,
+    )
+
+
+def test_enum_named_with_schema(generator: CodeGenerator) -> None:
+    Table(
+        "my_table",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "status",
+            SAEnum("active", "inactive", name="status_enum", schema="custom_schema"),
+        ),
+        schema="custom_schema",
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import Column, Enum, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        class StatusEnum(str, enum.Enum):
+            ACTIVE = 'active'
+            INACTIVE = 'inactive'
+
+
+        t_my_table = Table(
+            'my_table', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('status', Enum(StatusEnum, values_callable=lambda cls: [member.value for member in cls], name='status_enum', schema='custom_schema')),
+            schema='custom_schema'
+        )
+        """,
+    )
+
+
+def test_array_enum_named_with_schema(generator: CodeGenerator) -> None:
+    Table(
+        "my_table",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "tags",
+            ARRAY(SAEnum("a", "b", name="tag_enum", schema="custom_schema")),
+        ),
+        schema="custom_schema",
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import enum
+
+        from sqlalchemy import ARRAY, Column, Enum, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        class TagEnum(str, enum.Enum):
+            A = 'a'
+            B = 'b'
+
+
+        t_my_table = Table(
+            'my_table', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('tags', ARRAY(Enum(TagEnum, values_callable=lambda cls: [member.value for member in cls], name='tag_enum', schema='custom_schema'))),
+            schema='custom_schema'
         )
         """,
     )

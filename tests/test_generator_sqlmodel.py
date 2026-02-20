@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy import Uuid
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import (
@@ -13,7 +14,7 @@ from sqlalchemy.schema import (
     Table,
     UniqueConstraint,
 )
-from sqlalchemy.types import INTEGER, VARCHAR
+from sqlalchemy.types import ARRAY, INTEGER, VARCHAR
 
 from sqlacodegen.generators import CodeGenerator, SQLModelGenerator
 
@@ -327,5 +328,41 @@ def test_synthetic_enum_generation(generator: CodeGenerator) -> None:
 
                 id: int = Field(sa_column=Column('id', Integer, primary_key=True))
                 status: AccountsStatus = Field(sa_column=Column('status', Enum(AccountsStatus, values_callable=lambda cls: [member.value for member in cls]), nullable=False))
+        """,
+    )
+
+
+def test_array_enum_named_with_schema(generator: CodeGenerator) -> None:
+    Table(
+        "my_table",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column(
+            "tags",
+            ARRAY(SAEnum("a", "b", name="tag_enum", schema="custom_schema")),
+            nullable=False,
+        ),
+        schema="custom_schema",
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            import enum
+
+            from sqlalchemy import ARRAY, Column, Enum, Integer
+            from sqlmodel import Field, SQLModel
+
+            class TagEnum(str, enum.Enum):
+                A = 'a'
+                B = 'b'
+
+
+            class MyTable(SQLModel, table=True):
+                __tablename__ = 'my_table'
+                __table_args__ = {'schema': 'custom_schema'}
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+                tags: list[TagEnum] = Field(sa_column=Column('tags', ARRAY(Enum(TagEnum, values_callable=lambda cls: [member.value for member in cls], name='tag_enum', schema='custom_schema')), nullable=False))
         """,
     )
