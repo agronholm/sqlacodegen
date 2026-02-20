@@ -553,8 +553,10 @@ class TablesGenerator(CodeGenerator):
                 extra_kwargs = ""
                 if column_type.name is not None:
                     extra_kwargs += f", name={column_type.name!r}"
+
                 if column_type.schema is not None:
                     extra_kwargs += f", schema={column_type.schema!r}"
+
                 return f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls]{extra_kwargs})"
 
         args = []
