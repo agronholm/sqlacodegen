@@ -572,8 +572,10 @@ class TablesGenerator(CodeGenerator):
                 extra_kwargs = ""
                 if column_type.item_type.name is not None:
                     extra_kwargs += f", name={column_type.item_type.name!r}"
+
                 if column_type.item_type.schema is not None:
                     extra_kwargs += f", schema={column_type.item_type.schema!r}"
+
                 rendered_enum = f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls]{extra_kwargs})"
                 if column_type.dimensions is not None:
                     kwargs["dimensions"] = repr(column_type.dimensions)
