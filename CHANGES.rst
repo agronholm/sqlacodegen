@@ -5,7 +5,7 @@ Version history
 
 - Fixed rendering of inherited keyword arguments for dialect-specific types that use
   ``**kwargs`` in their initializers (such as MySQL ``CHAR`` with ``collation``) while
-  preserving existing ``*args`` rendering behavior
+  preserving existing ``*args`` rendering behavior (PR by @hyoj0942)
 
 **4.0.1**
 
