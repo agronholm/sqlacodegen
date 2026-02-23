@@ -541,6 +541,77 @@ class TablesGenerator(CodeGenerator):
         else:
             return render_callable("mapped_column", *args, kwargs=kwargs)
 
+    def _render_column_type_value(self, value: Any) -> str:
+        if isinstance(value, (JSONB, JSON)):
+            # Remove astext_type if it's the default
+            if isinstance(value.astext_type, Text) and value.astext_type.length is None:
+                value.astext_type = None  # type: ignore[assignment]
+            else:
+                self.add_import(Text)
+
+        if isinstance(value, TextClause):
+            self.add_literal_import("sqlalchemy", "text")
+            return render_callable("text", repr(value.text))
+
+        return repr(value)
+
+    def _collect_inherited_init_kwargs(
+        self,
+        column_type: Any,
+        init_sig: inspect.Signature,
+        seen_param_names: set[str],
+        missing: object,
+    ) -> dict[str, str]:
+        has_var_keyword = any(
+            param.kind is Parameter.VAR_KEYWORD
+            for param in init_sig.parameters.values()
+        )
+        has_var_positional = any(
+            param.kind is Parameter.VAR_POSITIONAL
+            for param in init_sig.parameters.values()
+        )
+        if not has_var_keyword or has_var_positional:
+            return {}
+
+        inherited_kwargs: dict[str, str] = {}
+        for supercls in column_type.__class__.__mro__[1:]:
+            if supercls is object:
+                break
+
+            try:
+                super_sig = inspect.signature(supercls.__init__)
+            except (TypeError, ValueError):
+                continue
+
+            for super_param in list(super_sig.parameters.values())[1:]:
+                if super_param.name.startswith("_"):
+                    continue
+
+                if super_param.kind in (
+                    Parameter.POSITIONAL_ONLY,
+                    Parameter.VAR_POSITIONAL,
+                    Parameter.VAR_KEYWORD,
+                ):
+                    continue
+
+                if super_param.name in seen_param_names:
+                    continue
+
+                seen_param_names.add(super_param.name)
+                value = getattr(column_type, super_param.name, missing)
+                if value is missing:
+                    continue
+
+                default = super_param.default
+                if default is not Parameter.empty and value == default:
+                    continue
+
+                inherited_kwargs[super_param.name] = self._render_column_type_value(
+                    value
+                )
+
+        return inherited_kwargs
+
     def render_column_type(self, column: Column[Any]) -> str:
         column_type = column.type
         # Check if this is an enum column with a Python enum class
@@ -586,29 +657,7 @@ class TablesGenerator(CodeGenerator):
         defaults = {param.name: param.default for param in sig.parameters.values()}
         missing = object()
         use_kwargs = False
-        seen_param_names = {
-            param.name
-            for param in list(sig.parameters.values())[1:]
-            if not param.name.startswith("_")
-            and param.kind not in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD)
-        }
-
-        def render_param_value(value: Any) -> str:
-            if isinstance(value, (JSONB, JSON)):
-                # Remove astext_type if it's the default
-                if (
-                    isinstance(value.astext_type, Text)
-                    and value.astext_type.length is None
-                ):
-                    value.astext_type = None  # type: ignore[assignment]
-                else:
-                    self.add_import(Text)
-
-            if isinstance(value, TextClause):
-                self.add_literal_import("sqlalchemy", "text")
-                return render_callable("text", repr(value.text))
-
-            return repr(value)
+        seen_param_names: set[str] = set()
 
         for param in list(sig.parameters.values())[1:]:
             # Remove annoyances like _warn_on_bytestring
@@ -618,58 +667,24 @@ class TablesGenerator(CodeGenerator):
                 use_kwargs = True
                 continue
 
+            seen_param_names.add(param.name)
             value = getattr(column_type, param.name, missing)
             default = defaults.get(param.name, missing)
             if value is missing or value == default:
                 use_kwargs = True
                 continue
 
-            rendered_value = render_param_value(value)
+            rendered_value = self._render_column_type_value(value)
             if use_kwargs:
                 kwargs[param.name] = rendered_value
             else:
                 args.append(rendered_value)
 
-        has_var_keyword = any(
-            param.kind is Parameter.VAR_KEYWORD for param in sig.parameters.values()
+        kwargs.update(
+            self._collect_inherited_init_kwargs(
+                column_type, sig, seen_param_names, missing
+            )
         )
-        has_var_positional = any(
-            param.kind is Parameter.VAR_POSITIONAL for param in sig.parameters.values()
-        )
-        if has_var_keyword and not has_var_positional:
-            for supercls in column_type.__class__.__mro__[1:]:
-                if supercls is object:
-                    break
-
-                try:
-                    super_sig = inspect.signature(supercls.__init__)
-                except (TypeError, ValueError):
-                    continue
-
-                for super_param in list(super_sig.parameters.values())[1:]:
-                    if super_param.name.startswith("_"):
-                        continue
-
-                    if super_param.kind in (
-                        Parameter.POSITIONAL_ONLY,
-                        Parameter.VAR_POSITIONAL,
-                        Parameter.VAR_KEYWORD,
-                    ):
-                        continue
-
-                    if super_param.name in seen_param_names:
-                        continue
-
-                    seen_param_names.add(super_param.name)
-                    value = getattr(column_type, super_param.name, missing)
-                    if value is missing:
-                        continue
-
-                    default = super_param.default
-                    if default is not Parameter.empty and value == default:
-                        continue
-
-                    kwargs[super_param.name] = render_param_value(value)
 
         vararg = next(
             (

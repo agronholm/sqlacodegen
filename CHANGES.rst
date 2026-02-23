@@ -1,6 +1,12 @@
 Version history
 ===============
 
+**Unreleased**
+
+- Fixed rendering of inherited keyword arguments for dialect-specific types that use
+  ``**kwargs`` in their initializers (such as MySQL ``CHAR`` with ``collation``) while
+  preserving existing ``*args`` rendering behavior
+
 **4.0.1**
 
 - Fix enum column definitions to explicitly include schema and name if reflected
