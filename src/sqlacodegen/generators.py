@@ -1872,19 +1872,27 @@ class SQLModelGenerator(DeclarativeGenerator):
         self.add_import(Column)
         return render_callable("Column", *args, kwargs=kwargs)
 
+    def render_table(self, table: Table) -> str:
+        # Hack to fix #465 without breaking backwards compatibility
+        self.base.metadata_ref = "SQLModel.metadata"
+
+        return super().render_table(table)
+
     def generate_base(self) -> None:
         self.base = Base(
             literal_imports=[],
             declarations=[],
-            metadata_ref="",
+            metadata_ref="SQLModel.metadata",
         )
 
     def collect_imports(self, models: Iterable[Model]) -> None:
         super(DeclarativeGenerator, self).collect_imports(models)
         if any(isinstance(model, ModelClass) for model in models):
+            self.add_literal_import("sqlmodel", "Field")
+
+        if models:
             self.remove_literal_import("sqlalchemy", "MetaData")
             self.add_literal_import("sqlmodel", "SQLModel")
-            self.add_literal_import("sqlmodel", "Field")
 
     def collect_imports_for_model(self, model: Model) -> None:
         super(DeclarativeGenerator, self).collect_imports_for_model(model)
