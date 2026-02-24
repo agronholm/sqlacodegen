@@ -366,3 +366,24 @@ def test_array_enum_named_with_schema(generator: CodeGenerator) -> None:
                 tags: list[TagEnum] = Field(sa_column=Column('tags', ARRAY(Enum(TagEnum, values_callable=lambda cls: [member.value for member in cls], name='tag_enum', schema='custom_schema')), nullable=False))
         """,
     )
+
+
+def test_fallback_table(generator: CodeGenerator) -> None:
+    Table(
+        "simple_fallback",
+        generator.metadata,
+        Column("field", VARCHAR(20), nullable=False),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from sqlalchemy import Column, String, Table
+            from sqlmodel import SQLModel
+
+            t_simple_fallback = Table(
+                'simple_fallback', SQLModel.metadata,
+                Column('field', String(20), nullable=False)
+            )
+        """,
+    )
