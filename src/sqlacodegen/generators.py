@@ -1737,13 +1737,18 @@ class DeclarativeGenerator(TablesGenerator):
     ) -> Mapping[str, Any]:
         def render_column_attrs(column_attrs: list[ColumnAttribute]) -> str:
             rendered = []
+            render_as_string = False
             for attr in column_attrs:
-                if attr.model is relationship.source:
+                if not self.explicit_foreign_keys and attr.model is relationship.source:
                     rendered.append(attr.name)
                 else:
-                    rendered.append(repr(f"{attr.model.name}.{attr.name}"))
+                    rendered.append(f"{attr.model.name}.{attr.name}")
+                    render_as_string = True
 
-            return "[" + ", ".join(rendered) + "]"
+            if render_as_string:
+                return "'[" + ", ".join(rendered) + "]'"
+            else:
+                return "[" + ", ".join(rendered) + "]"
 
         def render_foreign_keys(column_attrs: list[ColumnAttribute]) -> str:
             rendered = []
