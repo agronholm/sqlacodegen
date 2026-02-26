@@ -1745,7 +1745,7 @@ class DeclarativeGenerator(TablesGenerator):
                     rendered.append(f"{attr.model.name}.{attr.name}")
                     render_as_string = True
 
-            joined = "'[" + ", ".join(rendered) + "]'"
+            joined = "[" + ", ".join(rendered) + "]"
             return repr(joined) if render_as_string else joined
 
         def render_foreign_keys(column_attrs: list[ColumnAttribute]) -> str:
