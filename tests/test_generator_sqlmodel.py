@@ -387,3 +387,85 @@ def test_fallback_table(generator: CodeGenerator) -> None:
             )
         """,
     )
+
+
+def test_onetomany_selfref(generator: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("parent_item_id", INTEGER),
+        ForeignKeyConstraint(["parent_item_id"], ["simple_items.id"]),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from typing import Optional
+
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlmodel import Field, Relationship, SQLModel
+
+            class SimpleItems(SQLModel, table=True):
+                __tablename__ = 'simple_items'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+                parent_item_id: Optional[int] = Field(default=None, sa_column=Column(\
+'parent_item_id', ForeignKey('simple_items.id')))
+
+                parent_item: Optional['SimpleItems'] = Relationship(\
+back_populates='parent_item_reverse', sa_relationship_kwargs={\
+'remote_side': '[SimpleItems.id]'})
+                parent_item_reverse: list['SimpleItems'] = Relationship(\
+back_populates='parent_item', sa_relationship_kwargs={\
+'remote_side': '[SimpleItems.parent_item_id]'})
+        """,
+    )
+
+
+def test_onetomany_selfref_multi(generator: CodeGenerator) -> None:
+    Table(
+        "simple_items_selfref",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("parent_item_id", INTEGER),
+        Column("top_item_id", INTEGER),
+        ForeignKeyConstraint(["parent_item_id"], ["simple_items_selfref.id"]),
+        ForeignKeyConstraint(["top_item_id"], ["simple_items_selfref.id"]),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from typing import Optional
+
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlmodel import Field, Relationship, SQLModel
+
+            class SimpleItemsSelfref(SQLModel, table=True):
+                __tablename__ = 'simple_items_selfref'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+                parent_item_id: Optional[int] = Field(default=None, sa_column=Column(\
+'parent_item_id', ForeignKey('simple_items_selfref.id')))
+                top_item_id: Optional[int] = Field(default=None, sa_column=Column(\
+'top_item_id', ForeignKey('simple_items_selfref.id')))
+
+                parent_item: Optional['SimpleItemsSelfref'] = Relationship(\
+back_populates='parent_item_reverse', sa_relationship_kwargs={\
+'remote_side': '[SimpleItemsSelfref.id]', \
+'foreign_keys': '[SimpleItemsSelfref.parent_item_id]'})
+                parent_item_reverse: list['SimpleItemsSelfref'] = Relationship(\
+back_populates='parent_item', sa_relationship_kwargs={\
+'remote_side': '[SimpleItemsSelfref.parent_item_id]', \
+'foreign_keys': '[SimpleItemsSelfref.parent_item_id]'})
+                top_item: Optional['SimpleItemsSelfref'] = Relationship(\
+back_populates='top_item_reverse', sa_relationship_kwargs={\
+'remote_side': '[SimpleItemsSelfref.id]', \
+'foreign_keys': '[SimpleItemsSelfref.top_item_id]'})
+                top_item_reverse: list['SimpleItemsSelfref'] = Relationship(\
+back_populates='top_item', sa_relationship_kwargs={\
+'remote_side': '[SimpleItemsSelfref.top_item_id]', \
+'foreign_keys': '[SimpleItemsSelfref.top_item_id]'})
+        """,
+    )

@@ -7,7 +7,7 @@ Version history
   ``**kwargs`` in their initializers (such as MySQL ``CHAR`` with ``collation``) while
   preserving existing ``*args`` rendering behavior (PR by @hyoj0942)
 - Fixed missing metadata argument when rendering plain tables with the SQLModel
-  generator
+- Added support for self-referential tables in the SQLModel generator (PR by @sheinbergon)
 
 **4.0.1**
 
