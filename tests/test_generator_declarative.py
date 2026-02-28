@@ -3161,3 +3161,75 @@ def test_array_enum_named_with_schema(generator: CodeGenerator) -> None:
             tags: Mapped[list[TagEnum]] = mapped_column(ARRAY(Enum(TagEnum, values_callable=lambda cls: [member.value for member in cls], name='tag_enum', schema='custom_schema')), nullable=False)
         """,
     )
+
+
+def test_index_with_empty_kwargs(generator: CodeGenerator) -> None:
+    simple_items = Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("name", VARCHAR),
+    )
+    simple_items.indexes.add(
+        Index(
+            "idx_name",
+            simple_items.c.name,
+            postgresql_using="gist",
+            postgresql_include=[],
+        )
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import Index, Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        Index('idx_name', 'name', postgresql_using='gist'),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[Optional[str]] = mapped_column(String)
+        """,
+    )
+
+
+@pytest.mark.parametrize("generator", [["include_dialect_options"]], indirect=True)
+def test_include_dialect_options_empty_values_skipped(
+    generator: CodeGenerator,
+) -> None:
+    Table(
+        "t_opts3",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        mysql_engine="InnoDB",
+        mysql_partition_by=[],
+        mysql_PROPERTIES={},
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TOpts3(Base):
+    __tablename__ = 't_opts3'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+        """,
+    )
