@@ -427,6 +427,7 @@ class TablesGenerator(CodeGenerator):
         kwargs = {
             key: repr(value) if isinstance(value, str) else value
             for key, value in sorted(index.kwargs.items(), key=lambda item: item[0])
+            if value not in ([], {})
         }
         if index.unique:
             kwargs["unique"] = True
@@ -776,6 +777,9 @@ class TablesGenerator(CodeGenerator):
             try:
                 value = dialect_kwargs[key]
             except Exception:
+                continue
+
+            if isinstance(value, list | dict) and not value:
                 continue
 
             # Render values:
