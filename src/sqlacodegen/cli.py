@@ -112,6 +112,13 @@ def main() -> None:
     # Use reflection to fill in the metadata
     engine_args = _parse_engine_args(args.engine_arg)
     engine = create_engine(args.url, **engine_args)
+
+    # Register missing SQL Server types
+    if engine.dialect.name == "mssql":
+        from sqlalchemy.sql.sqltypes import NVARCHAR
+
+        engine.dialect.ischema_names.setdefault("sysname", NVARCHAR)
+
     metadata = MetaData()
     tables = args.tables.split(",") if args.tables else None
     schemas = args.schemas.split(",") if args.schemas else [None]
