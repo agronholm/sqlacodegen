@@ -544,8 +544,10 @@ class TablesGenerator(CodeGenerator):
                 value = getattr(identity, attr, None)
                 if value is None or value == identity_defaults.get(attr):
                     continue
+
                 if isinstance(value, Decimal):
                     value = int(value)
+
                 identity_kwargs[attr] = value
 
             args.append(render_callable("Identity", kwargs=identity_kwargs))
