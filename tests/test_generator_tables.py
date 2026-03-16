@@ -1217,6 +1217,38 @@ def test_identity_column(generator: CodeGenerator) -> None:
     )
 
 
+def test_identity_column_decimal(generator: CodeGenerator) -> None:
+    from decimal import Decimal
+
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column(
+            "id",
+            INTEGER,
+            primary_key=True,
+            server_default=Identity(start=Decimal("1"), increment=Decimal("2")),
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        import decimal
+
+        from sqlalchemy import Column, Identity, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('id', Integer, Identity(start=decimal.Decimal('1'), increment=decimal.Decimal('2')), primary_key=True)
+        )
+        """,
+    )
+
+
 def test_multiline_column_comment(generator: CodeGenerator) -> None:
     Table(
         "simple_items",

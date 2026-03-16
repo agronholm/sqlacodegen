@@ -4,6 +4,7 @@ import inspect
 import re
 import sys
 from abc import ABCMeta, abstractmethod
+from decimal import Decimal
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -521,7 +522,36 @@ class TablesGenerator(CodeGenerator):
                 render_callable("Computed", repr(expression), kwargs=computed_kwargs)
             )
         elif isinstance(column.server_default, Identity):
-            args.append(repr(column.server_default))
+            identity = column.server_default
+            identity_kwargs: dict[str, Any] = {}
+            identity_defaults = {
+                p.name: p.default
+                for p in inspect.signature(Identity).parameters.values()
+            }
+            for attr in (
+                "always",
+                "on_null",
+                "start",
+                "increment",
+                "minvalue",
+                "maxvalue",
+                "nominvalue",
+                "nomaxvalue",
+                "cycle",
+                "cache",
+                "order",
+            ):
+                value = getattr(identity, attr, None)
+                if value is None or value == identity_defaults.get(attr):
+                    continue
+                if isinstance(value, Decimal):
+                    self.add_module_import("decimal")
+                    value = f"decimal.Decimal('{value}')"
+                identity_kwargs[attr] = value
+
+            args.append(
+                render_callable("Identity", kwargs=identity_kwargs)
+            )
         elif column.server_default:
             kwargs["server_default"] = repr(column.server_default)
 
