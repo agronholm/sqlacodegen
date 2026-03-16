@@ -117,7 +117,11 @@ def main() -> None:
     if engine.dialect.name == "mssql":
         from sqlalchemy.sql.sqltypes import NVARCHAR
 
-        engine.dialect.ischema_names.setdefault("sysname", NVARCHAR)
+        ischema_names: dict[str, type] | None = getattr(
+            engine.dialect, "ischema_names", None
+        )
+        if ischema_names is not None:
+            ischema_names.setdefault("sysname", NVARCHAR)
 
     metadata = MetaData()
     tables = args.tables.split(",") if args.tables else None
