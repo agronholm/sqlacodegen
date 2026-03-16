@@ -4,10 +4,10 @@ import inspect
 import re
 import sys
 from abc import ABCMeta, abstractmethod
-from decimal import Decimal
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 from importlib import import_module
 from inspect import Parameter
 from itertools import count
@@ -548,9 +548,7 @@ class TablesGenerator(CodeGenerator):
                     value = int(value)
                 identity_kwargs[attr] = value
 
-            args.append(
-                render_callable("Identity", kwargs=identity_kwargs)
-            )
+            args.append(render_callable("Identity", kwargs=identity_kwargs))
         elif column.server_default:
             kwargs["server_default"] = repr(column.server_default)
 
