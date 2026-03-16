@@ -1,6 +1,12 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Improved rendering of ``Identity`` server defaults by explicitly rendering
+  non-default parameters; ``Decimal`` values (as returned by some databases) are
+  now cast to ``int`` (PR by @NotCarlosSerrano)
+
 **4.0.2**
 
 - Fixed rendering of inherited keyword arguments for dialect-specific types that use
@@ -10,9 +16,6 @@ Version history
 - Added support for self-referential tables in the SQLModel generator (PR by @sheinbergon)
 - Fixed empty dialect kwargs (e.g. ``postgresql_include=[]``) being included in
   rendered indexes, tables, and columns (PR by @sheinbergon)
-- Improved rendering of ``Identity`` server defaults by explicitly rendering
-  non-default parameters; ``Decimal`` values (as returned by some databases) are
-  now cast to ``int`` (PR by @NotCarlosSerrano)
 
 **4.0.1**
 
