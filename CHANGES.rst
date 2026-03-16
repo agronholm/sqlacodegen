@@ -11,7 +11,8 @@ Version history
 - Fixed empty dialect kwargs (e.g. ``postgresql_include=[]``) being included in
   rendered indexes, tables, and columns (PR by @sheinbergon)
 - Improved rendering of ``Identity`` server defaults by explicitly rendering
-  non-default parameters and adding support for ``Decimal`` values (PR by @NotCarlosSerrano)
+  non-default parameters; ``Decimal`` values (as returned by some databases) are
+  now cast to ``int`` (PR by @NotCarlosSerrano)
 
 **4.0.1**
 

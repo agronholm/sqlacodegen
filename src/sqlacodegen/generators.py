@@ -545,8 +545,7 @@ class TablesGenerator(CodeGenerator):
                 if value is None or value == identity_defaults.get(attr):
                     continue
                 if isinstance(value, Decimal):
-                    self.add_module_import("decimal")
-                    value = f"decimal.Decimal('{value}')"
+                    value = int(value)
                 identity_kwargs[attr] = value
 
             args.append(
