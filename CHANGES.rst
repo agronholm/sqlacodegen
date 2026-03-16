@@ -1,6 +1,12 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Fix SQL Server schema reflection failing when encountering the ``sysname`` type
+  by registering it as ``NVARCHAR`` in the MSSQL dialect before reflection
+  (PR by @NotCarlosSerrano)
+
 **4.0.2**
 
 - Fixed rendering of inherited keyword arguments for dialect-specific types that use
