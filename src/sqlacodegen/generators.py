@@ -523,11 +523,27 @@ class TablesGenerator(CodeGenerator):
             )
         elif isinstance(column.server_default, Identity):
             identity = column.server_default
-            identity_kwargs = {
-                key: int(value) if isinstance(value, Decimal) else value
-                for key, value in identity.__dict__.items()
-                if value is not None
-            }
+            identity_kwargs: dict[str, Any] = {}
+
+            for name, param in inspect.signature(Identity).parameters.items():
+                if name == "self" or param.kind in (
+                    Parameter.VAR_POSITIONAL,
+                    Parameter.VAR_KEYWORD,
+                ):
+                    continue
+
+                value = getattr(identity, name, None)
+                if value is None:
+                    continue
+
+                if isinstance(value, Decimal):
+                    value = int(value)
+
+                if param.default is not Parameter.empty and value == param.default:
+                    continue
+
+                identity_kwargs[name] = value
+
             args.append(render_callable("Identity", kwargs=identity_kwargs))
         elif column.server_default:
             kwargs["server_default"] = repr(column.server_default)
