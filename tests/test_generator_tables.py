@@ -1219,8 +1219,10 @@ def test_identity_column(generator: CodeGenerator) -> None:
 
 
 def test_identity_column_decimal_values(generator: CodeGenerator) -> None:
+    # MSSQL reflects Identity column parameters (start, increment) as Decimal
+    # values instead of integers. This test ensures those are serialized correctly.
     identity = Identity(start=1, increment=2)
-    # Simulate database reflection returning Decimal values
+    # Simulate database reflection returning Decimal values (as MSSQL does)
     setattr(identity, "start", Decimal("1"))
     setattr(identity, "increment", Decimal("2"))
     Table(
