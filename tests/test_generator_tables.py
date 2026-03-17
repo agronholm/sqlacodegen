@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from textwrap import dedent
 
 import pytest
@@ -1198,6 +1199,40 @@ def test_identity_column(generator: CodeGenerator) -> None:
             INTEGER,
             primary_key=True,
             server_default=Identity(start=1, increment=2),
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, Identity, Integer, MetaData, Table
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('id', Integer, Identity(start=1, increment=2), primary_key=True)
+        )
+        """,
+    )
+
+
+def test_identity_column_decimal_values(generator: CodeGenerator) -> None:
+    # MSSQL reflects Identity column parameters (start, increment) as Decimal
+    # values instead of integers. This test ensures those are serialized correctly.
+    identity = Identity(start=1, increment=2)
+    # Simulate database reflection returning Decimal values (as MSSQL does)
+    identity.start = Decimal("1")  # type: ignore[assignment]
+    identity.increment = Decimal("2")  # type: ignore[assignment]
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column(
+            "id",
+            INTEGER,
+            primary_key=True,
+            server_default=identity,
         ),
     )
 

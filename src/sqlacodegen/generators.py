@@ -7,6 +7,7 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 from importlib import import_module
 from inspect import Parameter
 from itertools import count
@@ -521,7 +522,29 @@ class TablesGenerator(CodeGenerator):
                 render_callable("Computed", repr(expression), kwargs=computed_kwargs)
             )
         elif isinstance(column.server_default, Identity):
-            args.append(repr(column.server_default))
+            identity = column.server_default
+            identity_kwargs: dict[str, Any] = {}
+
+            for name, param in inspect.signature(Identity).parameters.items():
+                if name == "self" or param.kind in (
+                    Parameter.VAR_POSITIONAL,
+                    Parameter.VAR_KEYWORD,
+                ):
+                    continue
+
+                value = getattr(identity, name, None)
+                if value is None:
+                    continue
+
+                if isinstance(value, Decimal):
+                    value = int(value)
+
+                if param.default is not Parameter.empty and value == param.default:
+                    continue
+
+                identity_kwargs[name] = value
+
+            args.append(render_callable("Identity", kwargs=identity_kwargs))
         elif column.server_default:
             kwargs["server_default"] = repr(column.server_default)
 
