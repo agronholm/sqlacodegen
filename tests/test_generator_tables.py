@@ -1221,8 +1221,8 @@ def test_identity_column(generator: CodeGenerator) -> None:
 def test_identity_column_decimal_values(generator: CodeGenerator) -> None:
     identity = Identity(start=1, increment=2)
     # Simulate database reflection returning Decimal values
-    identity.start = Decimal("1")
-    identity.increment = Decimal("2")
+    setattr(identity, "start", Decimal("1"))
+    setattr(identity, "increment", Decimal("2"))
     Table(
         "simple_items",
         generator.metadata,
