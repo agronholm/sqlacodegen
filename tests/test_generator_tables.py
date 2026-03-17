@@ -1223,8 +1223,8 @@ def test_identity_column_decimal_values(generator: CodeGenerator) -> None:
     # values instead of integers. This test ensures those are serialized correctly.
     identity = Identity(start=1, increment=2)
     # Simulate database reflection returning Decimal values (as MSSQL does)
-    setattr(identity, "start", Decimal("1"))
-    setattr(identity, "increment", Decimal("2"))
+    identity.start = Decimal("1")  # type: ignore[assignment]
+    identity.increment = Decimal("2")  # type: ignore[assignment]
     Table(
         "simple_items",
         generator.metadata,
