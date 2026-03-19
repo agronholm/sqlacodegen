@@ -1,7 +1,7 @@
 Version history
 ===============
 
-**UNRELEASED**
+**4.0.3**
 
 - Improved rendering of ``Identity`` server defaults by explicitly rendering
   non-default parameters; ``Decimal`` values (as returned by some databases) are
