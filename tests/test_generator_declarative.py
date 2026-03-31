@@ -1496,12 +1496,13 @@ class SimpleItems(Base):
         """,
     )
 
+
 def test_composite_autoincrement_pk(generator: CodeGenerator) -> None:
     Table(
         "simple_autoincrement_items",
         generator.metadata,
         Column("id1", INTEGER, primary_key=True, autoincrement=True),
-        Column("id2", INTEGER, primary_key=True)
+        Column("id2", INTEGER, primary_key=True),
     )
     validate_code(
         generator.generate(),
@@ -1518,7 +1519,7 @@ class SimpleAutoincrementItems(Base):
 
     id1: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     id2: Mapped[int] = mapped_column(Integer, primary_key=True)
-        """,          
+        """,
     )
 
 
