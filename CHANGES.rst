@@ -1,5 +1,6 @@
 Version history
 ===============
+
 **UNRELEASED**
 
 - Added autoincrement to primary key columns to prevent missing field errors.
