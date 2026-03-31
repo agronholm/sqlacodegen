@@ -471,6 +471,9 @@ class TablesGenerator(CodeGenerator):
             )
             or column.primary_key
         )
+        is_autoincrement = (
+            isinstance(column.autoincrement, bool) and column.autoincrement
+        )
         has_index = any(
             set(i.columns) == {column} and uses_default_name(i)
             for i in column.table.indexes
@@ -494,6 +497,8 @@ class TablesGenerator(CodeGenerator):
             kwargs["key"] = column.key
         if is_primary:
             kwargs["primary_key"] = True
+        if is_autoincrement and is_primary:
+            kwargs["autoincrement"] = True
         if not column.nullable and not column.primary_key:
             kwargs["nullable"] = False
         if column.nullable and is_part_of_composite_pk:
