@@ -5,6 +5,9 @@ Version history
 
 - Added autoincrement to primary key columns to prevent missing field errors.
   (`#473 <https://github.com/agronholm/sqlacodegen/issues/473>`_; PR by @jtmonroe)
+- Replaced informational ``print()`` calls in the CLI with ``logging``, preventing
+  status messages from corrupting stdout when piping generated output
+  (`#451 <https://github.com/agronholm/sqlacodegen/issues/451>`_)
 
 **4.0.3**
 

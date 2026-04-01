@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import argparse
 import ast
+import logging
 import sys
 from contextlib import ExitStack
 from importlib.metadata import entry_points, version
 from typing import Any, TextIO
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import MetaData
@@ -49,6 +52,7 @@ def _parse_engine_args(arg_list: list[str]) -> dict[str, Any]:
 
 
 def main() -> None:
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     generators = {ep.name: ep for ep in entry_points(group="sqlacodegen.generators")}
     parser = argparse.ArgumentParser(
         description="Generates SQLAlchemy model code from an existing database."
@@ -96,18 +100,18 @@ def main() -> None:
         return
 
     if not args.url:
-        print("You must supply a url\n", file=sys.stderr)
+        logger.error("You must supply a url")
         parser.print_help()
         return
 
     if citext:
-        print(f"Using sqlalchemy-citext {version('sqlalchemy-citext')}")
+        logger.info("Using sqlalchemy-citext %s", version("sqlalchemy-citext"))
 
     if geoalchemy2:
-        print(f"Using geoalchemy2 {version('geoalchemy2')}")
+        logger.info("Using geoalchemy2 %s", version("geoalchemy2"))
 
     if pgvector:
-        print(f"Using pgvector {version('pgvector')}")
+        logger.info("Using pgvector %s", version("pgvector"))
 
     # Use reflection to fill in the metadata
     engine_args = _parse_engine_args(args.engine_arg)
@@ -123,10 +127,7 @@ def main() -> None:
 
     if not generator.views_supported:
         name = generator_class.__name__
-        print(
-            f"VIEW models will not be generated when using the '{name}' generator",
-            file=sys.stderr,
-        )
+        logger.warning("VIEW models will not be generated when using the '%s' generator", name)
 
     for schema in schemas:
         metadata.reflect(

@@ -221,3 +221,24 @@ def test_main() -> None:
         check=True,
     )
     assert completed.stdout.decode().strip() == expected_version
+
+
+def test_informational_messages_go_to_stderr_not_stdout(
+    db_path: Path, tmp_path: Path
+) -> None:
+    """Informational log messages must not corrupt stdout (the generated code)."""
+    result = subprocess.run(
+        [
+            "sqlacodegen",
+            f"sqlite:///{db_path}",
+            "--generator",
+            "tables",
+            "--outfile",
+            str(tmp_path / "outfile"),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+    # Nothing informational should bleed into stdout
+    assert result.stdout == b""
