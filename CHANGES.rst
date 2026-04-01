@@ -1,6 +1,11 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Added autoincrement to primary key columns to prevent missing field errors.
+  (`#473 <https://github.com/agronholm/sqlacodegen/issues/473>`_; PR by @jtmonroe)
+
 **4.0.3**
 
 - Improved rendering of ``Identity`` server defaults by explicitly rendering
