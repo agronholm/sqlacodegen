@@ -127,7 +127,9 @@ def main() -> None:
 
     if not generator.views_supported:
         name = generator_class.__name__
-        logger.warning("VIEW models will not be generated when using the '%s' generator", name)
+        logger.warning(
+            "VIEW models will not be generated when using the '%s' generator", name
+        )
 
     for schema in schemas:
         metadata.reflect(
