@@ -87,6 +87,51 @@ class Foo(Base):
     )
 
 
+def test_cli_declarative_output_directory(db_path: Path, tmp_path: Path) -> None:
+    output_path = tmp_path / "models"
+    subprocess.run(
+        [
+            "sqlacodegen",
+            f"sqlite:///{db_path}",
+            "--generator",
+            "declarative",
+            "--output-directory",
+            str(output_path),
+        ],
+        check=True,
+    )
+
+    assert sorted(path.name for path in output_path.iterdir()) == [
+        "Foo.py",
+        "__base.py",
+        "__init__.py",
+    ]
+    assert (
+        (output_path / "__base.py").read_text()
+        == """\
+from sqlalchemy.orm import DeclarativeBase
+
+class Base(DeclarativeBase):
+    pass
+"""
+    )
+    assert (output_path / "__init__.py").read_text() == ""
+    assert (
+        (output_path / "Foo.py").read_text()
+        == """\
+from .__base import Base
+from sqlalchemy import Integer, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+class Foo(Base):
+    __tablename__ = 'foo'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+"""
+    )
+
+
 def test_cli_dataclass(db_path: Path, tmp_path: Path) -> None:
     output_path = tmp_path / "outfile"
     subprocess.run(

@@ -5,6 +5,8 @@ Version history
 
 - Added autoincrement to primary key columns to prevent missing field errors.
   (`#473 <https://github.com/agronholm/sqlacodegen/issues/473>`_; PR by @jtmonroe)
+- Added ``--output-directory`` for writing generated models into separate files.
+  (`#88 <https://github.com/agronholm/sqlacodegen/issues/88>`_)
 
 **4.0.3**
 

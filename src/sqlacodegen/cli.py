@@ -5,6 +5,7 @@ import ast
 import sys
 from contextlib import ExitStack
 from importlib.metadata import entry_points, version
+from pathlib import Path
 from typing import Any, TextIO
 
 from sqlalchemy.engine import create_engine
@@ -88,7 +89,14 @@ def main() -> None:
             "(values are parsed with ast.literal_eval)"
         ),
     )
-    parser.add_argument("--outfile", help="file to write output to (default: stdout)")
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
+        "--outfile", help="file to write output to (default: stdout)"
+    )
+    output_group.add_argument(
+        "--output-directory",
+        help="directory to write generated models to, one file per model",
+    )
     args = parser.parse_args()
 
     if args.version:
@@ -132,6 +140,14 @@ def main() -> None:
         metadata.reflect(
             engine, schema, (generator.views_supported and not args.noviews), tables
         )
+
+    if args.output_directory:
+        output_directory = Path(args.output_directory)
+        output_directory.mkdir(parents=True, exist_ok=True)
+        for name, contents in generator.generate(multi_file=True).items():
+            (output_directory / f"{name}.py").write_text(contents, encoding="utf-8")
+
+        return
 
     # Open the target file (if given)
     with ExitStack() as stack:
