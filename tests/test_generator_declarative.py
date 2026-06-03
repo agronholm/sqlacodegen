@@ -77,6 +77,54 @@ class SimpleItems(Base):
     )
 
 
+def test_multi_file_generation(metadata: MetaData, engine: Engine) -> None:
+    generator = DeclarativeGenerator(metadata, engine, [])
+    Table(
+        "foo",
+        metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("name", Text, nullable=False),
+    )
+    Table(
+        "bar",
+        metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("enabled", INTEGER, nullable=False),
+    )
+
+    assert generator.generate(multi_file=True) == {
+        "__base": """\
+from sqlalchemy.orm import DeclarativeBase
+
+class Base(DeclarativeBase):
+    pass
+""",
+        "__init__": "",
+        "Foo": """\
+from .__base import Base
+from sqlalchemy import Integer, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+class Foo(Base):
+    __tablename__ = 'foo'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+""",
+        "Bar": """\
+from .__base import Base
+from sqlalchemy import Integer
+from sqlalchemy.orm import Mapped, mapped_column
+
+class Bar(Base):
+    __tablename__ = 'bar'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    enabled: Mapped[int] = mapped_column(Integer, nullable=False)
+""",
+    }
+
+
 def test_index_with_kwargs(generator: CodeGenerator) -> None:
     simple_items = Table(
         "simple_items",

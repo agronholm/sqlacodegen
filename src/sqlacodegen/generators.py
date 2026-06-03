@@ -14,7 +14,7 @@ from itertools import count
 from keyword import iskeyword
 from pprint import pformat
 from textwrap import indent
-from typing import Any, ClassVar, Literal, cast
+from typing import Any, ClassVar, Literal, cast, overload
 
 import inflect
 import sqlalchemy
@@ -110,8 +110,16 @@ class CodeGenerator(metaclass=ABCMeta):
     def views_supported(self) -> bool:
         pass
 
+    @overload
     @abstractmethod
-    def generate(self) -> str:
+    def generate(self, multi_file: Literal[False] = False) -> str: ...
+
+    @overload
+    @abstractmethod
+    def generate(self, multi_file: Literal[True]) -> dict[str, str]: ...
+
+    @abstractmethod
+    def generate(self, multi_file: bool = False) -> str | dict[str, str]:
         """
         Generate the code for the given metadata.
         .. note:: May modify the metadata.
@@ -167,10 +175,14 @@ class TablesGenerator(CodeGenerator):
             metadata_ref="metadata",
         )
 
-    def generate(self) -> str:
-        self.generate_base()
+    @overload
+    def generate(self, multi_file: Literal[False] = False) -> str: ...
 
-        sections: list[str] = []
+    @overload
+    def generate(self, multi_file: Literal[True]) -> dict[str, str]: ...
+
+    def generate(self, multi_file: bool = False) -> str | dict[str, str]:
+        self.generate_base()
 
         # Remove unwanted elements from the metadata
         for table in list(self.metadata.tables.values()):
@@ -199,6 +211,14 @@ class TablesGenerator(CodeGenerator):
         # Generate the models
         models: list[Model] = self.generate_models()
 
+        if multi_file:
+            return self.render_multi_file(models)
+        else:
+            return self.render_all(models)
+
+    def render_all(self, models: list[Model]) -> str:
+        sections: list[str] = []
+
         # Render module level variables
         if variables := self.render_module_variables(models):
             sections.append(variables + "\n")
@@ -219,6 +239,74 @@ class TablesGenerator(CodeGenerator):
             sections.insert(0, imports)
 
         return "\n\n".join(sections) + "\n"
+
+    def render_multi_file(self, models: list[Model]) -> dict[str, str]:
+        rendered_files = {
+            "__base": self.render_base_model(),
+            "__init__": "",
+        }
+        base = self.base
+        imports = self.imports
+        module_imports = self.module_imports
+
+        try:
+            for model in models:
+                self.imports = defaultdict(set)
+                self.module_imports = set()
+                self.base = self.get_base_model_import(base, model)
+                self.collect_imports([model])
+                rendered_files[model.name] = self.render_all([model])
+        finally:
+            self.base = base
+            self.imports = imports
+            self.module_imports = module_imports
+
+        return rendered_files
+
+    def render_base_model(self) -> str:
+        imports = self.imports
+        module_imports = self.module_imports
+        try:
+            self.imports = defaultdict(set)
+            self.module_imports = set()
+            for literal_import in self.base.literal_imports:
+                self.add_literal_import(literal_import.pkgname, literal_import.name)
+
+            declarations = list(self.base.declarations)
+            if self.base.table_metadata_declaration is not None:
+                declarations.append(self.base.table_metadata_declaration)
+
+            sections = []
+            groups = self.group_imports()
+            if rendered_imports := "\n\n".join(
+                "\n".join(line for line in group) for group in groups
+            ):
+                sections.append(rendered_imports)
+
+            if declarations:
+                sections.append("\n".join(declarations))
+
+            return "\n\n".join(sections) + "\n"
+        finally:
+            self.imports = imports
+            self.module_imports = module_imports
+
+    def get_base_model_import(self, base: Base, model: Model) -> Base:
+        literal_imports = []
+        if base.metadata_ref == "metadata":
+            literal_imports.append(LiteralImport(".__base", "metadata"))
+        elif base.declarations and isinstance(model, ModelClass):
+            literal_imports.append(
+                LiteralImport(".__base", base.metadata_ref.partition(".")[0])
+            )
+
+        return Base(
+            literal_imports=literal_imports,
+            declarations=[],
+            metadata_ref=base.metadata_ref,
+            decorator=base.decorator,
+            table_metadata_declaration=None,
+        )
 
     def collect_imports(self, models: Iterable[Model]) -> None:
         for literal_import in self.base.literal_imports:

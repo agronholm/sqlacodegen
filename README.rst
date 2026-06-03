@@ -70,9 +70,14 @@ Examples::
     sqlacodegen postgresql:///some_local_db
     sqlacodegen --generator tables mysql+pymysql://user:password@localhost/dbname
     sqlacodegen --generator dataclasses sqlite:///database.db
+    sqlacodegen sqlite:///database.db --output-directory models
     # --engine-arg values are parsed with ast.literal_eval
     sqlacodegen oracle+oracledb://user:pass@127.0.0.1:1521/XE --engine-arg thick_mode=True
     sqlacodegen oracle+oracledb://user:pass@127.0.0.1:1521/XE --engine-arg thick_mode=True --engine-arg connect_args='{"user": "user", "dsn": "..."}'
+
+To write generated models into separate files, use ``--output-directory``. This creates
+the directory if needed and writes one Python file per generated model, plus shared
+support files such as ``__base.py`` and ``__init__.py``.
 
 To see the list of generic options::
 
