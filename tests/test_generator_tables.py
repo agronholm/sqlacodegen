@@ -127,10 +127,15 @@ def test_arrays(generator: CodeGenerator) -> None:
         Column("int_array", postgresql.ARRAY(INTEGER)),
     )
 
+    # The dialect-specific ``postgresql.ARRAY`` is preserved because the generic
+    # ``sqlalchemy.ARRAY`` does not implement operators such as ``.contains()``
+    # (see GH-441). The item types are still adapted to their generic
+    # equivalents (``DOUBLE_PRECISION`` -> ``Double``, ``INTEGER`` -> ``Integer``).
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import ARRAY, Column, Double, Integer, MetaData, Table
+        from sqlalchemy import Column, Double, Integer, MetaData, Table
+        from sqlalchemy.dialects.postgresql import ARRAY
 
         metadata = MetaData()
 
@@ -139,6 +144,43 @@ def test_arrays(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('dp_array', ARRAY(Double(precision=53))),
             Column('int_array', ARRAY(Integer()))
+        )
+        """,
+    )
+
+
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_array_preserves_dialect_for_runtime_operators(
+    generator: CodeGenerator,
+) -> None:
+    """Regression test for GH-441.
+
+    A ``text[]`` column should generate ``sqlalchemy.dialects.postgresql.ARRAY``
+    (not the generic ``sqlalchemy.ARRAY``) so that PostgreSQL array operators
+    like ``.contains()`` work on the generated model. The generic ARRAY raises
+    ``NotImplementedError: ARRAY.contains() not implemented for the base ARRAY
+    type; please use the dialect-specific ARRAY type``.
+    """
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", postgresql.TEXT, primary_key=True),
+        Column("tags", postgresql.ARRAY(postgresql.TEXT)),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, MetaData, Table, Text
+        from sqlalchemy.dialects.postgresql import ARRAY
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('id', Text, primary_key=True),
+            Column('tags', ARRAY(Text()))
         )
         """,
     )
