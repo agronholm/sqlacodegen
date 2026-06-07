@@ -127,10 +127,6 @@ def test_arrays(generator: CodeGenerator) -> None:
         Column("int_array", postgresql.ARRAY(INTEGER)),
     )
 
-    # The dialect-specific ``postgresql.ARRAY`` is preserved because the generic
-    # ``sqlalchemy.ARRAY`` does not implement operators such as ``.contains()``
-    # (see GH-441). The item types are still adapted to their generic
-    # equivalents (``DOUBLE_PRECISION`` -> ``Double``, ``INTEGER`` -> ``Integer``).
     validate_code(
         generator.generate(),
         """\
@@ -153,14 +149,7 @@ def test_arrays(generator: CodeGenerator) -> None:
 def test_array_preserves_dialect_for_runtime_operators(
     generator: CodeGenerator,
 ) -> None:
-    """Regression test for GH-441.
-
-    A ``text[]`` column should generate ``sqlalchemy.dialects.postgresql.ARRAY``
-    (not the generic ``sqlalchemy.ARRAY``) so that PostgreSQL array operators
-    like ``.contains()`` work on the generated model. The generic ARRAY raises
-    ``NotImplementedError: ARRAY.contains() not implemented for the base ARRAY
-    type; please use the dialect-specific ARRAY type``.
-    """
+    """Regression test for GH-441."""
     Table(
         "simple_items",
         generator.metadata,

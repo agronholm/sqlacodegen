@@ -1036,12 +1036,8 @@ class TablesGenerator(CodeGenerator):
                         column.server_default = None
 
     def get_adapted_type(self, coltype: Any) -> Any:
-        # The generic ``sqlalchemy.ARRAY`` does not implement operators such as
-        # ``.contains()`` that dialect-specific ARRAY types (notably
-        # ``sqlalchemy.dialects.postgresql.ARRAY``) provide. Adapting a
-        # dialect-specific ARRAY to the generic one would silently break user
-        # code that relies on those operators at runtime (see GH-441), so we
-        # keep the original ARRAY class and only adapt its item type.
+        # Keep dialect-specific ARRAY subclasses; the generic sqlalchemy.ARRAY
+        # is missing operators like .contains() (GH-441).
         if isinstance(coltype, ARRAY) and type(coltype) is not ARRAY:
             coltype.item_type = self.get_adapted_type(coltype.item_type)
             return coltype
