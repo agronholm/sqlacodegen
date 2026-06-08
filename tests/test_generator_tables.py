@@ -130,7 +130,8 @@ def test_arrays(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-        from sqlalchemy import ARRAY, Column, Double, Integer, MetaData, Table
+        from sqlalchemy import Column, Double, Integer, MetaData, Table
+        from sqlalchemy.dialects.postgresql import ARRAY
 
         metadata = MetaData()
 
@@ -139,6 +140,36 @@ def test_arrays(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('dp_array', ARRAY(Double(precision=53))),
             Column('int_array', ARRAY(Integer()))
+        )
+        """,
+    )
+
+
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_array_preserves_dialect_for_runtime_operators(
+    generator: CodeGenerator,
+) -> None:
+    """Regression test for GH-441."""
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", postgresql.TEXT, primary_key=True),
+        Column("tags", postgresql.ARRAY(postgresql.TEXT)),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, MetaData, Table, Text
+        from sqlalchemy.dialects.postgresql import ARRAY
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('id', Text, primary_key=True),
+            Column('tags', ARRAY(Text()))
         )
         """,
     )

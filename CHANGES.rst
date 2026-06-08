@@ -5,6 +5,11 @@ Version history
 
 - Added autoincrement to primary key columns to prevent missing field errors.
   (`#473 <https://github.com/agronholm/sqlacodegen/issues/473>`_; PR by @jtmonroe)
+- Preserve dialect-specific ``ARRAY`` types (e.g. ``postgresql.ARRAY``) instead
+  of adapting them to the generic ``sqlalchemy.ARRAY``. The generic type does
+  not implement operators like ``.contains()``, so adapting silently broke
+  PostgreSQL array queries on generated models.
+  (`#441 <https://github.com/agronholm/sqlacodegen/issues/441>`_)
 
 **4.0.3**
 

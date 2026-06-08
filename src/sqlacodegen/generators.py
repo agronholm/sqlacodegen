@@ -1036,6 +1036,12 @@ class TablesGenerator(CodeGenerator):
                         column.server_default = None
 
     def get_adapted_type(self, coltype: Any) -> Any:
+        # Keep dialect-specific ARRAY subclasses; the generic sqlalchemy.ARRAY
+        # is missing operators like .contains() (GH-441).
+        if isinstance(coltype, ARRAY) and type(coltype) is not ARRAY:
+            coltype.item_type = self.get_adapted_type(coltype.item_type)
+            return coltype
+
         compiled_type = coltype.compile(self.bind.engine.dialect)
         for supercls in coltype.__class__.__mro__:
             if not supercls.__name__.startswith("_") and hasattr(
