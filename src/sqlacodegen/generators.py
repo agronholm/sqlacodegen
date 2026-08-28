@@ -1271,8 +1271,8 @@ class DeclarativeGenerator(TablesGenerator):
                 # For self referential relationships, remote_side needs to be set
                 if source is target:
                     relationship.remote_side = [
-                        source.get_column_attribute(col.name)
-                        for col in constraint.referred_table.primary_key
+                        source.get_column_attribute(element.column.name)
+                        for element in constraint.elements
                     ]
 
                 # If the two tables share more than one foreign key constraint,

@@ -483,6 +483,56 @@ remote_side=[top_item_id], foreign_keys=[top_item_id], back_populates='top_item'
     )
 
 
+def test_onetomany_selfref_composite_unique_target(generator: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("scheme", VARCHAR, nullable=False),
+        Column("code", VARCHAR, nullable=False),
+        Column("parent_scheme", VARCHAR),
+        Column("parent_code", VARCHAR),
+        UniqueConstraint("scheme", "code"),
+        ForeignKeyConstraint(
+            ["parent_scheme", "parent_code"],
+            ["simple_items.scheme", "simple_items.code"],
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import ForeignKeyConstraint, Integer, String, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SimpleItems(Base):
+    __tablename__ = 'simple_items'
+    __table_args__ = (
+        ForeignKeyConstraint(['parent_scheme', 'parent_code'], \
+['simple_items.scheme', 'simple_items.code']),
+        UniqueConstraint('scheme', 'code')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    scheme: Mapped[str] = mapped_column(String, nullable=False)
+    code: Mapped[str] = mapped_column(String, nullable=False)
+    parent_scheme: Mapped[Optional[str]] = mapped_column(String)
+    parent_code: Mapped[Optional[str]] = mapped_column(String)
+
+    simple_items: Mapped[Optional['SimpleItems']] = relationship('SimpleItems', \
+remote_side=[scheme, code], back_populates='simple_items_reverse')
+    simple_items_reverse: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
+remote_side=[parent_scheme, parent_code], back_populates='simple_items')
+""",
+    )
+
+
 def test_onetomany_composite(generator: CodeGenerator) -> None:
     Table(
         "simple_items",

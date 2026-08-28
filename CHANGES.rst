@@ -1,6 +1,13 @@
 Version history
 ===============
 
+**UNRELEASED**
+
+- Fixed ``remote_side`` in a self-referential relationship pointing at the primary key
+  when the foreign key targets other columns (such as a ``UNIQUE`` constraint), which
+  made mapper configuration fail with ``ArgumentError``
+  (`#484 <https://github.com/agronholm/sqlacodegen/issues/484>`_; PR by @NixBiks)
+
 **4.0.4**
 
 - Added autoincrement to primary key columns to prevent missing field errors.
