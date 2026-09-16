@@ -469,3 +469,268 @@ back_populates='top_item', sa_relationship_kwargs={\
 'foreign_keys': '[SimpleItemsSelfref.top_item_id]'})
         """,
     )
+
+
+def test_manytomany(generator: CodeGenerator) -> None:
+    Table("left_table", generator.metadata, Column("id", INTEGER, primary_key=True))
+    Table("right_table", generator.metadata, Column("id", INTEGER, primary_key=True))
+    Table(
+        "association_table",
+        generator.metadata,
+        Column("left_id", INTEGER, primary_key=True),
+        Column("right_id", INTEGER, primary_key=True),
+        ForeignKeyConstraint(["left_id"], ["left_table.id"]),
+        ForeignKeyConstraint(["right_id"], ["right_table.id"]),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlmodel import Field, Relationship, SQLModel
+
+            class AssociationTable(SQLModel, table=True):
+                __tablename__ = 'association_table'
+
+                left_id: int = Field(sa_column=Column('left_id', \
+ForeignKey('left_table.id'), primary_key=True))
+                right_id: int = Field(sa_column=Column('right_id', \
+ForeignKey('right_table.id'), primary_key=True))
+
+
+            class LeftTable(SQLModel, table=True):
+                __tablename__ = 'left_table'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+
+                right: list['RightTable'] = Relationship(back_populates='left', \
+link_model=AssociationTable)
+
+
+            class RightTable(SQLModel, table=True):
+                __tablename__ = 'right_table'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+
+                left: list['LeftTable'] = Relationship(back_populates='right', \
+link_model=AssociationTable)
+        """,
+    )
+
+
+def test_manytomany_selfref(generator: CodeGenerator) -> None:
+    Table("m2m_items", generator.metadata, Column("id", INTEGER, primary_key=True))
+    Table(
+        "m2m_child_items",
+        generator.metadata,
+        Column("parent_id", INTEGER, primary_key=True),
+        Column("child_id", INTEGER, primary_key=True),
+        ForeignKeyConstraint(["parent_id"], ["m2m_items.id"]),
+        ForeignKeyConstraint(["child_id"], ["m2m_items.id"]),
+        schema="otherschema",
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from sqlalchemy import Column, ForeignKey, Integer
+            from sqlmodel import Field, Relationship, SQLModel
+
+            class M2mChildItems(SQLModel, table=True):
+                __tablename__ = 'm2m_child_items'
+                __table_args__ = {'schema': 'otherschema'}
+
+                parent_id: int = Field(sa_column=Column('parent_id', \
+ForeignKey('m2m_items.id'), primary_key=True))
+                child_id: int = Field(sa_column=Column('child_id', \
+ForeignKey('m2m_items.id'), primary_key=True))
+
+
+            class M2mItems(SQLModel, table=True):
+                __tablename__ = 'm2m_items'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+
+                parent: list['M2mItems'] = Relationship(back_populates='child', \
+link_model=M2mChildItems, sa_relationship_kwargs={\
+'primaryjoin': lambda: M2mItems.id == M2mChildItems.child_id, \
+'secondaryjoin': lambda: M2mItems.id == M2mChildItems.parent_id})
+                child: list['M2mItems'] = Relationship(back_populates='parent', \
+link_model=M2mChildItems, sa_relationship_kwargs={\
+'primaryjoin': lambda: M2mItems.id == M2mChildItems.parent_id, \
+'secondaryjoin': lambda: M2mItems.id == M2mChildItems.child_id})
+        """,
+    )
+
+
+def test_manytomany_composite(generator: CodeGenerator) -> None:
+    Table(
+        "composite_items",
+        generator.metadata,
+        Column("id1", INTEGER, primary_key=True),
+        Column("id2", INTEGER, primary_key=True),
+    )
+    Table(
+        "composite_containers",
+        generator.metadata,
+        Column("id1", INTEGER, primary_key=True),
+        Column("id2", INTEGER, primary_key=True),
+    )
+    Table(
+        "composite_container_items",
+        generator.metadata,
+        Column("item_id1", INTEGER, primary_key=True),
+        Column("item_id2", INTEGER, primary_key=True),
+        Column("container_id1", INTEGER, primary_key=True),
+        Column("container_id2", INTEGER, primary_key=True),
+        ForeignKeyConstraint(
+            ["item_id1", "item_id2"],
+            ["composite_items.id1", "composite_items.id2"],
+        ),
+        ForeignKeyConstraint(
+            ["container_id1", "container_id2"],
+            ["composite_containers.id1", "composite_containers.id2"],
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from sqlalchemy import Column, ForeignKeyConstraint, Integer
+            from sqlmodel import Field, Relationship, SQLModel
+
+            class CompositeContainerItems(SQLModel, table=True):
+                __tablename__ = 'composite_container_items'
+                __table_args__ = (
+                    ForeignKeyConstraint(['container_id1', 'container_id2'], \
+['composite_containers.id1', 'composite_containers.id2']),
+                    ForeignKeyConstraint(['item_id1', 'item_id2'], \
+['composite_items.id1', 'composite_items.id2'])
+                )
+
+                item_id1: int = Field(sa_column=Column('item_id1', Integer, \
+primary_key=True))
+                item_id2: int = Field(sa_column=Column('item_id2', Integer, \
+primary_key=True))
+                container_id1: int = Field(sa_column=Column('container_id1', Integer, \
+primary_key=True))
+                container_id2: int = Field(sa_column=Column('container_id2', Integer, \
+primary_key=True))
+
+
+            class CompositeContainers(SQLModel, table=True):
+                __tablename__ = 'composite_containers'
+
+                id1: int = Field(sa_column=Column('id1', Integer, primary_key=True))
+                id2: int = Field(sa_column=Column('id2', Integer, primary_key=True))
+
+                composite_items: list['CompositeItems'] = Relationship(\
+back_populates='composite_containers', link_model=CompositeContainerItems)
+
+
+            class CompositeItems(SQLModel, table=True):
+                __tablename__ = 'composite_items'
+
+                id1: int = Field(sa_column=Column('id1', Integer, primary_key=True))
+                id2: int = Field(sa_column=Column('id2', Integer, primary_key=True))
+
+                composite_containers: list['CompositeContainers'] = Relationship(\
+back_populates='composite_items', link_model=CompositeContainerItems)
+        """,
+    )
+
+
+def test_manytomany_no_pk(generator: CodeGenerator) -> None:
+    """Link tables without a primary key cannot be SQLModel classes; fall back."""
+    Table(
+        "nopk_left_table", generator.metadata, Column("id", INTEGER, primary_key=True)
+    )
+    Table(
+        "nopk_right_table", generator.metadata, Column("id", INTEGER, primary_key=True)
+    )
+    Table(
+        "nopk_association_table",
+        generator.metadata,
+        Column("left_id", INTEGER),
+        Column("right_id", INTEGER),
+        ForeignKeyConstraint(["left_id"], ["nopk_left_table.id"]),
+        ForeignKeyConstraint(["right_id"], ["nopk_right_table.id"]),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from sqlalchemy import Column, ForeignKey, Integer, Table
+            from sqlmodel import Field, Relationship, SQLModel
+
+            class NopkLeftTable(SQLModel, table=True):
+                __tablename__ = 'nopk_left_table'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+
+                right: list['NopkRightTable'] = Relationship(back_populates='left', \
+sa_relationship_kwargs={'secondary': 'nopk_association_table'})
+
+
+            class NopkRightTable(SQLModel, table=True):
+                __tablename__ = 'nopk_right_table'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+
+                left: list['NopkLeftTable'] = Relationship(back_populates='right', \
+sa_relationship_kwargs={'secondary': 'nopk_association_table'})
+
+
+            t_nopk_association_table = Table(
+                'nopk_association_table', SQLModel.metadata,
+                Column('left_id', ForeignKey('nopk_left_table.id')),
+                Column('right_id', ForeignKey('nopk_right_table.id'))
+            )
+        """,
+    )
+
+
+@pytest.mark.parametrize("generator", [["nolinktables"]], indirect=True)
+def test_manytomany_nolinktables(generator: CodeGenerator) -> None:
+    Table("nolink_left", generator.metadata, Column("id", INTEGER, primary_key=True))
+    Table("nolink_right", generator.metadata, Column("id", INTEGER, primary_key=True))
+    Table(
+        "nolink_association",
+        generator.metadata,
+        Column("left_id", INTEGER, primary_key=True),
+        Column("right_id", INTEGER, primary_key=True),
+        ForeignKeyConstraint(["left_id"], ["nolink_left.id"]),
+        ForeignKeyConstraint(["right_id"], ["nolink_right.id"]),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+            from sqlalchemy import Column, ForeignKey, Integer, Table
+            from sqlmodel import Field, Relationship, SQLModel
+
+            class NolinkLeft(SQLModel, table=True):
+                __tablename__ = 'nolink_left'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+
+                right: list['NolinkRight'] = Relationship(back_populates='left', \
+sa_relationship_kwargs={'secondary': 'nolink_association'})
+
+
+            class NolinkRight(SQLModel, table=True):
+                __tablename__ = 'nolink_right'
+
+                id: int = Field(sa_column=Column('id', Integer, primary_key=True))
+
+                left: list['NolinkLeft'] = Relationship(back_populates='right', \
+sa_relationship_kwargs={'secondary': 'nolink_association'})
+
+
+            t_nolink_association = Table(
+                'nolink_association', SQLModel.metadata,
+                Column('left_id', ForeignKey('nolink_left.id'), primary_key=True),
+                Column('right_id', ForeignKey('nolink_right.id'), primary_key=True)
+            )
+        """,
+    )

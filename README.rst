@@ -135,6 +135,9 @@ values must be delimited by commas, e.g. ``--options noconstraints,nobidi``):
 * ``sqlmodels``
 
   * all the options from ``declarative``
+  * ``nolinktables``: don't render many-to-many association tables as link model
+    classes (``Relationship(link_model=...)``); render them as plain ``Table`` objects
+    referenced via ``secondary`` instead
 
 Model class generators
 ----------------------
@@ -169,8 +172,9 @@ Relationships are detected based on existing foreign key constraints as follows:
 * **many-to-one**: a foreign key constraint exists on the table
 * **one-to-one**: same as **many-to-one**, but a unique constraint exists on the
   column(s) involved
-* **many-to-many**: (not implemented on the ``sqlmodel`` generator) an association table
-  is found to exist between two tables
+* **many-to-many**: an association table is found to exist between two tables (the
+  ``sqlmodels`` generator renders association tables that have a primary key as link
+  model classes, passed to the relationships via ``link_model=``)
 
 A table is considered an association table if it satisfies all of the following
 conditions:

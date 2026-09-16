@@ -3,6 +3,15 @@ Version history
 
 **UNRELEASED**
 
+- **BACKWARD INCOMPATIBLE** The SQLModel generator no longer emits ``t_<tablename>``
+  ``Table`` variables for many-to-many association tables that have a primary key, and
+  their relationships no longer pass ``secondary`` via ``sa_relationship_kwargs``.
+  Code importing those variables will break when models are regenerated. Use the
+  ``nolinktables`` option to keep the previous output.
+- Added support for many-to-many link models in the SQLModel generator: association
+  tables with a primary key are now rendered as ``SQLModel`` classes and referenced via
+  ``Relationship(link_model=...)``
+  (`#405 <https://github.com/agronholm/sqlacodegen/issues/405>`_; PR by @sheinbergon)
 - Fixed ``remote_side`` in a self-referential relationship pointing at the primary key
   when the foreign key targets other columns (such as a ``UNIQUE`` constraint), which
   made mapper configuration fail with ``ArgumentError``

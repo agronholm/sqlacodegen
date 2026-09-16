@@ -1154,6 +1154,7 @@ class DeclarativeGenerator(TablesGenerator):
         # Pick association tables from the metadata into their own set, don't process
         # them normally
         links: defaultdict[str, list[Model]] = defaultdict(lambda: [])
+        link_tables: set[Table] = set()
         for table in self.metadata.sorted_tables:
             qualified_name = qualified_table_name(table)
 
@@ -1165,9 +1166,12 @@ class DeclarativeGenerator(TablesGenerator):
             if len(fk_constraints) == 2 and all(
                 col.foreign_keys for col in table.columns
             ):
-                model = models_by_table_name[qualified_name] = Model(table)
+                model = models_by_table_name[qualified_name] = self.generate_link_model(
+                    table
+                )
                 tablename = fk_constraints[0].elements[0].column.table.name
                 links[tablename].append(model)
+                link_tables.add(table)
                 continue
 
             # Only form model classes for tables that have a primary key and are not
@@ -1183,9 +1187,9 @@ class DeclarativeGenerator(TablesGenerator):
                     column_attr = ColumnAttribute(model, column)
                     model.columns.append(column_attr)
 
-        # Add relationships
+        # Add relationships (link models only take part as association tables)
         for model in models_by_table_name.values():
-            if isinstance(model, ModelClass):
+            if isinstance(model, ModelClass) and model.table not in link_tables:
                 self.generate_relationships(
                     model, models_by_table_name, links[model.table.name]
                 )
@@ -1193,7 +1197,7 @@ class DeclarativeGenerator(TablesGenerator):
         # Nest inherited classes in their superclasses to ensure proper ordering
         if "nojoined" not in self.options:
             for model in list(models_by_table_name.values()):
-                if not isinstance(model, ModelClass):
+                if not isinstance(model, ModelClass) or model.table in link_tables:
                     continue
 
                 pk_column_names = {col.name for col in model.table.primary_key.columns}
@@ -1225,6 +1229,10 @@ class DeclarativeGenerator(TablesGenerator):
             global_names.add(model.name)
 
         return list(models_by_table_name.values())
+
+    def generate_link_model(self, table: Table) -> Model:
+        """Create the model for an association (link) table."""
+        return Model(table)
 
     def generate_relationships(
         self,
@@ -1887,6 +1895,10 @@ class DataclassGenerator(DeclarativeGenerator):
 
 
 class SQLModelGenerator(DeclarativeGenerator):
+    valid_options: ClassVar[set[str]] = DeclarativeGenerator.valid_options | {
+        "nolinktables"
+    }
+
     def __init__(
         self,
         metadata: MetaData,
@@ -1918,6 +1930,29 @@ class SQLModelGenerator(DeclarativeGenerator):
         self.base.metadata_ref = "SQLModel.metadata"
 
         return super().render_table(table)
+
+    def generate_link_model(self, table: Table) -> Model:
+        # SQLModel link models need a primary key; otherwise fall back to a plain Table
+        if "nolinktables" in self.options or not table.primary_key:
+            return super().generate_link_model(table)
+
+        model = ModelClass(table)
+        model.columns = [ColumnAttribute(model, column) for column in table.c]
+        return model
+
+    def generate_models(self) -> list[Model]:
+        models = super().generate_models()
+
+        # Link models must be defined before the classes referencing them via
+        # link_model=, so move them to the front (stable sort keeps the rest as is)
+        link_model_ids = {
+            id(relationship.association_table)
+            for model in models
+            if isinstance(model, ModelClass)
+            for relationship in model.relationships
+            if isinstance(relationship.association_table, ModelClass)
+        }
+        return sorted(models, key=lambda model: id(model) not in link_model_ids)
 
     def generate_base(self) -> None:
         self.base = Base(
@@ -1990,6 +2025,18 @@ class SQLModelGenerator(DeclarativeGenerator):
 
         return f"{column_attr.name}: {rendered_column_python_type} = {rendered_field}"
 
+    def render_relationship_arguments(
+        self, relationship: RelationshipAttribute
+    ) -> Mapping[str, Any]:
+        kwargs = dict(super().render_relationship_arguments(relationship))
+
+        # Link models are passed as link_model= rather than secondary=
+        if isinstance(relationship.association_table, ModelClass):
+            del kwargs["secondary"]
+            kwargs["link_model"] = relationship.association_table.name
+
+        return kwargs
+
     def render_relationship(self, relationship: RelationshipAttribute) -> str:
         kwargs = self.render_relationship_arguments(relationship)
         annotation = self.render_relationship_annotation(relationship)
@@ -1998,7 +2045,12 @@ class SQLModelGenerator(DeclarativeGenerator):
         non_native_kwargs: dict[str, Any] = {}
         for key, value in kwargs.items():
             # The following keyword arguments are natively supported in Relationship
-            if key in ("back_populates", "cascade_delete", "passive_deletes"):
+            if key in (
+                "back_populates",
+                "cascade_delete",
+                "passive_deletes",
+                "link_model",
+            ):
                 native_kwargs[key] = value
             else:
                 non_native_kwargs[key] = value
