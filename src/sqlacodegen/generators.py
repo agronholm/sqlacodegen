@@ -577,6 +577,9 @@ class TablesGenerator(CodeGenerator):
         elif isinstance(value, TypeEngine):
             self.add_import(value)
             return self._render_type(value, nested=True)
+        elif isinstance(value, MetaData):
+            # Named types must share the generated tables' DDL lifecycle.
+            return self.base.metadata_ref
 
         if isinstance(value, TextClause):
             self.add_literal_import("sqlalchemy", "text")

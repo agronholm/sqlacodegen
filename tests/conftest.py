@@ -1,10 +1,13 @@
 from textwrap import dedent
 
 import pytest
+import sqlalchemy
 from pytest import FixtureRequest
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import clear_mappers, configure_mappers
 from sqlalchemy.schema import MetaData
+
+SQLALCHEMY_21 = tuple(map(int, sqlalchemy.__version__.split(".")[:2])) >= (2, 1)
 
 
 @pytest.fixture

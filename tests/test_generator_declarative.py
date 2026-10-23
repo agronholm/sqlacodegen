@@ -25,7 +25,7 @@ from sqlalchemy.types import ARRAY, INTEGER, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, DeclarativeGenerator
 
-from .conftest import validate_code
+from .conftest import SQLALCHEMY_21, validate_code
 
 
 @pytest.fixture
@@ -2415,6 +2415,8 @@ class WithItems(Base):
 
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_domain_json(generator: CodeGenerator) -> None:
+    python_type = "object" if SQLALCHEMY_21 else "dict"
+    metadata_args = ", schema=None, metadata=Base.metadata" if SQLALCHEMY_21 else ""
     Table(
         "test_domain_json",
         generator.metadata,
@@ -2447,8 +2449,8 @@ class TestDomainJson(Base):
     __tablename__ = 'test_domain_json'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    foo: Mapped[Optional[dict]] = mapped_column(DOMAIN('domain_json', JSON(), not_null=False))
-""",
+    foo: Mapped[Optional[PYTHON_TYPE]] = mapped_column(DOMAIN('domain_json', JSON(), not_null=FalseMETADATA_ARGS))
+""".replace("PYTHON_TYPE", python_type).replace("METADATA_ARGS", metadata_args),
     )
 
 
@@ -2460,6 +2462,8 @@ def test_domain_non_default_json(
     generator: CodeGenerator,
     domain_type: type[JSON] | type[JSONB],
 ) -> None:
+    python_type = "object" if SQLALCHEMY_21 else "dict"
+    metadata_args = ", schema=None, metadata=Base.metadata" if SQLALCHEMY_21 else ""
     Table(
         "test_domain_json",
         generator.metadata,
@@ -2492,7 +2496,7 @@ class TestDomainJson(Base):
     __tablename__ = 'test_domain_json'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    foo: Mapped[Optional[dict]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False))
+    foo: Mapped[Optional[{python_type}]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False{metadata_args}))
 """,
     )
 
@@ -2503,6 +2507,8 @@ class TestDomainJson(Base):
 )
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_geoalchemy2_types(generator: CodeGenerator) -> None:
+    python_type = "object" if SQLALCHEMY_21 else "Any"
+    typing_import = "Optional" if SQLALCHEMY_21 else "Any, Optional"
     Table(
         "spatial_table",
         generator.metadata,
@@ -2514,7 +2520,7 @@ def test_geoalchemy2_types(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-from typing import Any, Optional
+from typing import TYPING_IMPORT
 
 from geoalchemy2.types import Geography, Geometry
 from sqlalchemy import Index, Integer
@@ -2532,9 +2538,9 @@ class SpatialTable(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    geom: Mapped[Any] = mapped_column(Geometry('POINT', 4326, 2, from_text='ST_GeomFromEWKT', name='geometry', nullable=False), nullable=False)
-    geog: Mapped[Optional[Any]] = mapped_column(Geography('POLYGON', dimension=2, from_text='ST_GeogFromText', name='geography'))
-""",
+    geom: Mapped[PYTHON_TYPE] = mapped_column(Geometry('POINT', 4326, 2, from_text='ST_GeomFromEWKT', name='geometry', nullable=False), nullable=False)
+    geog: Mapped[Optional[PYTHON_TYPE]] = mapped_column(Geography('POLYGON', dimension=2, from_text='ST_GeogFromText', name='geography'))
+""".replace("TYPING_IMPORT", typing_import).replace("PYTHON_TYPE", python_type),
     )
 
 
