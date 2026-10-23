@@ -571,12 +571,12 @@ class TablesGenerator(CodeGenerator):
             return render_callable("mapped_column", *args, kwargs=kwargs)
 
     def _render_column_type_value(self, value: Any) -> str:
-        if isinstance(value, (JSONB, JSON)):
-            # Remove astext_type if it's the default
-            if isinstance(value.astext_type, Text) and value.astext_type.length is None:
-                value.astext_type = None  # type: ignore[assignment]
-            else:
-                self.add_import(Text)
+        if isinstance(value, type) and issubclass(value, TypeEngine):
+            self.add_import(value)
+            return value.__name__
+        elif isinstance(value, TypeEngine):
+            self.add_import(value)
+            return self._render_type(value, nested=True)
 
         if isinstance(value, TextClause):
             self.add_literal_import("sqlalchemy", "text")
@@ -659,7 +659,6 @@ class TablesGenerator(CodeGenerator):
 
                 return f"Enum({enum_class_name}, values_callable=lambda cls: [member.value for member in cls]{extra_kwargs})"
 
-        args = []
         kwargs: dict[str, Any] = {}
 
         # Check if this is an ARRAY column with an Enum item type mapped to a Python enum class
@@ -682,6 +681,13 @@ class TablesGenerator(CodeGenerator):
 
                 return render_callable("ARRAY", rendered_enum, kwargs=kwargs)
 
+        return self._render_type(column_type)
+
+    def _render_type(
+        self, column_type: TypeEngine[Any], *, nested: bool = False
+    ) -> str:
+        args = []
+        kwargs: dict[str, Any] = {}
         sig = inspect.signature(column_type.__class__.__init__)
         defaults = {param.name: param.default for param in sig.parameters.values()}
         missing = object()
@@ -702,6 +708,19 @@ class TablesGenerator(CodeGenerator):
             if value is missing or value == default:
                 use_kwargs = True
                 continue
+
+            if (
+                param.name == "astext_type"
+                and isinstance(column_type, (JSONB, JSON))
+                and isinstance(value, Text)
+                and value.length is None
+            ):
+                use_kwargs = True
+                continue
+
+            if nested and param.default is not Parameter.empty:
+                # Preserve the keyword style previously supplied by type reprs.
+                use_kwargs = True
 
             rendered_value = self._render_column_type_value(value)
             if use_kwargs:
@@ -724,7 +743,10 @@ class TablesGenerator(CodeGenerator):
             None,
         )
         if vararg and hasattr(column_type, vararg):
-            varargs_repr = [repr(arg) for arg in getattr(column_type, vararg)]
+            varargs_repr = [
+                self._render_column_type_value(arg)
+                for arg in getattr(column_type, vararg)
+            ]
             args.extend(varargs_repr)
 
         # These arguments cannot be autodetected from the Enum initializer
@@ -733,15 +755,7 @@ class TablesGenerator(CodeGenerator):
                 if (value := getattr(column_type, colname)) is not None:
                     kwargs[colname] = repr(value)
 
-        if isinstance(column_type, (JSONB, JSON)):
-            # Remove astext_type if it's the default
-            if (
-                isinstance(column_type.astext_type, Text)
-                and column_type.astext_type.length is None
-            ):
-                del kwargs["astext_type"]
-
-        if args or kwargs:
+        if args or kwargs or nested:
             return render_callable(column_type.__class__.__name__, *args, kwargs=kwargs)
         else:
             return column_type.__class__.__name__
