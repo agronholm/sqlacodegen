@@ -3,6 +3,9 @@ Version history
 
 **UNRELEASED**
 
+- Fixed rendering and imports of nested type classes and instances, including
+  ClickHouse array element types
+  (`#469 <https://github.com/agronholm/sqlacodegen/issues/469>`_; PR by @Claire-ovo)
 - **BACKWARD INCOMPATIBLE** The SQLModel generator no longer emits ``t_<tablename>``
   ``Table`` variables for many-to-many association tables that have a primary key, and
   their relationships no longer pass ``secondary`` via ``sa_relationship_kwargs``.
