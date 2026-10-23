@@ -27,7 +27,7 @@ from sqlalchemy.types import ARRAY, INTEGER, NUMERIC, SMALLINT, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, TablesGenerator
 
-from .conftest import validate_code
+from .conftest import SQLALCHEMY_21, validate_code
 
 
 # This needs to be uppercased to trigger #315
@@ -506,6 +506,7 @@ def test_array_enum_named_with_schema(generator: CodeGenerator) -> None:
 
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_domain_text(generator: CodeGenerator) -> None:
+    metadata_args = ", schema=None, metadata=metadata" if SQLALCHEMY_21 else ""
     Table(
         "simple_items",
         generator.metadata,
@@ -535,14 +536,15 @@ def test_domain_text(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('postal_code', DOMAIN('us_postal_code', Text(), \
 constraint_name='valid_us_postal_code', not_null=False, \
-check=text("VALUE ~ '^\\\\d{5}$' OR VALUE ~ '^\\\\d{5}-\\\\d{4}$'")), nullable=False)
+check=text("VALUE ~ '^\\\\d{5}$' OR VALUE ~ '^\\\\d{5}-\\\\d{4}$'")METADATA_ARGS), nullable=False)
         )
-        """,
+        """.replace("METADATA_ARGS", metadata_args),
     )
 
 
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_domain_int(generator: CodeGenerator) -> None:
+    metadata_args = ", schema=None, metadata=metadata" if SQLALCHEMY_21 else ""
     Table(
         "simple_items",
         generator.metadata,
@@ -572,9 +574,9 @@ def test_domain_int(generator: CodeGenerator) -> None:
             'simple_items', metadata,
             Column('n', DOMAIN('positive_int', INTEGER(), \
 constraint_name='positive', not_null=False, \
-check=text('VALUE > 0')), nullable=False)
+check=text('VALUE > 0')METADATA_ARGS), nullable=False)
         )
-        """,
+        """.replace("METADATA_ARGS", metadata_args),
     )
 
 
