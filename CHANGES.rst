@@ -3,9 +3,6 @@ Version history
 
 **UNRELEASED**
 
-- Fixed rendering and imports of nested type classes and instances, including
-  ClickHouse array element types
-  (`#469 <https://github.com/agronholm/sqlacodegen/issues/469>`_; PR by @Claire-ovo)
 - Fixed named types referencing a separate metadata instance in generated code,
   including PostgreSQL domains attached automatically by SQLAlchemy 2.1
 - **BACKWARD INCOMPATIBLE** The SQLModel generator no longer emits ``t_<tablename>``

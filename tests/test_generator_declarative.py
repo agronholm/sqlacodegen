@@ -25,7 +25,7 @@ from sqlalchemy.types import ARRAY, INTEGER, VARCHAR, Text
 
 from sqlacodegen.generators import CodeGenerator, DeclarativeGenerator
 
-from .conftest import SQLALCHEMY_21, validate_code
+from .conftest import validate_code
 
 
 @pytest.fixture
@@ -2413,10 +2413,11 @@ class WithItems(Base):
     )
 
 
+@pytest.mark.parametrize(
+    "sqlalchemy_version", [(2, 0)], indirect=True, ids=["sqlalchemy20"]
+)
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
-def test_domain_json(generator: CodeGenerator) -> None:
-    python_type = "object" if SQLALCHEMY_21 else "dict"
-    metadata_args = ", schema=None, metadata=Base.metadata" if SQLALCHEMY_21 else ""
+def test_domain_json_sa20(sqlalchemy_version: None, generator: CodeGenerator) -> None:
     Table(
         "test_domain_json",
         generator.metadata,
@@ -2449,21 +2450,65 @@ class TestDomainJson(Base):
     __tablename__ = 'test_domain_json'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    foo: Mapped[Optional[PYTHON_TYPE]] = mapped_column(DOMAIN('domain_json', JSON(), not_null=FalseMETADATA_ARGS))
-""".replace("PYTHON_TYPE", python_type).replace("METADATA_ARGS", metadata_args),
+    foo: Mapped[Optional[dict]] = mapped_column(DOMAIN('domain_json', JSON(), not_null=False))
+""",
     )
 
 
 @pytest.mark.parametrize(
+    "sqlalchemy_version", [(2, 1)], indirect=True, ids=["sqlalchemy21"]
+)
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_domain_json_sa21(sqlalchemy_version: None, generator: CodeGenerator) -> None:
+    Table(
+        "test_domain_json",
+        generator.metadata,
+        Column("id", BIGINT, primary_key=True),
+        Column(
+            "foo",
+            postgresql.DOMAIN(
+                "domain_json",
+                JSON,
+                not_null=False,
+            ),
+            nullable=True,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import BigInteger
+from sqlalchemy.dialects.postgresql import DOMAIN, JSON
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TestDomainJson(Base):
+    __tablename__ = 'test_domain_json'
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    foo: Mapped[Optional[object]] = mapped_column(DOMAIN('domain_json', JSON(), not_null=False, schema=None, metadata=Base.metadata))
+""",
+    )
+
+
+@pytest.mark.parametrize(
+    "sqlalchemy_version", [(2, 0)], indirect=True, ids=["sqlalchemy20"]
+)
+@pytest.mark.parametrize(
     "domain_type",
     [JSONB, JSON],
 )
-def test_domain_non_default_json(
+def test_domain_non_default_json_sa20(
+    sqlalchemy_version: None,
     generator: CodeGenerator,
     domain_type: type[JSON] | type[JSONB],
 ) -> None:
-    python_type = "object" if SQLALCHEMY_21 else "dict"
-    metadata_args = ", schema=None, metadata=Base.metadata" if SQLALCHEMY_21 else ""
     Table(
         "test_domain_json",
         generator.metadata,
@@ -2496,19 +2541,71 @@ class TestDomainJson(Base):
     __tablename__ = 'test_domain_json'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    foo: Mapped[Optional[{python_type}]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False{metadata_args}))
+    foo: Mapped[Optional[dict]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False))
 """,
     )
 
 
+@pytest.mark.parametrize(
+    "sqlalchemy_version", [(2, 1)], indirect=True, ids=["sqlalchemy21"]
+)
+@pytest.mark.parametrize(
+    "domain_type",
+    [JSONB, JSON],
+)
+def test_domain_non_default_json_sa21(
+    sqlalchemy_version: None,
+    generator: CodeGenerator,
+    domain_type: type[JSON] | type[JSONB],
+) -> None:
+    Table(
+        "test_domain_json",
+        generator.metadata,
+        Column("id", BIGINT, primary_key=True),
+        Column(
+            "foo",
+            postgresql.DOMAIN(
+                "domain_json",
+                domain_type(astext_type=Text(128)),
+                not_null=False,
+            ),
+            nullable=True,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        f"""\
+from typing import Optional
+
+from sqlalchemy import BigInteger, Text
+from sqlalchemy.dialects.postgresql import DOMAIN, {domain_type.__name__}
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TestDomainJson(Base):
+    __tablename__ = 'test_domain_json'
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    foo: Mapped[Optional[object]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False, schema=None, metadata=Base.metadata))
+""",
+    )
+
+
+@pytest.mark.parametrize(
+    "sqlalchemy_version", [(2, 0)], indirect=True, ids=["sqlalchemy20"]
+)
 @pytest.mark.skipif(
     sys.version_info < (3, 10),
     reason="This test assumes GeoAlchemy2 0.18.x and above, which does not support python 3.9",
 )
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
-def test_geoalchemy2_types(generator: CodeGenerator) -> None:
-    python_type = "object" if SQLALCHEMY_21 else "Any"
-    typing_import = "Optional" if SQLALCHEMY_21 else "Any, Optional"
+def test_geoalchemy2_types_sa20(
+    sqlalchemy_version: None, generator: CodeGenerator
+) -> None:
     Table(
         "spatial_table",
         generator.metadata,
@@ -2520,7 +2617,7 @@ def test_geoalchemy2_types(generator: CodeGenerator) -> None:
     validate_code(
         generator.generate(),
         """\
-from typing import TYPING_IMPORT
+from typing import Any, Optional
 
 from geoalchemy2.types import Geography, Geometry
 from sqlalchemy import Index, Integer
@@ -2538,9 +2635,55 @@ class SpatialTable(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    geom: Mapped[PYTHON_TYPE] = mapped_column(Geometry('POINT', 4326, 2, from_text='ST_GeomFromEWKT', name='geometry', nullable=False), nullable=False)
-    geog: Mapped[Optional[PYTHON_TYPE]] = mapped_column(Geography('POLYGON', dimension=2, from_text='ST_GeogFromText', name='geography'))
-""".replace("TYPING_IMPORT", typing_import).replace("PYTHON_TYPE", python_type),
+    geom: Mapped[Any] = mapped_column(Geometry('POINT', 4326, 2, from_text='ST_GeomFromEWKT', name='geometry', nullable=False), nullable=False)
+    geog: Mapped[Optional[Any]] = mapped_column(Geography('POLYGON', dimension=2, from_text='ST_GeogFromText', name='geography'))
+""",
+    )
+
+
+@pytest.mark.parametrize(
+    "sqlalchemy_version", [(2, 1)], indirect=True, ids=["sqlalchemy21"]
+)
+@pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="This test assumes GeoAlchemy2 0.18.x and above, which does not support python 3.9",
+)
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_geoalchemy2_types_sa21(
+    sqlalchemy_version: None, generator: CodeGenerator
+) -> None:
+    Table(
+        "spatial_table",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("geom", Geometry("POINT", srid=4326, dimension=2), nullable=False),
+        Column("geog", Geography("POLYGON", dimension=2)),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from geoalchemy2.types import Geography, Geometry
+from sqlalchemy import Index, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class SpatialTable(Base):
+    __tablename__ = 'spatial_table'
+    __table_args__ = (
+        Index('idx_spatial_table_geog', 'geog', postgresql_using='gist'),
+        Index('idx_spatial_table_geom', 'geom', postgresql_using='gist')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    geom: Mapped[object] = mapped_column(Geometry('POINT', 4326, 2, from_text='ST_GeomFromEWKT', name='geometry', nullable=False), nullable=False)
+    geog: Mapped[Optional[object]] = mapped_column(Geography('POLYGON', dimension=2, from_text='ST_GeogFromText', name='geography'))
+""",
     )
 
 
