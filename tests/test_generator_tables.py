@@ -504,8 +504,11 @@ def test_array_enum_named_with_schema(generator: CodeGenerator) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "sqlalchemy_version", [(2, 0)], indirect=True, ids=["sqlalchemy20"]
+)
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
-def test_domain_text(generator: CodeGenerator) -> None:
+def test_domain_text_sa20(sqlalchemy_version: None, generator: CodeGenerator) -> None:
     Table(
         "simple_items",
         generator.metadata,
@@ -541,8 +544,51 @@ check=text("VALUE ~ '^\\\\d{5}$' OR VALUE ~ '^\\\\d{5}-\\\\d{4}$'")), nullable=F
     )
 
 
+@pytest.mark.parametrize(
+    "sqlalchemy_version", [(2, 1)], indirect=True, ids=["sqlalchemy21"]
+)
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
-def test_domain_int(generator: CodeGenerator) -> None:
+def test_domain_text_sa21(sqlalchemy_version: None, generator: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column(
+            "postal_code",
+            postgresql.DOMAIN(
+                "us_postal_code",
+                Text,
+                constraint_name="valid_us_postal_code",
+                not_null=False,
+                check=text("VALUE ~ '^\\d{5}$' OR VALUE ~ '^\\d{5}-\\d{4}$'"),
+            ),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, MetaData, Table, Text, text
+        from sqlalchemy.dialects.postgresql import DOMAIN
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('postal_code', DOMAIN('us_postal_code', Text(), \
+constraint_name='valid_us_postal_code', not_null=False, \
+check=text("VALUE ~ '^\\\\d{5}$' OR VALUE ~ '^\\\\d{5}-\\\\d{4}$'"), schema=None, metadata=metadata), nullable=False)
+        )
+        """,
+    )
+
+
+@pytest.mark.parametrize(
+    "sqlalchemy_version", [(2, 0)], indirect=True, ids=["sqlalchemy20"]
+)
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_domain_int_sa20(sqlalchemy_version: None, generator: CodeGenerator) -> None:
     Table(
         "simple_items",
         generator.metadata,
@@ -573,6 +619,46 @@ def test_domain_int(generator: CodeGenerator) -> None:
             Column('n', DOMAIN('positive_int', INTEGER(), \
 constraint_name='positive', not_null=False, \
 check=text('VALUE > 0')), nullable=False)
+        )
+        """,
+    )
+
+
+@pytest.mark.parametrize(
+    "sqlalchemy_version", [(2, 1)], indirect=True, ids=["sqlalchemy21"]
+)
+@pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
+def test_domain_int_sa21(sqlalchemy_version: None, generator: CodeGenerator) -> None:
+    Table(
+        "simple_items",
+        generator.metadata,
+        Column(
+            "n",
+            postgresql.DOMAIN(
+                "positive_int",
+                INTEGER,
+                constraint_name="positive",
+                not_null=False,
+                check=text("VALUE > 0"),
+            ),
+            nullable=False,
+        ),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, INTEGER, MetaData, Table, text
+        from sqlalchemy.dialects.postgresql import DOMAIN
+
+        metadata = MetaData()
+
+
+        t_simple_items = Table(
+            'simple_items', metadata,
+            Column('n', DOMAIN('positive_int', INTEGER(), \
+constraint_name='positive', not_null=False, \
+check=text('VALUE > 0'), schema=None, metadata=metadata), nullable=False)
         )
         """,
     )
