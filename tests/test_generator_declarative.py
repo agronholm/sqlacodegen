@@ -2129,6 +2129,35 @@ class Simple(Base):
     )
 
 
+def test_registry_column(generator: CodeGenerator) -> None:
+    Table(
+        "simple",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("registry", VARCHAR),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from typing import Optional
+
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Simple(Base):
+    __tablename__ = 'simple'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    registry_: Mapped[Optional[str]] = mapped_column('registry', String)
+""",
+    )
+
+
 def test_metadata_column(generator: CodeGenerator) -> None:
     Table(
         "simple",

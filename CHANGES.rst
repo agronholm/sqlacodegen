@@ -16,6 +16,9 @@ Version history
   when the foreign key targets other columns (such as a ``UNIQUE`` constraint), which
   made mapper configuration fail with ``ArgumentError``
   (`#484 <https://github.com/agronholm/sqlacodegen/issues/484>`_; PR by @NixBiks)
+- Fixed a column named ``registry`` being rendered as-is, which made SQLAlchemy warn
+  that the attribute should be left reserved for the declarative class registry; it is
+  now renamed to ``registry_`` the same way a ``metadata`` column already was
 
 **4.0.4**
 
