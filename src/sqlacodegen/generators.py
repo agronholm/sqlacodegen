@@ -1148,6 +1148,11 @@ class DeclarativeGenerator(TablesGenerator):
             if model.relationships:
                 self.add_literal_import("sqlalchemy.orm", "relationship")
 
+            # Collect the modules the Mapped[] annotations use (uuid, datetime,
+            # decimal) now, so attribute names can avoid them
+            for column in model.table.columns:
+                self.render_column_python_type(column)
+
     def generate_models(self) -> list[Model]:
         models_by_table_name: dict[str, Model] = {}
 
@@ -1223,7 +1228,7 @@ class DeclarativeGenerator(TablesGenerator):
         # attributes
         global_names = {
             name for namespace in self.imports.values() for name in namespace
-        }
+        } | self.module_imports
         for model in models_by_table_name.values():
             self.generate_model_name(model, global_names)
             global_names.add(model.name)
