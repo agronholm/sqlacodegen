@@ -3,8 +3,6 @@ Version history
 
 **UNRELEASED**
 
-- Added SQLAlchemy 2.1 support
-  (`#489 <https://github.com/agronholm/sqlacodegen/pull/489>`_; PR by @Claire-ovo)
 - **BACKWARD INCOMPATIBLE** The SQLModel generator no longer emits ``t_<tablename>``
   ``Table`` variables for many-to-many association tables that have a primary key, and
   their relationships no longer pass ``secondary`` via ``sa_relationship_kwargs``.
@@ -21,6 +19,8 @@ Version history
 - Fixed a column named ``registry`` being rendered as-is, which made SQLAlchemy warn
   that the attribute should be left reserved for the declarative class registry; it is
   now renamed to ``registry_`` the same way a ``metadata`` column already was
+- Added SQLAlchemy 2.1 support
+  (`#489 <https://github.com/agronholm/sqlacodegen/pull/489>`_; PR by @Claire-ovo, reworked by @sheinbergon)
 
 **4.0.4**
 
