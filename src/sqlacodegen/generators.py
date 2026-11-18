@@ -571,10 +571,6 @@ class TablesGenerator(CodeGenerator):
             return render_callable("mapped_column", *args, kwargs=kwargs)
 
     def _render_column_type_value(self, value: Any) -> str:
-        if isinstance(value, MetaData):
-            # Named types must share the generated tables' DDL lifecycle.
-            return self.base.metadata_ref
-
         if isinstance(value, (JSONB, JSON)):
             # Remove astext_type if it's the default
             if isinstance(value.astext_type, Text) and value.astext_type.length is None:
@@ -637,6 +633,11 @@ class TablesGenerator(CodeGenerator):
 
                 default = super_param.default
                 if default is not Parameter.empty and value == default:
+                    continue
+
+                # SQLAlchemy 2.1 attaches the table's metadata to named types and
+                # uses a sentinel as the default for "schema"
+                if value is None or isinstance(value, MetaData):
                     continue
 
                 inherited_kwargs[super_param.name] = self._render_column_type_value(

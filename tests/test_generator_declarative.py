@@ -2519,7 +2519,7 @@ class TestDomainJson(Base):
     __tablename__ = 'test_domain_json'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    foo: Mapped[Optional[object]] = mapped_column(DOMAIN('domain_json', JSON(), not_null=False, schema=None, metadata=Base.metadata))
+    foo: Mapped[Optional[object]] = mapped_column(DOMAIN('domain_json', JSON(), not_null=False))
 """,
     )
 
@@ -2617,7 +2617,7 @@ class TestDomainJson(Base):
     __tablename__ = 'test_domain_json'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    foo: Mapped[Optional[object]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False, schema=None, metadata=Base.metadata))
+    foo: Mapped[Optional[object]] = mapped_column(DOMAIN('domain_json', {domain_type.__name__}(astext_type=Text(length=128)), not_null=False))
 """,
     )
 

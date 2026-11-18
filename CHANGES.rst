@@ -3,9 +3,7 @@ Version history
 
 **UNRELEASED**
 
-- Added SQLAlchemy 2.1 support: named types (such as PostgreSQL domains, which
-  SQLAlchemy 2.1 attaches to the table metadata automatically) no longer reference a
-  separate metadata instance in generated code
+- Added SQLAlchemy 2.1 support
   (`#489 <https://github.com/agronholm/sqlacodegen/pull/489>`_; PR by @Claire-ovo)
 - **BACKWARD INCOMPATIBLE** The SQLModel generator no longer emits ``t_<tablename>``
   ``Table`` variables for many-to-many association tables that have a primary key, and
