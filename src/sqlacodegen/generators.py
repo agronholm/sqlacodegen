@@ -846,7 +846,7 @@ class TablesGenerator(CodeGenerator):
         name = _re_invalid_identifier.sub("_", name)
         if name[0].isdigit():
             name = "_" + name
-        elif iskeyword(name) or name == "metadata":
+        elif iskeyword(name) or name in ("metadata", "registry"):
             name += "_"
 
         original = name
