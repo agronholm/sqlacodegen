@@ -267,6 +267,8 @@ class TablesGenerator(CodeGenerator):
         if isinstance(constraint, Index):
             if len(constraint.columns) > 1 or not uses_default_name(constraint):
                 self.add_literal_import("sqlalchemy", "Index")
+            if any(not isinstance(expr, Column) for expr in constraint.expressions):
+                self.add_literal_import("sqlalchemy", "text")
         elif isinstance(constraint, PrimaryKeyConstraint):
             if not uses_default_name(constraint):
                 self.add_literal_import("sqlalchemy", "PrimaryKeyConstraint")
@@ -424,7 +426,13 @@ class TablesGenerator(CodeGenerator):
         return render_callable("Table", *args, kwargs=kwargs, indentation="    ")
 
     def render_index(self, index: Index) -> str:
-        extra_args = [repr(col.name) for col in index.columns]
+        # expressions holds the columns and the SQL expressions (lower(email)) in order
+        extra_args = [
+            repr(expr.name)
+            if isinstance(expr, Column)
+            else render_callable("text", repr(str(expr)))
+            for expr in index.expressions
+        ]
         kwargs = {
             key: repr(value) if isinstance(value, str) else value
             for key, value in sorted(index.kwargs.items(), key=lambda item: item[0])
