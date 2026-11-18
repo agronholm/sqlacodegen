@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import sys
-
 import pytest
 from _pytest.fixtures import FixtureRequest
 from geoalchemy2 import Geography, Geometry
@@ -2627,10 +2625,6 @@ class TestDomainJson(Base):
 @pytest.mark.parametrize(
     "sqlalchemy_version", [(2, 0)], indirect=True, ids=["sqlalchemy20"]
 )
-@pytest.mark.skipif(
-    sys.version_info < (3, 10),
-    reason="This test assumes GeoAlchemy2 0.18.x and above, which does not support python 3.9",
-)
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_geoalchemy2_types_sa20(
     sqlalchemy_version: None, generator: CodeGenerator
@@ -2672,10 +2666,6 @@ class SpatialTable(Base):
 
 @pytest.mark.parametrize(
     "sqlalchemy_version", [(2, 1)], indirect=True, ids=["sqlalchemy21"]
-)
-@pytest.mark.skipif(
-    sys.version_info < (3, 10),
-    reason="This test assumes GeoAlchemy2 0.18.x and above, which does not support python 3.9",
 )
 @pytest.mark.parametrize("engine", ["postgresql"], indirect=["engine"])
 def test_geoalchemy2_types_sa21(
