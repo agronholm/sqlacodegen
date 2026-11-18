@@ -20,7 +20,8 @@ Version history
   that the attribute should be left reserved for the declarative class registry; it is
   now renamed to ``registry_`` the same way a ``metadata`` column already was
 - Added SQLAlchemy 2.1 support
-  (`#489 <https://github.com/agronholm/sqlacodegen/pull/489>`_; PR by @Claire-ovo, reworked by @sheinbergon)
+  (`#489 <https://github.com/agronholm/sqlacodegen/pull/489>`_; PR by @Claire-ovo,
+  reworked by @sheinbergon)
 
 **4.0.4**
 
