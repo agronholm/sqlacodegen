@@ -2187,6 +2187,35 @@ class Simple(Base):
     )
 
 
+def test_column_named_like_annotation_module(generator: CodeGenerator) -> None:
+    Table(
+        "accounts",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        Column("uuid", postgresql.UUID, nullable=False),
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+import uuid
+
+from sqlalchemy import Integer, UUID
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Accounts(Base):
+    __tablename__ = 'accounts'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    uuid_: Mapped[uuid.UUID] = mapped_column('uuid', UUID, nullable=False)
+""",
+    )
+
+
 def test_invalid_variable_name_from_column(generator: CodeGenerator) -> None:
     Table(
         "simple",
