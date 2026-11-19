@@ -221,3 +221,19 @@ def test_main() -> None:
         check=True,
     )
     assert completed.stdout.decode().strip() == expected_version
+
+
+def test_cli_stdout_clean_from_informational_messages(db_path: Path) -> None:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "sqlacodegen",
+            f"sqlite:///{db_path}",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "Using " not in completed.stdout
+    assert "from sqlalchemy import" in completed.stdout

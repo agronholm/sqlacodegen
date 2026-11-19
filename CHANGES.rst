@@ -3,6 +3,9 @@ Version history
 
 **UNRELEASED**
 
+- Printed informational dependency messages to ``stderr`` instead of ``stdout``
+  to prevent corrupting generated model code when stdout is redirected
+  (`#451 <https://github.com/agronholm/sqlacodegen/issues/451>`_; PR by @Rajan-vish)
 - **BACKWARD INCOMPATIBLE** The SQLModel generator no longer emits ``t_<tablename>``
   ``Table`` variables for many-to-many association tables that have a primary key, and
   their relationships no longer pass ``secondary`` via ``sa_relationship_kwargs``.
