@@ -19,6 +19,9 @@ Version history
 - Fixed a column named ``registry`` being rendered as-is, which made SQLAlchemy warn
   that the attribute should be left reserved for the declarative class registry; it is
   now renamed to ``registry_`` the same way a ``metadata`` column already was
+- Fixed expression indexes (such as ``lower(email)``) being rendered without their
+  expressions, which made ``create_all`` fail or silently dropped the expression part
+  (`#493 <https://github.com/agronholm/sqlacodegen/pull/493>`_; PR by @jayhemnani9910)
 
 **4.0.4**
 
