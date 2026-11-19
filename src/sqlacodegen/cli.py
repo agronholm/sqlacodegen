@@ -101,13 +101,15 @@ def main() -> None:
         return
 
     if citext:
-        print(f"Using sqlalchemy-citext {version('sqlalchemy-citext')}")
+        print(
+            f"Using sqlalchemy-citext {version('sqlalchemy-citext')}", file=sys.stderr
+        )
 
     if geoalchemy2:
-        print(f"Using geoalchemy2 {version('geoalchemy2')}")
+        print(f"Using geoalchemy2 {version('geoalchemy2')}", file=sys.stderr)
 
     if pgvector:
-        print(f"Using pgvector {version('pgvector')}")
+        print(f"Using pgvector {version('pgvector')}", file=sys.stderr)
 
     # Use reflection to fill in the metadata
     engine_args = _parse_engine_args(args.engine_arg)
