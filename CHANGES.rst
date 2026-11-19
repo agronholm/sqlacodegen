@@ -19,6 +19,10 @@ Version history
 - Fixed a column named ``registry`` being rendered as-is, which made SQLAlchemy warn
   that the attribute should be left reserved for the declarative class registry; it is
   now renamed to ``registry_`` the same way a ``metadata`` column already was
+- Fixed a column named like a module used in the type annotations (``uuid``,
+  ``datetime``, ``decimal``) shadowing that module, which made the generated declarative
+  and dataclass models fail at import with ``AttributeError``; the attribute is now renamed
+  (`#331 <https://github.com/agronholm/sqlacodegen/issues/331>`_; PR by @jayhemnani9910)
 
 **4.0.4**
 
