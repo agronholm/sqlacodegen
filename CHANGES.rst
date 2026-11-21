@@ -11,6 +11,9 @@ Version history
   their relationships no longer pass ``secondary`` via ``sa_relationship_kwargs``.
   Code importing those variables will break when models are regenerated. Use the
   ``nolinktables`` option to keep the previous output.
+- Added SQLAlchemy 2.1 support
+  (`#489 <https://github.com/agronholm/sqlacodegen/pull/489>`_; PR by @Claire-ovo,
+  reworked by @sheinbergon)
 - Added support for many-to-many link models in the SQLModel generator: association
   tables with a primary key are now rendered as ``SQLModel`` classes and referenced via
   ``Relationship(link_model=...)``
@@ -22,9 +25,6 @@ Version history
 - Fixed a column named ``registry`` being rendered as-is, which made SQLAlchemy warn
   that the attribute should be left reserved for the declarative class registry; it is
   now renamed to ``registry_`` the same way a ``metadata`` column already was
-- Added SQLAlchemy 2.1 support
-  (`#489 <https://github.com/agronholm/sqlacodegen/pull/489>`_; PR by @Claire-ovo,
-  reworked by @sheinbergon)
 
 **4.0.4**
 
