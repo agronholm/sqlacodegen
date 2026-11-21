@@ -3,6 +3,9 @@ Version history
 
 **UNRELEASED**
 
+- Fixed many-to-many link tables leaking onto same-named tables in other schemas, which
+  generated invalid relationships and made mapper configuration fail with
+  ``NoForeignKeysError``
 - Printed informational dependency messages to ``stderr`` instead of ``stdout``
   to prevent corrupting generated model code when stdout is redirected
   (`#451 <https://github.com/agronholm/sqlacodegen/issues/451>`_; PR by @Rajan-vish)

@@ -3338,3 +3338,92 @@ class TOpts3(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
     )
+
+
+def test_manytomany_multi_schema_same_table_name(generator: CodeGenerator) -> None:
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        schema="alpha",
+    )
+    Table(
+        "roles",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        schema="alpha",
+    )
+    Table(
+        "user_roles",
+        generator.metadata,
+        Column("user_id", INTEGER, primary_key=True),
+        Column("role_id", INTEGER, primary_key=True),
+        ForeignKeyConstraint(["user_id"], ["alpha.users.id"]),
+        ForeignKeyConstraint(["role_id"], ["alpha.roles.id"]),
+        schema="alpha",
+    )
+    Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        schema="beta",
+    )
+    Table(
+        "roles",
+        generator.metadata,
+        Column("id", INTEGER, primary_key=True),
+        schema="beta",
+    )
+
+    validate_code(
+        generator.generate(),
+        """\
+from sqlalchemy import Column, ForeignKey, Integer, Table
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Roles(Base):
+    __tablename__ = 'roles'
+    __table_args__ = {'schema': 'alpha'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    user: Mapped[list['Users']] = relationship('Users', secondary='alpha.user_roles', \
+back_populates='role')
+
+
+class Users(Base):
+    __tablename__ = 'users'
+    __table_args__ = {'schema': 'alpha'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    role: Mapped[list['Roles']] = relationship('Roles', secondary='alpha.user_roles', \
+back_populates='user')
+
+
+class Roles_(Base):
+    __tablename__ = 'roles'
+    __table_args__ = {'schema': 'beta'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
+class Users_(Base):
+    __tablename__ = 'users'
+    __table_args__ = {'schema': 'beta'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
+t_user_roles = Table(
+    'user_roles', Base.metadata,
+    Column('user_id', ForeignKey('alpha.users.id'), primary_key=True),
+    Column('role_id', ForeignKey('alpha.roles.id'), primary_key=True),
+    schema='alpha'
+)
+        """,
+    )
