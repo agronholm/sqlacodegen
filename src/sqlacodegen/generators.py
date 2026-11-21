@@ -1193,7 +1193,9 @@ class DeclarativeGenerator(TablesGenerator):
         for model in models_by_table_name.values():
             if isinstance(model, ModelClass) and model.table not in link_tables:
                 self.generate_relationships(
-                    model, models_by_table_name, links[qualified_table_name(model.table)]
+                    model,
+                    models_by_table_name,
+                    links[qualified_table_name(model.table)],
                 )
 
         # Nest inherited classes in their superclasses to ensure proper ordering
