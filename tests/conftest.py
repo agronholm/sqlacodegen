@@ -1,10 +1,18 @@
 from textwrap import dedent
 
 import pytest
+import sqlalchemy
 from pytest import FixtureRequest
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import clear_mappers, configure_mappers
 from sqlalchemy.schema import MetaData
+
+
+@pytest.fixture
+def sqlalchemy_version(request: FixtureRequest) -> None:
+    installed = tuple(map(int, sqlalchemy.__version__.split(".")[:2]))
+    if installed != request.param:
+        pytest.skip(f"Requires SQLAlchemy {request.param}; installed {installed}")
 
 
 @pytest.fixture
