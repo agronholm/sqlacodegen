@@ -781,6 +781,35 @@ def test_table_name_identifiers(generator: CodeGenerator) -> None:
     )
 
 
+def test_expression_indexes(generator: CodeGenerator) -> None:
+    users = Table(
+        "users",
+        generator.metadata,
+        Column("id", INTEGER),
+        Column("email", VARCHAR),
+        Index("ix_email_lower", text("lower(email)"), unique=True),
+    )
+    users.indexes.add(Index("ix_id_email_lower", users.c.id, text("lower(email)")))
+
+    validate_code(
+        generator.generate(),
+        """\
+        from sqlalchemy import Column, Index, Integer, MetaData, String, Table, text
+
+        metadata = MetaData()
+
+
+        t_users = Table(
+            'users', metadata,
+            Column('id', Integer),
+            Column('email', String),
+            Index('ix_email_lower', text('lower(email)'), unique=True),
+            Index('ix_id_email_lower', 'id', text('lower(email)'))
+        )
+        """,
+    )
+
+
 @pytest.mark.parametrize("generator", [["noindexes"]], indirect=True)
 def test_option_noindexes(generator: CodeGenerator) -> None:
     simple_items = Table(
