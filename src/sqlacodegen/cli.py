@@ -33,7 +33,7 @@ def _parse_engine_arg(arg_str: str) -> tuple[str, Any]:
     key, value = arg_str.split("=", 1)
     try:
         value = ast.literal_eval(value)
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass  # Leave as string if literal_eval fails
 
     return key, value
