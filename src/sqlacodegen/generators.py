@@ -635,6 +635,11 @@ class TablesGenerator(CodeGenerator):
                 if default is not Parameter.empty and value == default:
                     continue
 
+                # SQLAlchemy 2.1 attaches the table's metadata to named types and
+                # uses a sentinel as the default for "schema"
+                if value is None or isinstance(value, MetaData):
+                    continue
+
                 inherited_kwargs[super_param.name] = self._render_column_type_value(
                     value
                 )
