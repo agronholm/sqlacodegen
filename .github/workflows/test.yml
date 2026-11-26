@@ -11,12 +11,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        sqlalchemy: [">=2.0.29,<2.1", ">=2.1,<2.2"]
-        exclude:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        sqlalchemy: [">=2.1,<2.2"]
+        include:
           # SQLAlchemy 2.1 requires Python 3.11 or later.
           - python-version: "3.10"
-            sqlalchemy: ">=2.1,<2.2"
+            sqlalchemy: ">=2.0.29,<2.1"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
@@ -29,8 +29,6 @@ jobs:
         cache-dependency-path: pyproject.toml
     - name: Install dependencies
       run: pip install --group test -e .[sqlmodel,citext,geoalchemy2,pgvector] "SQLAlchemy${{ matrix.sqlalchemy }}"
-    - name: Show dependency version
-      run: python -c "import sqlalchemy; print(sqlalchemy.__version__)"
     - name: Test with pytest
       run: coverage run -m pytest
     - name: Upload Coverage
