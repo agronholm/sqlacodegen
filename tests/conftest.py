@@ -35,7 +35,7 @@ def validate_code(generated_code: str, expected_code: str) -> None:
     expected_code = dedent(expected_code)
     assert generated_code == expected_code
     try:
-        exec(generated_code, {})
+        exec(generated_code, {})  # noqa: S102
         configure_mappers()
     finally:
         clear_mappers()

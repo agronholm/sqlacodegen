@@ -2534,7 +2534,7 @@ class TestDomainJson(Base):
 def test_domain_non_default_json_sa20(
     sqlalchemy_version: None,
     generator: CodeGenerator,
-    domain_type: type[JSON] | type[JSONB],
+    domain_type: type[JSON | JSONB],
 ) -> None:
     Table(
         "test_domain_json",
