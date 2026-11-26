@@ -3338,3 +3338,93 @@ class TOpts3(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
         """,
     )
+
+
+def test_manytomany_same_names_across_schemas(generator: CodeGenerator) -> None:
+    for schema in ("public", "tenant"):
+        Table(
+            "user",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            schema=schema,
+        )
+        Table(
+            "group",
+            generator.metadata,
+            Column("id", INTEGER, primary_key=True),
+            schema=schema,
+        )
+        Table(
+            "user_group",
+            generator.metadata,
+            Column(
+                "user_id", INTEGER, ForeignKey(f"{schema}.user.id"), primary_key=True
+            ),
+            Column(
+                "group_id", INTEGER, ForeignKey(f"{schema}.group.id"), primary_key=True
+            ),
+            schema=schema,
+        )
+
+    validate_code(
+        generator.generate(),
+        """\
+from sqlalchemy import Column, ForeignKey, Integer, Table
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Group(Base):
+    __tablename__ = 'group'
+    __table_args__ = {'schema': 'public'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    user: Mapped[list['User']] = relationship('User', secondary='public.user_group', back_populates='group')
+
+
+class User(Base):
+    __tablename__ = 'user'
+    __table_args__ = {'schema': 'public'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    group: Mapped[list['Group']] = relationship('Group', secondary='public.user_group', back_populates='user')
+
+
+class Group_(Base):
+    __tablename__ = 'group'
+    __table_args__ = {'schema': 'tenant'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    user: Mapped[list['User_']] = relationship('User_', secondary='tenant.user_group', back_populates='group')
+
+
+class User_(Base):
+    __tablename__ = 'user'
+    __table_args__ = {'schema': 'tenant'}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    group: Mapped[list['Group_']] = relationship('Group_', secondary='tenant.user_group', back_populates='user')
+
+
+t_user_group = Table(
+    'user_group', Base.metadata,
+    Column('user_id', ForeignKey('public.user.id'), primary_key=True),
+    Column('group_id', ForeignKey('public.group.id'), primary_key=True),
+    schema='public'
+)
+
+
+t_user_group_ = Table(
+    'user_group', Base.metadata,
+    Column('user_id', ForeignKey('tenant.user.id'), primary_key=True),
+    Column('group_id', ForeignKey('tenant.group.id'), primary_key=True),
+    schema='tenant'
+)
+        """,
+    )

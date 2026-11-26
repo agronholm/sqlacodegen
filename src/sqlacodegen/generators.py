@@ -1169,7 +1169,13 @@ class DeclarativeGenerator(TablesGenerator):
                 model = models_by_table_name[qualified_name] = self.generate_link_model(
                     table
                 )
-                tablename = fk_constraints[0].elements[0].column.table.name
+                # Association tables must be grouped by their qualified name:
+                # tables with the same name in different schemas are distinct,
+                # and mixing them up attaches their relationships to the wrong
+                # models (issue #426).
+                tablename = qualified_table_name(
+                    fk_constraints[0].elements[0].column.table
+                )
                 links[tablename].append(model)
                 link_tables.add(table)
                 continue
@@ -1191,7 +1197,9 @@ class DeclarativeGenerator(TablesGenerator):
         for model in models_by_table_name.values():
             if isinstance(model, ModelClass) and model.table not in link_tables:
                 self.generate_relationships(
-                    model, models_by_table_name, links[model.table.name]
+                    model,
+                    models_by_table_name,
+                    links[qualified_table_name(model.table)],
                 )
 
         # Nest inherited classes in their superclasses to ensure proper ordering
