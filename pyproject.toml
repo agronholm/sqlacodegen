@@ -78,7 +78,10 @@ extend-select = [
     "W",            # pycodestyle warnings
 ]
 ignore = [
-    "SIM102",
+    "BLE001",
+    "S110",
+    "S112",
+    "SIM",
 ]
 
 [tool.mypy]

@@ -33,7 +33,7 @@ def _parse_engine_arg(arg_str: str) -> tuple[str, Any]:
     key, value = arg_str.split("=", 1)
     try:
         value = ast.literal_eval(value)
-    except Exception:  # noqa: BLE001, S110
+    except Exception:
         pass  # Leave as string if literal_eval fails
 
     return key, value
@@ -139,7 +139,7 @@ def main() -> None:
     with ExitStack() as stack:
         outfile: TextIO
         if args.outfile:
-            outfile = open(args.outfile, "w", encoding="utf-8")  # noqa: SIM115
+            outfile = open(args.outfile, "w", encoding="utf-8")
             stack.enter_context(outfile)
         else:
             outfile = sys.stdout

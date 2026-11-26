@@ -797,14 +797,14 @@ class TablesGenerator(CodeGenerator):
         dialect_keys: list[str]
         try:
             dialect_keys = sorted(obj.dialect_kwargs)
-        except Exception:  # noqa: BLE001
+        except Exception:
             return
 
         dialect_kwargs = getattr(obj, "dialect_kwargs", {})
         for key in dialect_keys:
             try:
                 value = dialect_kwargs[key]
-            except Exception:  # noqa: BLE001, S112
+            except Exception:
                 continue
 
             if isinstance(value, list | dict) and not value:
