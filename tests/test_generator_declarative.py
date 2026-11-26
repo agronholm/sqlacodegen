@@ -573,7 +573,7 @@ class SimpleContainers(Base):
     id2: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     simple_items: Mapped[list['SimpleItems']] = relationship('SimpleItems', \
-back_populates='simple_containers')
+back_populates='simple_containers', passive_deletes=True)
 
 
 class SimpleItems(Base):

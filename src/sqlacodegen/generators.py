@@ -1855,6 +1855,16 @@ class DeclarativeGenerator(TablesGenerator):
         if relationship.backref:
             kwargs["back_populates"] = repr(relationship.backref.name)
 
+        if (
+            relationship.type is RelationshipType.ONE_TO_MANY
+            and relationship.constraint
+            and any(
+                fk.ondelete and fk.ondelete.upper() == "CASCADE"
+                for fk in relationship.constraint.elements
+            )
+        ):
+            kwargs["passive_deletes"] = True
+
         return kwargs
 
 
