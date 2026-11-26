@@ -816,8 +816,8 @@ class TablesGenerator(CodeGenerator):
             # - dict context (values_for_dict=True): pass raw primitives / str;
             #   custom objects become str(value) so pformat quotes them.
             if values_for_dict:
-                if isinstance(value, type(None) | bool | int | float) or isinstance(
-                    value, str | dict | list
+                if isinstance(
+                    value, type(None) | bool | int | float | str | dict | list
                 ):
                     target_kwargs[key] = value
                 else:
@@ -942,7 +942,7 @@ class TablesGenerator(CodeGenerator):
 
             if enum_type.name:
                 existing_class = None
-                for (_, _), cls in self.enum_classes.items():
+                for cls in self.enum_classes.values():
                     if cls == self._enum_name_to_class_name(enum_type.name):
                         existing_class = cls
                         break

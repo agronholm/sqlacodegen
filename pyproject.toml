@@ -77,6 +77,12 @@ extend-select = [
     "UP",           # pyupgrade
     "W",            # pycodestyle warnings
 ]
+ignore = [
+    "BLE001",
+    "S110",
+    "S112",
+    "SIM",
+]
 
 [tool.mypy]
 strict = true

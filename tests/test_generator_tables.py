@@ -1435,7 +1435,7 @@ schema='{expected_schema}'), primary_key=True),
 
 class MockStarRocksDialect(MySQLDialect_pymysql):
     name = "starrocks"
-    construct_arguments = [
+    construct_arguments = [  # noqa: RUF012
         (
             Column,
             {
