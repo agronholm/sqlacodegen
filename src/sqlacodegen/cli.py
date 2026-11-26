@@ -139,7 +139,7 @@ def main() -> None:
     with ExitStack() as stack:
         outfile: TextIO
         if args.outfile:
-            outfile = open(args.outfile, "w", encoding="utf-8")
+            outfile = open(args.outfile, "w", encoding="utf-8")  # noqa: SIM115
             stack.enter_context(outfile)
         else:
             outfile = sys.stdout

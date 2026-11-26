@@ -78,7 +78,7 @@ extend-select = [
     "W",            # pycodestyle warnings
 ]
 ignore = [
-    "SIM",
+    "SIM102",
 ]
 
 [tool.mypy]
