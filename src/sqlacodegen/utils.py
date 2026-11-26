@@ -196,11 +196,11 @@ def decode_postgresql_sequence(clause: TextClause) -> tuple[str | None, str | No
     schema: str | None = None
     sequence: str = ""
     in_quotes = False
-    for match in _re_postgresql_sequence_delimiter.finditer(match.group(1)):
-        sequence += match.group(1)
-        if match.group(2) == '"':
+    for part in _re_postgresql_sequence_delimiter.finditer(match.group(1)):
+        sequence += part.group(1)
+        if part.group(2) == '"':
             in_quotes = not in_quotes
-        elif match.group(2) == ".":
+        elif part.group(2) == ".":
             if in_quotes:
                 sequence += "."
             else:

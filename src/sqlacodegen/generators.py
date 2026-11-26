@@ -796,7 +796,7 @@ class TablesGenerator(CodeGenerator):
 
         dialect_keys: list[str]
         try:
-            dialect_keys = sorted(getattr(obj, "dialect_kwargs"))
+            dialect_keys = sorted(obj.dialect_kwargs)
         except Exception:
             return
 
@@ -816,9 +816,9 @@ class TablesGenerator(CodeGenerator):
             # - dict context (values_for_dict=True): pass raw primitives / str;
             #   custom objects become str(value) so pformat quotes them.
             if values_for_dict:
-                if isinstance(value, type(None) | bool | int | float):
-                    target_kwargs[key] = value
-                elif isinstance(value, str | dict | list):
+                if isinstance(
+                    value, type(None) | bool | int | float | str | dict | list
+                ):
                     target_kwargs[key] = value
                 else:
                     target_kwargs[key] = str(value)
@@ -942,7 +942,7 @@ class TablesGenerator(CodeGenerator):
 
             if enum_type.name:
                 existing_class = None
-                for (_, _), cls in self.enum_classes.items():
+                for cls in self.enum_classes.values():
                     if cls == self._enum_name_to_class_name(enum_type.name):
                         existing_class = cls
                         break
@@ -1153,7 +1153,7 @@ class DeclarativeGenerator(TablesGenerator):
 
         # Pick association tables from the metadata into their own set, don't process
         # them normally
-        links: defaultdict[str, list[Model]] = defaultdict(lambda: [])
+        links: defaultdict[str, list[Model]] = defaultdict(list)
         link_tables: set[Table] = set()
         for table in self.metadata.sorted_tables:
             qualified_name = qualified_table_name(table)
